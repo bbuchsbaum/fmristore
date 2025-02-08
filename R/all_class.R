@@ -328,6 +328,8 @@ setClass("H5ReducedClusteredVec",
          ),
          contains = c("H5NeuroVec"))
 
+
+
 #' H5ReducedClusteredVecSeq Class
 #'
 #' @description

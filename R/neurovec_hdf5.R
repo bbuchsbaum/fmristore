@@ -348,6 +348,76 @@ setMethod(
   }
 )
 
+#' Extract time series from an H5NeuroVec
+#'
+#' @description
+#' This method supports two main usages:
+#' \enumerate{
+#'   \item \code{series(x, i)} where \code{i} is an integer vector of voxel indices
+#'     (in 1D linearized form). We return a matrix \code{[nTime, length(i)]}.
+#'   \item \code{series(x, i, j, k)} where \code{i, j, k} are single voxel coordinates,
+#'     returning a vector of length \code{nTime}.
+#' }
+#'
+#' @param x An \code{H5NeuroVec} object (4D).
+#' @param i Either an integer vector of voxel indices, or a single voxel index (x-axis).
+#' @param j Single voxel index (y-axis), optional if you only pass \code{i}.
+#' @param k Single voxel index (z-axis), optional if you only pass \code{i}.
+#' @param drop Logical: if \code{TRUE}, dimensions of size 1 are dropped. Default \code{TRUE}.
+#' @return A numeric \code{matrix} or \code{vector}:
+#' \itemize{
+#'   \item If \code{i} is an integer vector and \code{j,k} are missing, returns a \code{[nTime, length(i)]} matrix.
+#'   \item If \code{i,j,k} are each length=1, returns a numeric vector of length \code{nTime}.
+#' }
+#' @export
+#' @rdname series-methods
+setMethod(
+  f = "series",
+  signature = signature(x="H5NeuroVec", i="integer"),
+  definition = function(x, i, j, k, drop=TRUE) {
+
+    # If user provided only 'i', treat it as a vector of linear voxel indices
+    if (missing(j) && missing(k)) {
+      # compute total # of voxels in the 3D part
+      nels <- prod(dim(x)[1:3])
+
+      # We'll build linear indices for all timepoints
+      # offsets = c(0, nels, 2*nels, ..., (nTime-1)*nels)
+      offsets <- seq(0, (dim(x)[4]-1)) * nels
+
+      # For each element in i, we add each offset => flatten
+      # 'map' is from purrr or we can do a base R loop
+      idx_list <- lapply(i, function(pos) pos + offsets)
+      idx <- unlist(idx_list, use.names=FALSE)
+
+      # Now we rely on x[idx] => must be valid 1D subscript
+      # (which is handled by your `[.H5NeuroVec` or `linear_access()` method)
+      vals <- x[idx]  # => numeric vector of length length(i)*nTime
+
+      # Reshape => [nTime, length(i)]
+      ret <- matrix(vals, nrow=dim(x)[4], ncol=length(i))
+      if (drop) drop(ret) else ret
+
+    } else {
+      # If user provided i,j,k => single voxel across time
+      # Confirm each is length=1
+      stopifnot(length(i)==1 && length(j)==1 && length(k)==1)
+      # Subset the entire time dimension
+      ret <- x[i, j, k, seq_len(dim(x)[4])]
+      if (drop) drop(ret) else ret
+    }
+  }
+)
+
+#' @export
+#' @rdname series-methods
+setMethod(
+  f = "series",
+  signature = signature(x="H5NeuroVec", i="numeric"),
+  definition = function(x, i, j, k, drop=TRUE) {
+    callGeneric(x, as.integer(i), as.integer(j), as.integer(k), drop=drop)
+  })
+
 #' Convert NeuroVec to HDF5 Format, returning an H5NeuroVec
 #'
 #' @description
@@ -451,3 +521,54 @@ to_nih5_vec <- function(vec,
   # 13) Return new H5NeuroVec
   new("H5NeuroVec", space=space(vec), obj=h5obj)
 }
+
+#' Display an H5NeuroVec object
+#'
+#' @description
+#' Prints a concise summary of the H5NeuroVec object, including
+#' 4D dimensions, spacing, origin, and orientation.
+#'
+#' @param object An \code{H5NeuroVec} object to show.
+#'
+#' @importFrom crayon bold blue silver yellow green
+#' @importFrom utils object.size
+#' @export
+setMethod(
+  f = "show",
+  signature = signature(object="H5NeuroVec"),
+  definition = function(object) {
+    # Basic header
+    cat("\n", crayon::bold(crayon::blue("H5NeuroVec")), "\n", sep="")
+
+    # Gather dimension info
+    d <- dim(object)  # c(X, Y, Z, nVol)
+    cat(crayon::bold("\n╔═ Dimensions "), crayon::silver("───────────────────────────"), "\n", sep="")
+    cat("║ ", crayon::yellow("Spatial (X×Y×Z)"), " : ",
+        paste(d[1:3], collapse=" × "), "\n", sep="")
+    cat("║ ", crayon::yellow("Number of Volumes"), " : ", d[4], "\n", sep="")
+
+    # Spacing, origin
+    sp  <- space(object)
+    cat(crayon::bold("\n╠═ Spatial Info "), crayon::silver("───────────────────────────"), "\n", sep="")
+    cat("║ ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" × "), "\n", sep="")
+    cat("║ ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin,2), collapse=" × "), "\n", sep="")
+
+    # If axes are known, show them; else fallback
+    if (length(sp@axes@ndim) >= 3) {
+      cat("║ ", crayon::yellow("Orientation"), "   : ",
+          paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
+    } else {
+      cat("║ ", crayon::yellow("Orientation"), "   : Unknown\n")
+    }
+
+    # HDF5 file info
+    cat(crayon::bold("\n╚═ Storage Info "), crayon::silver("──────────────────────────"), "\n", sep="")
+    if (object@obj$is_valid) {
+      cat("  ", crayon::yellow("File"), " : ", object@obj$get_filename(), "\n", sep="")
+    } else {
+      cat("  ", crayon::yellow("File"), " : (CLOSED HDF5 File)\n", sep="")
+    }
+    cat("  ", crayon::yellow("Dataset"), " : /data/elements\n", sep="")
+    cat("\n")
+  }
+)

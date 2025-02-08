@@ -6,17 +6,22 @@
 \title{H5ClusteredVec Class}
 \description{
 A class representing a single clustered time series scan backed by HDF5.
-Provides a NeuroVec interface while maintaining HDF5 backing.
+Provides a NeuroVec-like interface while maintaining HDF5 backing.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{obj}}{The H5File object}
+\item{\code{obj}}{The \code{H5File} object referencing the open file.}
 
-\item{\code{scan_name}}{Name of this scan}
+\item{\code{scan_name}}{A \code{character} label identifying this scan.}
 
-\item{\code{mask}}{LogicalNeuroVol defining the brain mask}
+\item{\code{mask}}{A \code{LogicalNeuroVol} defining the brain mask.}
 
-\item{\code{clusters}}{ClusteredNeuroVol containing cluster assignments}
+\item{\code{clusters}}{A \code{ClusteredNeuroVol} containing cluster assignments.}
 }}
+
+\section{Inheritance}{
+
+Inherits from \code{H5NeuroVec}, which is in turn a \code{NeuroVec}.
+}
 

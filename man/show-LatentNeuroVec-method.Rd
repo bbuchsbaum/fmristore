@@ -7,16 +7,18 @@
 \S4method{show}{LatentNeuroVec}(object)
 }
 \arguments{
-\item{object}{A LatentNeuroVec object to display}
+\item{object}{A \code{LatentNeuroVec} to display.}
 }
 \description{
-Displays a formatted summary of a LatentNeuroVec object with colored output.
+Displays a formatted summary of a \code{LatentNeuroVec} with colored output.
 }
 \details{
-Uses the crayon package for colored terminal output, showing:
-- Dimensions and components
-- Memory usage statistics
-- Sparsity information
-- Space metadata
+Uses the \pkg{crayon} package for colored terminal output, showing:
+\itemize{
+  \item Dimensions & components
+  \item Memory usage
+  \item Sparsity info
+  \item Space metadata
+}
 }
 \keyword{internal}

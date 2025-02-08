@@ -450,7 +450,7 @@ setMethod(
       stop("Some indices out of range 1..", total)
     }
 
-    sub_4d <- arrayInd(i, dim=bigDim)
+    sub_4d <- arrayInd(i, .dim=bigDim)
     vol_groups <- split(seq_len(nrow(sub_4d)), sub_4d[,4])
     out <- numeric(length(i))
 
@@ -474,6 +474,24 @@ setMethod(
       }
     }
     out
+  }
+)
+
+#' @export
+setMethod(
+  f = "[[",
+  signature = signature(x="LabeledVolumeSet", i="numeric"),
+  definition = function(x, i, j, ...) {
+    if (length(i) != 1) {
+      stop("Must provide a single index i.")
+    }
+    nLabels <- length(x@labels)
+    if (i < 1 || i > nLabels) {
+      stop("Index i out of range 1..", nLabels)
+    }
+    # use the environment’s loader to get that one volume
+    vol <- x@load_env$load_vol(i)
+    vol
   }
 )
 

@@ -366,29 +366,141 @@ setMethod(
 #'
 #' @rdname extract-methods
 #' @export
+# single volume at time i
+setMethod("[[", signature(x="LatentNeuroVec", i="numeric"),
+          function(x, i) {
+            if (length(i) != 1) stop("Index must be a single number")
+            if (i < 1 || i > dim(x)[4]) stop("Index out of range")
+
+            # basis[i,,drop=FALSE] => shape (1 x k)
+            # loadings => shape (p x k)
+            # We want (1 x p).
+            # Easiest is: row <- basis[i,] => shape (1 x k)
+            # partialVol <- row %*% t(loadings) => (1 x k)*(k x p) => (1 x p)
+            dat <- as.numeric(x@basis[i,,drop=FALSE] %*% t(x@loadings))
+            dat <- dat + x@offset  # length p
+
+            # Now place them in a SparseNeuroVol with the known mask
+            newdim <- dim(x)[1:3]
+            bspace <- NeuroSpace(newdim,
+                                 spacing=neuroim2::spacing(x),
+                                 origin=neuroim2::origin(x),
+                                 axes=neuroim2::axes(x@space),
+                                 trans=neuroim2::trans(x))
+
+            SparseNeuroVol(dat, bspace, indices=neuroim2::indices(x))
+          }
+)
+
+#' 4D subsetting for LatentNeuroVec
+#'
+#' @description
+#' Allows \code{latent_vec[i, j, k, l]} style subsetting:
+#' \itemize{
+#'   \item \code{i,j,k} are currently assumed missing or full range
+#'   \item \code{l} can be a numeric vector (subset of timepoints)
+#' }
+#'
+#' @param x A \code{LatentNeuroVec} object
+#' @param i,j,k Numeric index vectors for the 3D spatial dims. If missing,
+#'   all voxels are included.
+#' @param l Numeric index vector (timepoints). If missing, all time.
+#' @param drop \code{logical} drop dims of size 1?
+#' @param ... Not used
+#'
+#' @return An array with shape \code{[length(i), length(j), length(k), length(l)]}
+#'   or, if \code{i,j,k} are missing, \code{[dim(x)[1], dim(x)[2], dim(x)[3], length(l)]}.
+#'   Then we reconstruct each timepoint on-the-fly using \code{basis[l, ]} and
+#'   \code{loadings}, plus \code{offset}.
+#'
+#' @export
 setMethod(
-  f = "[[",
-  signature = signature(x="LatentNeuroVec", i="numeric"),
-  definition = function(x, i) {
-    if (length(i) != 1) {
-      stop("Index must be a single number")
+  f = "[",
+  signature = signature(x="LatentNeuroVec", i="numeric", j="numeric", drop="ANY"),
+  definition = function(x, i, j, k, l, ..., drop=TRUE) {
+
+    # For simplicity: if i,j,k are not specified, or are the full range, we do full 3D
+    # We won't do partial bounding in the 3D space here, but you *could* implement it.
+
+    if (missing(i)) i <- seq_len(dim(x)[1])
+    if (missing(j)) j <- seq_len(dim(x)[2])
+    if (missing(k)) k <- seq_len(dim(x)[3])
+    if (missing(l)) l <- seq_len(dim(x)[4])
+
+    # Check that i,j,k,l are within range
+    if (max(i) > dim(x)[1] || max(j) > dim(x)[2] ||
+        max(k) > dim(x)[3] || max(l) > dim(x)[4] ||
+        min(i,j,k,l) < 1) {
+      stop("Subscript out of range for LatentNeuroVec.")
     }
-    if (i < 1 || i > dim(x)[4]) {
-      stop("Index out of bounds")
+
+    # We'll gather an output array => shape [ length(i), length(j), length(k), length(l) ]
+    out_dim <- c(length(i), length(j), length(k), length(l))
+    # We'll fill each time slice.
+    n_vox <- prod(out_dim[1:3])
+
+    # Convert i,j,k to linear mask-based indices if needed
+    # Here we assume the entire 3D space is masked => sum(x@mask) = #voxs
+    # but if you have partial mask, you must do a more advanced approach.
+    # We'll do the simpler approach: we gather all i,j,k in one pass => "coords_3d".
+    coords_3d <- as.matrix(expand.grid(i, j, k))
+    # coords_3d is N x 3
+    # Now we find which of those are in the mask. This is minimal example.
+    # Actually we want partial, or else we do all?
+
+    # Since in your example you have offset, basis, loadings, we do:
+    # for each t in l => slice = basis[t,, drop=FALSE] %*% loadings => shape [1, #voxels]
+    # then add offset => shape is #voxels
+    # then we reshape to [ length(i), length(j), length(k) ]
+    # but we need to map each (x,y,z) to a row in "loadings". That is:
+    # loadings has nrow = sum(mask), so we do "lookup(x@map, voxelIndex)".
+    # We'll define a function:
+
+    # Flatten i,j,k into 1D mask-based indices
+    # This step is tricky: we must convert (i,j,k) to single linear index among sum(mask).
+    # Our x@map stores something like IndexLookupVol(...). We'll do:
+
+    # 1) 3D "big" index => i + (j-1)*dim1 + (k-1)*dim1*dim2
+    # 2) then we see if it's in mask => x@map@indices => match => row offset
+
+    dims_space <- dim(space(x))[1:3]
+    bigIdx <- coords_3d[,1] + (coords_3d[,2]-1)*dims_space[1] +
+      (coords_3d[,3]-1)*dims_space[1]*dims_space[2]
+
+    # Then lookup in x@map => if not in mask, 0 => returns 0
+    rowmap <- lookup(x@map, bigIdx)  # length = n_vox
+    # rowmap might have 0 for out-of-mask. We'll do a small approach:
+    # If rowmap=0 => that voxel is out of mask => reconstruct => 0? or offset => offset?
+    # Possibly we do:
+
+    result <- array(0, out_dim)
+
+    # We'll do a loop over each time t in l => construct slice => place in result[,,, tpos]
+    # This is naive approach for clarity:
+    for (idx_t in seq_along(l)) {
+      tval <- l[idx_t]
+      brow <- x@basis[tval, , drop=FALSE]       # shape (1 x k)
+      partialVol <- as.numeric( brow %*% t(x@loadings) )
+      partialVol <- partialVol + x@offset       # length p
+
+
+      # Now for each voxel in rowmap => if rowmap[i] > 0 => that index => partialVol[rowmap[i]]
+      # else => 0
+      slice_vals <- numeric(n_vox)
+      nz_idx <- which(rowmap > 0)
+      slice_vals[nz_idx] <- partialVol[rowmap[nz_idx]]
+      # store into result
+      # we define 4D => [ i, j, k, idx_t ]
+      # but in R's column major => we can do an array(...) approach or a loop
+      # We'll do direct approach:
+      # We'll rewrite slice_vals into the sub-dim we want => reshape => [ length(i), length(j), length(k) ]
+      slice_3d <- array(slice_vals, dim=out_dim[1:3])
+      result[,,, idx_t] <- slice_3d
     }
 
-    xs <- space(x)
-    dat <- (tcrossprod(x@basis[i,,drop=FALSE], x@loadings))[1,]
-    dat <- dat + x@offset
-
-    newdim <- dim(xs)[1:3]
-    bspace <- NeuroSpace(newdim,
-                         spacing=spacing(xs),
-                         origin=origin(xs),
-                         axes=axes(xs),
-                         trans=trans(xs))
-
-    SparseNeuroVol(dat, bspace, indices=indices(x))
+    # Possibly drop
+    if (drop) result <- drop(result)
+    result
   }
 )
 
@@ -566,6 +678,120 @@ setMethod(
 
     LatentNeuroVec(basis, loadings, space=sp, mask=mask_vol, offset=offset,
                    label=basename(x@file_name))
+  }
+)
+
+#' Extract time series from a LatentNeuroVec
+#'
+#' @description
+#' This method supports two main usages:
+#' \enumerate{
+#'   \item \code{series(x, i)} where \code{i} is an integer vector of voxel indices
+#'     in the 3D linear space (\eqn{1..X \times Y \times Z}). We return a matrix
+#'     \code{[nTime, length(i)]}.
+#'   \item \code{series(x, i, j, k)} where each of \code{i, j, k} is length=1 (a single voxel),
+#'     returning a numeric vector of length \code{nTime}.
+#' }
+#'
+#' @param x A \code{LatentNeuroVec} object.
+#' @param i An integer vector of voxel indices (in \eqn{1..X*Y*Z}), or a single integer if
+#'   combined with \code{j, k}.
+#' @param j,k If provided, these must be single integers. Then \code{i,j,k} specify
+#'   one voxel in (x,y,z) coordinate space.
+#' @param drop Logical: if \code{TRUE}, dimensions of size 1 are dropped. Default \code{TRUE}.
+#'
+#' @return A numeric matrix or vector:
+#' \itemize{
+#'   \item If \code{i} is an integer vector and \code{j,k} are missing, returns
+#'         \code{[nTime, length(i)]}.
+#'   \item If \code{i,j,k} are each length=1, returns a numeric vector of length \code{nTime}.
+#' }
+#'
+#' @details
+#' Internally, for each time \code{t} we reconstruct
+#' \deqn{\text{volume}_t = \text{basis}[t,\,] \times \text{loadings}^\top + \text{offset}.}
+#' Then we extract the requested voxel(s). Voxels not in the mask are zero.
+#'
+#' @export
+#' @rdname series-methods
+setMethod(
+  f = "series",
+  signature = signature(x="LatentNeuroVec", i="integer"),
+  definition = function(x, i, j, k, drop=TRUE) {
+    nTime  <- dim(x)[4]
+    nels3d <- prod(dim(x)[1:3])
+
+    # CASE A: user gave only i -> interpret as multiple voxel indices
+    if (missing(j) && missing(k)) {
+      if (any(i < 1 | i > nels3d)) {
+        stop("Some voxel index in 'i' is out of range [1..(X*Y*Z)].")
+      }
+      n_vox <- length(i)
+      out_mat <- matrix(0, nrow=nTime, ncol=n_vox)
+
+      # map i to mask row indices (some might be zero => out-of-mask => stays 0)
+      rowmap <- lookup(x@map, i)
+
+      for (t in seq_len(nTime)) {
+        # (1 x k)
+        brow <- x@basis[t, , drop=FALSE]
+        # multiply => shape p if loadings is p x k => do: (1 x k) %*% t(loadings) => length p
+        slice <- as.numeric( brow %*% t(x@loadings) + x@offset )
+
+        # fill out_mat[t, col_i] by rowmap
+        for (col_i in seq_len(n_vox)) {
+          mr <- rowmap[col_i]
+          if (mr > 0) {
+            out_mat[t, col_i] <- slice[mr]
+          }
+        }
+      }
+      if (drop && n_vox == 1) {
+        return(drop(out_mat))
+      } else {
+        return(out_mat)
+      }
+
+    } else {
+      # CASE B: user gave i,j,k => each must be length 1 => single voxel
+      if (!(length(i) == 1 && length(j) == 1 && length(k) == 1)) {
+        stop("series(x, i,j,k): i,j,k must each be a single integer for one voxel.")
+      }
+      # convert (i,j,k) => 3D linear index
+      idx_1d <- i + (j-1)*dim(x)[1] + (k-1)*dim(x)[1]*dim(x)[2]
+      if (idx_1d<1 || idx_1d>nels3d) {
+        stop("Voxel subscript (i,j,k) out of range for LatentNeuroVec.")
+      }
+      # map => row in loadings
+      mr <- lookup(x@map, idx_1d)
+      # if out-of-mask => entire time series is 0
+      if (mr < 1) {
+        return(numeric(nTime))
+      }
+
+      # build result => length nTime
+      out_vec <- numeric(nTime)
+      for (t in seq_len(nTime)) {
+        brow <- x@basis[t, , drop=FALSE]
+        slice <- as.numeric( brow %*% t(x@loadings) + x@offset )
+        out_vec[t] <- slice[mr]
+      }
+      if (drop) drop(out_vec) else out_vec
+    }
+  }
+)
+
+#' @export
+#' @rdname series-methods
+setMethod(
+  f = "series",
+  signature = signature(x="LatentNeuroVec", i="numeric"),
+  definition = function(x, i, j, k, drop=TRUE) {
+    # Cast i,j,k to integer if provided
+    if (!missing(i)) i <- as.integer(i)
+    if (!missing(j)) j <- as.integer(j)
+    if (!missing(k)) k <- as.integer(k)
+    callGeneric(x, i=i, j=j, k=k, drop=drop)
   }
 )
 

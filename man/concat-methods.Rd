@@ -7,41 +7,31 @@
 \S4method{concat}{LatentNeuroVec,LatentNeuroVec}(x, y, ...)
 }
 \arguments{
-\item{x}{First \code{\link[neuroim2]{LatentNeuroVec-class}} object}
+\item{x}{First \code{LatentNeuroVec}.}
 
-\item{y}{Second \code{\link[neuroim2]{LatentNeuroVec-class}} object}
+\item{y}{Second \code{LatentNeuroVec}.}
 
-\item{...}{Additional LatentNeuroVec objects to concatenate}
+\item{...}{Additional \code{LatentNeuroVec} objects to concatenate.}
 }
 \value{
-A \code{\link[neuroim2]{NeuroVecSeq-class}} object containing all input vectors
+A \code{\link[neuroim2]{NeuroVecSeq-class}} containing all input vectors.
 }
 \description{
-Concatenates two or more LatentNeuroVec objects along the temporal dimension.
+Concatenates two or more \code{LatentNeuroVec} objects along the temporal dimension.
 }
 \details{
-The method:
-\itemize{
-  \item Validates compatibility of input objects
-  \item Creates a sequence container
-  \item Preserves individual object properties
-}
+1. Checks for compatibility
+2. Creates a sequence container
+3. Preserves individual object properties
 }
 \examples{
 \dontrun{
-# Create two LatentNeuroVec objects
-lvec1 <- LatentNeuroVec(basis1, loadings1, space1, mask)
-lvec2 <- LatentNeuroVec(basis2, loadings2, space2, mask)
-
-# Concatenate them
-combined <- concat(lvec1, lvec2)
-
-# Access as a sequence
-dim(combined)  # Shows combined dimensions
-combined[[1]]  # First volume
+# Concatenate multiple LatentNeuroVec objects
+combined <- concat(lvec1, lvec2, lvec3)
+dim(combined)
 }
 
 }
 \seealso{
-\code{\link[neuroim2]{NeuroVecSeq-class}} for the return type
+\code{\link[neuroim2]{NeuroVecSeq-class}}
 }

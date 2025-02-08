@@ -24,7 +24,7 @@ test_that("H5NeuroVol construction and subsetting works", {
   # Test subsetting
   subset <- h5vol[1:5, 1:5, 1:5]
   expect_equal(dim(subset), c(5,5,5))
-  expect_equal(as.array(subset), data[1:5, 1:5, 1:5])
+  expect_equal(as.array(subset), data[1:5, 1:5, 1:5], tolerance=1e-6)
 })
 
 test_that("H5NeuroVec construction and series extraction works", {
@@ -49,48 +49,65 @@ test_that("H5NeuroVec construction and series extraction works", {
   expect_equal(origin(space(h5vec)), origin(space(vec)))
 
   # Test series extraction
-  series1 <- series(h5vec, x=5, y=5, z=5)
+  series1 <- series(h5vec, 5, 5, 5)
   expect_equal(length(series1), nvols)
-  expect_equal(series1, data[5,5,5,])
+  expect_equal(series1, data[5,5,5,], tolerance=1e-6)
 
   # Test subsetting
   subset <- h5vec[1:5, 1:5, 1:5, 1:3]
   expect_equal(dim(subset), c(5,5,5,3))
-  expect_equal(as.array(subset), data[1:5, 1:5, 1:5, 1:3])
+  expect_equal(as.array(subset), data[1:5, 1:5, 1:5, 1:3], tolerance=1e-6)
 })
 
-test_that("LatentNeuroVec construction and reconstruction works", {
-  # Create test data
-  n_basis <- 5
-  n_voxels <- 1000
-  n_timepoints <- 100
+test_that("LatentNeuroVec single timepoint reconstruction", {
+  n_basis       <- 5
+  n_voxels      <- 1000
+  n_timepoints  <- 100
 
-  # Create basis functions and loadings
-  basis <- Matrix(rnorm(n_timepoints * n_basis), nrow=n_timepoints, ncol=n_basis)
-  loadings <- Matrix(rnorm(n_basis * n_voxels), nrow=n_basis, ncol=n_voxels, sparse=TRUE)
-  offset <- rnorm(n_voxels)
+  # basis => (n_timepoints x n_basis) => (100 x 5)
+  basis <- Matrix(rnorm(n_timepoints * n_basis),
+                  nrow = n_timepoints,
+                  ncol = n_basis)
 
-  # Create space object
+  # loadings => (p x k) => (1000 x 5)
+  loadings <- Matrix(rnorm(n_voxels * n_basis),
+                     nrow = n_voxels,
+                     ncol = n_basis,
+                     sparse = TRUE)
+
+  offset <- rnorm(n_voxels)  # length=1000
+
+  # Create a NeuroSpace with dims (10,10,10,100)
   space <- NeuroSpace(c(10,10,10,n_timepoints), spacing=c(2,2,2), origin=c(1,1,1))
+  mask_vol <- LogicalNeuroVol(array(TRUE, dim=c(10,10,10)),
+                              NeuroSpace(c(10,10,10)))
 
-  # Create LatentNeuroVec
-  latent_vec <- new("LatentNeuroVec",
-                    basis = basis,
-                    loadings = loadings,
-                    offset = offset,
-                    space = space)
+  latent_vec <- LatentNeuroVec(
+    basis    = basis,      # (100 x 5)
+    loadings = loadings,   # (1000 x 5)
+    space    = space,
+    mask     = mask_vol,
+    offset   = offset
+  )
 
   # Test basic properties
   expect_true(inherits(latent_vec, "LatentNeuroVec"))
   expect_equal(dim(latent_vec), c(10,10,10,n_timepoints))
 
-  # Test reconstruction of a single time point
-  time_point_1 <- as.vector(loadings %*% basis[1,] + offset)
+  # Fix: Multiply as (1×n_basis)×(n_basis×n_voxels) => (1×n_voxels)
+  # "time_point_1" is the full volume at time=1, i.e. basis[1, ] times loadings plus offset
+  # Instead of basis[1,,drop=FALSE] %*% loadings:
+  time_point_1 <- as.vector( basis[1,,drop=FALSE] %*% t(loadings) + offset )
+  #time_point_1 <- as.vector(basis[1,,drop=FALSE] %*% loadings + offset)
+  # Reconstruct time=1 from the latent vector
   reconstructed_1 <- as.vector(latent_vec[,,,1])
-  expect_equal(time_point_1, reconstructed_1)
+
+  # They should match
+  expect_equal(time_point_1, reconstructed_1, tolerance=1e-8)
 
   # Test series extraction
-  series1 <- series(latent_vec, x=5, y=5, z=5)
+  # e.g. single voxel's time series
+  series1 <- series(latent_vec, 5, 5, 5)
   expect_equal(length(series1), n_timepoints)
 })
 

@@ -5,23 +5,22 @@
 \alias{H5ClusteredVecSeq-class}
 \title{H5ClusteredVecSeq Class}
 \description{
-A class representing a sequence of clustered time series backed by an HDF5 file.
-Provides a NeuroVecSeq-like interface while maintaining HDF5 backing for efficient
-data access.
+A class representing a sequence of clustered time series scans backed by an HDF5 file.
+It provides a \code{NeuroVecSeq}-like interface while maintaining HDF5 backing.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{obj}}{The H5File object}
+\item{\code{obj}}{The \code{H5File} object referencing the open file.}
 
-\item{\code{scan_names}}{Names of available scans}
+\item{\code{scan_names}}{A \code{character} vector of scan IDs.}
 
-\item{\code{mask}}{LogicalNeuroVol defining the brain mask}
+\item{\code{mask}}{A \code{LogicalNeuroVol} defining the brain mask.}
 
-\item{\code{clusters}}{ClusteredNeuroVol containing cluster assignments}
+\item{\code{clusters}}{A \code{ClusteredNeuroVol} containing cluster assignments.}
 
-\item{\code{scan_metadata}}{List of metadata for each scan}
+\item{\code{scan_metadata}}{A \code{list} of metadata, one entry per scan.}
 
-\item{\code{cluster_metadata}}{Data frame of cluster metadata}
+\item{\code{cluster_metadata}}{A \code{data.frame} containing metadata for each cluster.}
 }}
 

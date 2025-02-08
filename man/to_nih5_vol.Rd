@@ -2,7 +2,7 @@
 % Please edit documentation in R/neurovol_hdf5.R
 \name{to_nih5_vol}
 \alias{to_nih5_vol}
-\title{Convert NeuroVol to HDF5 Format (Improved)}
+\title{Convert a NeuroVol to HDF5 Format}
 \usage{
 to_nih5_vol(
   vol,
@@ -14,22 +14,22 @@ to_nih5_vol(
 )
 }
 \arguments{
-\item{vol}{A \code{\link[neuroim2]{NeuroVol-class}} object to convert}
+\item{vol}{A \code{NeuroVol} object (3D).}
 
-\item{file_name}{Character string specifying the output file path}
+\item{file_name}{\code{character} path to the output file (if NULL, uses tempfile).}
 
-\item{data_type}{String: "FLOAT", "DOUBLE", "INT", etc.}
+\item{data_type}{\code{character}: "FLOAT", "DOUBLE", "INT", etc.}
 
-\item{chunk_dim}{Optional numeric vector specifying chunk dimensions}
+\item{chunk_dim}{\code{numeric} vector specifying chunk sizes.}
 
-\item{nbit}{Logical; if TRUE, uses N-bit compression (default: FALSE)}
+\item{nbit}{\code{logical}; if TRUE, applies N-bit compression.}
 
-\item{compression}{Integer from 1-9 specifying compression level (default: 6)}
+\item{compression}{\code{integer} [1..9], default 6.}
 }
 \value{
-A \code{\link{H5NeuroVol-class}} object representing the converted volume
+A new \code{\link{H5NeuroVol}} referencing the written file.
 }
 \description{
-Converts a NeuroVol object to HDF5 format and saves it to a file,
-storing enough spatial info to reconstruct a valid NeuroSpace in H5NeuroVol.
+Saves a \code{\link[neuroim2]{NeuroVol}} to an HDF5 file with minimal necessary
+metadata to reconstruct an \code{H5NeuroVol}.
 }

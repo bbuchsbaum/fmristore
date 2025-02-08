@@ -7,23 +7,22 @@
 \description{
 A class that represents a 4-dimensional neuroimaging array using a latent space
 decomposition. It stores the data as a set of basis functions (dictionary) and
-a corresponding set of loadings (coefficients), allowing for efficient
-representation and manipulation of high-dimensional neuroimaging data.
+a corresponding set of loadings (coefficients), enabling efficient representation
+and manipulation of high-dimensional data.
 
 The \code{LatentNeuroVec} class provides a memory-efficient representation of neuroimaging
 data in a latent space (e.g., from PCA or ICA). It stores data as a product of basis vectors
-and loadings, allowing for efficient storage and computation of high-dimensional neuroimaging data.
+and loadings, allowing for efficient storage and computation of high-dimensional
+neuroimaging data.
 }
 \details{
-The LatentNeuroVec class provides a memory-efficient representation of 4D
-neuroimaging data by decomposing it into a set of basis functions and their
-corresponding loadings. This approach is particularly useful for large datasets
-where direct storage of the full 4D array would be prohibitively expensive.
+\code{LatentNeuroVec} inherits from \code{\link[neuroim2]{NeuroVec-class}}
+and \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}. The original 4D data
+can be reconstructed as:
+\deqn{data[x,y,z,t] = \sum_i \bigl(basis[t,i] \times loadings[i,v]\bigr) + offset[v]}.
 
-The original 4D data can be reconstructed as:
-data[x,y,z,t] = sum(basis[t,i] * loadings[i,v]) + offset[v]
-where v is the voxel index corresponding to coordinates (x,y,z),
-and i indexes the basis functions.
+This approach is especially useful for large datasets where storing the full
+4D array is expensive.
 }
 \section{Slots}{
 
@@ -31,7 +30,7 @@ and i indexes the basis functions.
 \item{\code{basis}}{A \code{Matrix} object where each column represents a basis vector
 in the latent space.}
 
-\item{\code{loadings}}{A \code{Matrix} object (typically sparse) containing the coefficients
+\item{\code{loadings}}{A \code{Matrix} object (often sparse) containing the coefficients
 for each basis vector across the spatial dimensions.}
 
 \item{\code{offset}}{A \code{numeric} vector representing a constant offset term for
@@ -42,8 +41,8 @@ each voxel or spatial location.}
 
 \code{LatentNeuroVec} inherits from:
 \itemize{
-  \item \code{\link[neuroim2]{NeuroVec-class}}: Base class for 4D brain images
-  \item \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}: Provides sparse representation framework
+  \item \code{\link[neuroim2]{NeuroVec-class}}
+  \item \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}
 }
 }
 
@@ -53,8 +52,8 @@ The class implements a matrix factorization approach where the data is represent
 \deqn{X = B \times L^T + c}
 where:
 \itemize{
-  \item B is the basis matrix (n × k)
-  \item L is the loadings matrix (p × k)
+  \item B is the basis matrix (\eqn{n \times k})
+  \item L is the loadings matrix (\eqn{p \times k})
   \item c is an optional offset vector
   \item n is the number of time points
   \item p is the number of voxels
@@ -67,7 +66,7 @@ where:
 library(Matrix)
 library(neuroim2)
 
-# Create a simple LatentNeuroVec object
+# Create a LatentNeuroVec object
 basis <- Matrix(rnorm(100 * 10), nrow = 100, ncol = 10)
 loadings <- Matrix(rnorm(10 * 1000), nrow = 10, ncol = 1000, sparse = TRUE)
 offset <- rnorm(1000)
@@ -76,19 +75,19 @@ latent_vec <- new("LatentNeuroVec",
                   basis = basis,
                   loadings = loadings,
                   offset = offset,
-                  space = NeuroSpace(dim = c(10, 10, 10)))  # Assuming 1000 voxels total
+                  space = NeuroSpace(dim = c(10, 10, 10, 100)))
 
-# Access the basis functions
+# Access the basis
 basis_functions <- latent_vec@basis
 
-# Reconstruct a single time point (this is a simplified example)
+# Reconstruct a single time point
 time_point_1 <- latent_vec@loadings \%*\% latent_vec@basis[1,] + latent_vec@offset
 }
 
 }
 \seealso{
-\code{\link[neuroim2]{NeuroVec-class}} for the base 4D brain image class.
-\code{\link[neuroim2]{AbstractSparseNeuroVec-class}} for the sparse representation framework.
+\code{\link[neuroim2]{NeuroVec-class}},
+\code{\link[neuroim2]{AbstractSparseNeuroVec-class}}.
 
 \code{\link[neuroim2]{NeuroVec-class}} for the base 4D brain image class.
 \code{\link[neuroim2]{AbstractSparseNeuroVec-class}} for the sparse representation framework.

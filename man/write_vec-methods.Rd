@@ -7,47 +7,40 @@
 \S4method{write_vec}{LatentNeuroVec,character,missing,missing}(x, file_name, nbit = FALSE, compression = 9, chunk_dim = NULL)
 }
 \arguments{
-\item{x}{A \code{\link[neuroim2]{LatentNeuroVec-class}} object to write}
+\item{x}{A \code{\link[neuroim2]{LatentNeuroVec-class}} to write.}
 
-\item{file_name}{Character string specifying the output file path}
+\item{file_name}{\code{character} file path to the output HDF5.}
 
-\item{nbit}{Logical; if TRUE, uses N-bit compression (default: FALSE)}
+\item{nbit}{\code{logical}; if TRUE, uses N-bit compression (default: FALSE).}
 
-\item{compression}{Integer from 1-9 specifying compression level (default: 9)}
+\item{compression}{\code{integer} in [1..9] specifying compression level (default: 9).}
 
-\item{chunk_dim}{Optional numeric vector specifying chunk dimensions}
+\item{chunk_dim}{Optional numeric vector specifying chunk dimensions.}
 }
 \value{
-Invisible NULL, called for side effects
+Invisible \code{NULL}, called for side effects (writes to disk).
 }
 \description{
-Writes a LatentNeuroVec object to an HDF5 file with optional compression.
+Writes a \code{LatentNeuroVec} to an HDF5 file with optional compression.
 }
 \details{
-The method writes the following components to the HDF5 file:
+This function saves:
 \itemize{
-  \item Basis matrix
-  \item Loadings matrix
-  \item Offset vector
+  \item \code{basis} matrix
+  \item \code{loadings} matrix
+  \item \code{offset} vector
   \item Spatial metadata
   \item Mask information
 }
+all inside an HDF5 file for future loading.
 }
 \examples{
 \dontrun{
-# Create and write a LatentNeuroVec object
-lvec <- LatentNeuroVec(basis, loadings, space, mask)
-
-# Write with default compression
-write_vec(lvec, "brain_components.h5")
-
-# Write with custom settings
-write_vec(lvec, "brain_components_custom.h5",
-         compression = 6,
-         chunk_dim = c(100, 100))
+# Write a LatentNeuroVec
+write_vec(lvec, "brain_components.h5", compression=6)
 }
 
 }
 \seealso{
-\code{\link[neuroim2]{read_vec}} for reading the saved file
+\code{\link[neuroim2]{read_vec}} for reading back the file.
 }

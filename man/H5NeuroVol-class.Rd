@@ -6,19 +6,19 @@
 \title{H5NeuroVol Class}
 \description{
 A class representing a three-dimensional brain image backed by an HDF5 dataset.
-H5NeuroVol objects provide efficient storage and access for large-scale brain
-imaging data using the HDF5 file format.
+\code{H5NeuroVol} objects provide efficient storage and access for large-scale
+brain imaging data in the HDF5 format.
 }
 \details{
-The H5NeuroVol class leverages the HDF5 file format to manage large 3D neuroimaging
-datasets. This approach allows for efficient data I/O, compression, and partial
-data access, making it suitable for working with large brain volumes that may
-exceed available RAM.
+The \code{H5NeuroVol} class inherits a \code{space} slot from
+\code{\link[neuroim2]{NeuroVol-class}}, which specifies the spatial domain
+(dimensions, orientation, etc.). Data I/O is performed by reading/writing
+subsets of the HDF5 dataset, allowing efficient handling of large 3D volumes.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{h5obj}}{An instance of class \code{H5File} from the \code{hdf5r} package,
+\item{\code{h5obj}}{An instance of class \code{H5File} from the \pkg{hdf5r} package,
 representing the underlying HDF5 file containing the brain image data.}
 }}
 
@@ -40,9 +40,11 @@ library(neuroim2)
 h5_file <- H5File$new("brain_volume.h5", mode = "w")
 
 # Create a dataset in the HDF5 file
-h5_file$create_dataset("brain_data", dims = c(64, 64, 64), dtype = h5types$H5T_NATIVE_FLOAT)
+h5_file$create_dataset("brain_data",
+                       dims = c(64, 64, 64),
+                       dtype = h5types$H5T_NATIVE_FLOAT)
 
-# Create an H5NeuroVol object
+# Create an H5NeuroVol object (requires a NeuroSpace)
 h5_vol <- H5NeuroVol(h5obj = h5_file, space = NeuroSpace(dim = c(64, 64, 64)))
 
 # Access a subset of the data

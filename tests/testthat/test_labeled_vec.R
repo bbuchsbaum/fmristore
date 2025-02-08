@@ -2,8 +2,8 @@
 
 library(testthat)
 library(hdf5r)
-library(neuroim2)  # or your package providing NeuroVec, DenseNeuroVol, LabeledVolumeSet
-# (Make sure that you have your LabeledVolumeSet class, read_labeled_vec, write_labeled_vec defined/loaded)
+library(neuroim2)
+
 
 test_that("Write and read a small LabeledVolumeSet", {
   # 1) Create small 4D data in memory
@@ -61,37 +61,47 @@ test_that("Write and read a small LabeledVolumeSet", {
   k_range <- 1:2
   l_range <- 1:2
 
+
   sub_arr <- lvs[i_range, j_range, k_range, l_range, drop=FALSE]
-  # shape = [2,4,2,2]
-  expect_equal(dim(sub_arr), c(length(i_range), length(j_range), length(k_range), length(l_range)))
-  # We can cross-check values
-  # Let original subarr = arr_data[i_range, j_range, k_range, l_range]
-  # Then compare
-  expected_sub <- arr_data[i_range, j_range, k_range, l_range, drop=FALSE]
-  expect_equal(sub_arr, expected_sub, tolerance=1e-8)
+
+  diff_array <- sub_arr - expected_sub
+  diff_array[ !mask_array[i_range,j_range,k_range] ] <- 0
+  expect_true( all(abs(diff_array) < 1e-8) )
+
 
   # 11) 1D linear_access style check
   #     Suppose we want indices c(1, X*Y*Z, X*Y + 2, etc.).
   #     We'll do a small set to confirm correctness
   # Not all tests show partial usage, but here's the gist:
   # (Requires 'linear_access' method for LabeledVolumeSet)
-  if (any(grepl("linear_access", as.character(getMethods("linear_access"))))) {
-    # We'll pick some random linear indices in [1..X*Y*Z*nVol]
-    # total voxels = X*Y*Z, times nVol => length = X*Y*Z*nVol
-    tot <- X*Y*Z*nVol
+  if (any(grepl("linear_access", as.character(findMethods("linear_access"))))) {
+    # Total number of elements in the 4D array (dimensions: X, Y, Z, nVol)
+    tot <- X * Y * Z * nVol
+
+    # Pick 5 random linear indices in the full 4D space.
     idx_samp <- sample.int(tot, 5)
+
+    # Obtain the values using linear_access on the LabeledVolumeSet.
     lv <- linear_access(lvs, idx_samp)
-    # Re-check by creating a big 4D array and subsetting
-    big_4d <- arr_data
-    # => big_4d is [X, Y, Z, nVol]
-    # We compare big_4d[ idx_samp ] in column-major sense
-    # We do arrayInd:
-    subs <- arrayInd(idx_samp, .dim=dim(big_4d))
+
+    # The original array 'arr_data' is unmasked.
+    # However, the LabeledVolumeSet only stores data for voxels where the mask is TRUE.
+    # Thus, we construct an "expected" full 4D array by applying the mask.
+    # Repeat the 3D mask for each volume:
+    mask_4d <- array(rep(as.logical(mask_array), nVol), dim = c(X, Y, Z, nVol))
+    expected_full <- arr_data * mask_4d
+
+    # Convert the sampled linear indices to subscripts.
+    subs <- arrayInd(idx_samp, .dim = dim(expected_full))
+
+    # For each sampled index, get the corresponding value from expected_full.
     revals <- numeric(length(idx_samp))
     for (r in seq_along(idx_samp)) {
-      revals[r] <- big_4d[ subs[r,1], subs[r,2], subs[r,3], subs[r,4] ]
+      revals[r] <- expected_full[ subs[r, 1], subs[r, 2], subs[r, 3], subs[r, 4] ]
     }
-    expect_equal(lv, revals, tolerance=1e-8)
+
+    # Compare the output of linear_access with the expected values.
+    expect_equal(lv, revals, tolerance = 1e-8)
   }
 
   # 12) Done

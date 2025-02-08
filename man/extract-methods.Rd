@@ -7,44 +7,38 @@
 \S4method{[[}{LatentNeuroVec,numeric}(x, i)
 }
 \arguments{
-\item{x}{A \code{\link[neuroim2]{LatentNeuroVec-class}} object}
+\item{x}{A \code{\link[neuroim2]{LatentNeuroVec-class}} object.}
 
-\item{i}{A numeric index specifying which volume to extract (must be a single value)}
+\item{i}{A numeric index specifying which volume to extract (must be a single value).}
 }
 \value{
-A \code{\link[neuroim2]{SparseNeuroVol-class}} object containing:
+A \code{\link[neuroim2]{SparseNeuroVol-class}} containing:
 \itemize{
   \item The computed volume data
-  \item A new NeuroSpace object for the 3D volume
+  \item A new 3D \code{NeuroSpace} object
   \item The original spatial indices
 }
 }
 \description{
-Extracts a single volume from a LatentNeuroVec object and returns it as a SparseNeuroVol.
+Extracts a single volume from a \code{LatentNeuroVec} as a \code{SparseNeuroVol}.
 }
 \details{
-The method:
-\itemize{
-  \item Validates the input index
-  \item Computes the volume data using matrix operations
-  \item Adds the offset to center the data
-  \item Creates a new 3D space object
-  \item Returns a sparse volume representation
-}
+1. Validates index \code{i}
+2. Computes the volume data with matrix operations
+3. Adds the offset
+4. Builds a new 3D \code{NeuroSpace}
+5. Returns a \code{SparseNeuroVol}
 }
 \examples{
 \dontrun{
-# Create a LatentNeuroVec object
-lvec <- LatentNeuroVec(basis, loadings, space, mask)
-
 # Extract volumes
-vol1 <- lvec[[1]]  # First volume
-vol_mid <- lvec[[dim(lvec)[4]/2]]  # Middle volume
-vol_last <- lvec[[dim(lvec)[4]]]  # Last volume
+vol1 <- lvec[[1]]
+vol_mid <- lvec[[dim(lvec)[4] / 2]]
+vol_last <- lvec[[dim(lvec)[4]]]
 }
 
 }
 \seealso{
-\code{\link[neuroim2]{SparseNeuroVol-class}} for the return type
-\code{\link[neuroim2]{NeuroSpace-class}} for spatial metadata
+\code{\link[neuroim2]{SparseNeuroVol-class}} for the return type,
+\code{\link[neuroim2]{NeuroSpace-class}} for spatial metadata.
 }

@@ -2,25 +2,28 @@
 % Please edit documentation in R/read_write_hdf5.R
 \name{read_clustered_dataset}
 \alias{read_clustered_dataset}
-\title{Read a clustered time series dataset from an HDF5 file}
+\title{Read a cluster-based time-series dataset from HDF5}
 \usage{
-read_clustered_dataset(file, scan_names = NULL)
+read_clustered_dataset(file, scan_names = NULL, prefer_reduced = FALSE)
 }
 \arguments{
-\item{file}{An \code{\link[hdf5r]{H5File}} object or a character path to an existing file}
+\item{file}{A path (character) or an open \code{\link[hdf5r]{H5File}} in read mode.}
 
-\item{scan_names}{Optional character vector to specify which scans to read (NULL for all)}
+\item{scan_names}{An optional character vector of scan names to load. If \code{NULL},
+loads all scans found under \code{/scans}.}
+
+\item{prefer_reduced}{Logical; if TRUE, tries to load reduced data even if
+\code{summary_only=FALSE} (falling back if unavailable).}
 }
 \value{
-A list containing:
-  \itemize{
-    \item vecs: List of \code{\link[neuroim2]{NeuroVec}} objects, one per scan
-    \item mask: \code{\link[neuroim2]{LogicalNeuroVol}} object
-    \item clusters: \code{\link[neuroim2]{ClusteredNeuroVol}} object
-    \item scan_metadata: List of metadata for each scan
-    \item cluster_metadata: Data frame of cluster metadata if present, NULL otherwise
-  }
+Either an \code{\link{H5ReducedClusteredVecSeq}} or an \code{\link{H5ClusteredVecSeq}}.
 }
 \description{
-Read a clustered time series dataset from an HDF5 file
+Reads the dataset under \code{/scans}, checking the \code{summary_only} attribute:
+\itemize{
+  \item If \code{summary_only=TRUE}, returns an \code{H5ReducedClusteredVecSeq}.
+  \item Otherwise, returns an \code{H5ClusteredVecSeq} by default.
+}
+Additionally, if \code{prefer_reduced=TRUE}, attempts to read summary data even if
+\code{summary_only=FALSE}, falling back to the full data if the summary data is absent.
 }

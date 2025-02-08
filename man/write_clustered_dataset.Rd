@@ -2,7 +2,7 @@
 % Please edit documentation in R/read_write_hdf5.R
 \name{write_clustered_dataset}
 \alias{write_clustered_dataset}
-\title{Write a clustered time series dataset to an HDF5 file}
+\title{Write a cluster-based time-series dataset to an HDF5 file}
 \usage{
 write_clustered_dataset(
   file,
@@ -12,44 +12,49 @@ write_clustered_dataset(
   clusters,
   scan_metadata,
   cluster_metadata = NULL,
+  summary_only = FALSE,
   compression = 4,
   chunk_size = 1024
 )
 }
 \arguments{
-\item{file}{An \code{\link[hdf5r]{H5File}} object or a character path to create a new file}
+\item{file}{A path (character) or an open HDF5 file in write mode.}
 
-\item{vecs}{A list of \code{\link[neuroim2]{NeuroVec}} objects, one for each scan/run}
+\item{vecs}{If \code{summary_only=FALSE}, a list of \code{\link[neuroim2]{NeuroVec}} objects.
+If \code{summary_only=TRUE}, a list of numeric matrices (\eqn{nTime \times nClusters}).}
 
-\item{scan_names}{Character vector of scan names corresponding to vecs}
+\item{scan_names}{A character vector naming each scan (same length as \code{vecs}).}
 
-\item{mask}{A \code{\link[neuroim2]{LogicalNeuroVol}} object defining the brain mask}
+\item{mask}{A \code{\link[neuroim2]{LogicalNeuroVol}} for 3D geometry.}
 
-\item{clusters}{A \code{\link[neuroim2]{ClusteredNeuroVol}} object defining the cluster assignments}
+\item{clusters}{A \code{\link[neuroim2]{ClusteredNeuroVol}} with \code{clusters@clusters} IDs.}
 
-\item{scan_metadata}{A list of lists containing metadata for each scan. Each inner list should contain:
-\itemize{
-  \item subject_id: Subject identifier
-  \item task: Task name
-  \item TR: Repetition time
-  \item session: Session identifier
-  \item ...: Additional metadata fields
-}}
+\item{scan_metadata}{A list of metadata lists, one per scan.}
 
-\item{cluster_metadata}{Optional data.frame or list containing cluster-level metadata with columns/elements:
-\itemize{
-  \item cluster_id: Cluster identifier
-  \item description: Cluster description
-  \item ...: Additional metadata fields
-}}
+\item{cluster_metadata}{An optional \code{data.frame} or \code{list} describing clusters.}
 
-\item{compression}{Compression level (0-9) for the data}
+\item{summary_only}{Logical; if TRUE, store only summary data; otherwise voxel-level data.}
 
-\item{chunk_size}{Size of chunks for HDF5 dataset storage}
+\item{compression}{\code{integer} 0..9 specifying gzip level (default=4).}
+
+\item{chunk_size}{The chunk dimension for 2D writes (default=1024).}
 }
 \value{
-The \code{\link[hdf5r]{H5File}} object
+An \code{H5ClusteredVecSeq} (for full data) or \code{H5ReducedClusteredVecSeq}
+  (for summary-only).
 }
 \description{
-Write a clustered time series dataset to an HDF5 file
+Creates or overwrites an HDF5 file with:
+\itemize{
+  \item NIfTI-like header in \code{/header}
+  \item 3D mask in \code{/mask}
+  \item 1D \code{cluster_map} in \code{/cluster_map}
+  \item \code{voxel_coords} at \code{/voxel_coords}
+  \item Global \code{/clusters} group for \code{cluster_ids} & optional metadata
+  \item A \code{/scans} group with attribute \code{summary_only}
+}
+
+If \code{summary_only=TRUE}, stores *only* cluster-level summary data (one 2D dataset
+per scan). If \code{summary_only=FALSE}, stores full voxel-level data in \code{/clusters}.
+(You could store both, but here we do either/or for simplicity.)
 }

@@ -4,12 +4,12 @@
 \alias{DenseNeuroVol,H5NeuroVol}
 \title{Convert DenseNeuroVol to H5NeuroVol}
 \arguments{
-\item{from}{A DenseNeuroVol object.}
+\item{from}{A \code{DenseNeuroVol} object.}
 }
 \value{
-An H5NeuroVol object resulting from the conversion.
+An \code{H5NeuroVol} referencing the resulting HDF5 file.
 }
 \description{
-This function converts a DenseNeuroVol object to an H5NeuroVol object.
+Converts a \code{DenseNeuroVol} to \code{H5NeuroVol} by writing it to disk in HDF5 format.
 }
 \keyword{internal}

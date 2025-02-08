@@ -7,15 +7,15 @@
 H5NeuroVec(file_name)
 }
 \arguments{
-\item{file_name}{The name of the 4-dimensional image file in HDF5 format.}
+\item{file_name}{The path to a 4D HDF5 file.}
 }
 \value{
-An instance of the \code{\link{H5NeuroVec-class}} class.
+A new \code{\link{H5NeuroVec-class}} instance.
 }
 \description{
-This function constructs an H5NeuroVec object, which represents a four-dimensional
-brain image stored in the HDF5 format.
+Constructs an \code{\link{H5NeuroVec}} object, which represents a 4D brain image
+stored in HDF5 format.
 }
 \seealso{
-\code{\link[neuroim2]{NeuroVec-class}} for the base 4D brain image class.
+\code{\link[neuroim2]{NeuroVec-class}} for details on 4D brain images.
 }

@@ -6,19 +6,19 @@
 \title{H5NeuroVec Class}
 \description{
 A class representing a four-dimensional brain image backed by an HDF5 file.
-H5NeuroVec objects provide efficient storage and access for large-scale 4D
-neuroimaging data using the HDF5 file format.
+\code{H5NeuroVec} objects provide efficient storage and access for large-scale
+4D neuroimaging data using the HDF5 file format.
 }
 \details{
-The H5NeuroVec class leverages the HDF5 file format to manage large 4D neuroimaging
-datasets, such as fMRI time series. This approach allows for efficient data I/O,
-compression, and partial data access, making it suitable for working with large
-4D brain images that may exceed available RAM.
+\code{H5NeuroVec} inherits a \code{space} slot from
+\code{\link[neuroim2]{NeuroVec-class}}, defining the 4D dimensions
+(e.g., \code{x}, \code{y}, \code{z}, \code{time}). Data are stored in an HDF5
+dataset and accessed on demand.
 }
 \section{Slots}{
 
 \describe{
-\item{\code{obj}}{An instance of class \code{H5File} from the \code{hdf5r} package,
+\item{\code{obj}}{An instance of class \code{H5File} from the \pkg{hdf5r} package,
 representing the underlying HDF5 file containing the 4D brain image data.}
 }}
 
@@ -40,10 +40,13 @@ library(neuroim2)
 h5_file <- H5File$new("brain_timeseries.h5", mode = "w")
 
 # Create a dataset in the HDF5 file
-h5_file$create_dataset("fmri_data", dims = c(64, 64, 32, 100), dtype = h5types$H5T_NATIVE_FLOAT)
+h5_file$create_dataset("fmri_data",
+                       dims = c(64, 64, 32, 100),
+                       dtype = h5types$H5T_NATIVE_FLOAT)
 
 # Create an H5NeuroVec object
-h5_vec <- H5NeuroVec(obj = h5_file, space = NeuroSpace(dim = c(64, 64, 32)))
+h5_vec <- H5NeuroVec(obj = h5_file,
+                     space = NeuroSpace(dim = c(64, 64, 32, 100)))
 
 # Access a subset of the data
 subset <- h5_vec[1:10, 1:10, 1:10, 1:5]

@@ -7,14 +7,14 @@
 H5NeuroVol(file_name)
 }
 \arguments{
-\item{file_name}{The name of the 3-dimensional image file in HDF5 format.}
+\item{file_name}{A \code{character} string giving the path to a 3D HDF5 file.}
 }
 \value{
-An instance of the \code{\link{H5NeuroVol-class}} class.
+A new \code{\link{H5NeuroVol-class}} instance.
 }
 \description{
-This function constructs an H5NeuroVol object, which represents a three-dimensional
-brain image stored in the HDF5 format.
+Constructs an \code{\link{H5NeuroVol}} object representing a 3D brain volume
+stored in HDF5 format.
 }
 \seealso{
 \code{\link[neuroim2]{NeuroVol-class}} for the base 3D brain volume class.

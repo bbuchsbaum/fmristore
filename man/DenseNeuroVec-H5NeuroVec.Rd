@@ -4,12 +4,12 @@
 \alias{DenseNeuroVec,H5NeuroVec}
 \title{Convert DenseNeuroVec to H5NeuroVec}
 \arguments{
-\item{from}{A DenseNeuroVec object.}
+\item{from}{A \code{DenseNeuroVec} object.}
 }
 \value{
-An H5NeuroVec object resulting from the conversion.
+An \code{H5NeuroVec} referencing the newly created HDF5 file.
 }
 \description{
-This function converts a DenseNeuroVec object to an H5NeuroVec object.
+Converts a \code{DenseNeuroVec} object to an \code{H5NeuroVec} by writing it to HDF5.
 }
 \keyword{internal}

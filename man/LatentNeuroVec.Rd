@@ -7,25 +7,25 @@
 LatentNeuroVec(basis, loadings, space, mask, offset = NULL, label = "")
 }
 \arguments{
-\item{basis}{A numeric matrix (n × k) containing the temporal basis vectors.}
+\item{basis}{A numeric or \code{Matrix} object (\eqn{n \times k}) containing the temporal basis.}
 
-\item{loadings}{A numeric matrix (p × k) containing the spatial loadings.}
+\item{loadings}{A numeric or \code{Matrix} object (\eqn{p \times k}) containing spatial loadings.}
 
-\item{space}{A \code{\link[neuroim2]{NeuroSpace-class}} object defining the spatial and temporal dimensions.}
+\item{space}{A \code{\link[neuroim2]{NeuroSpace-class}} defining the spatial/temporal dims.}
 
-\item{mask}{A \code{\link[neuroim2]{LogicalNeuroVol-class}} object defining the brain mask.}
+\item{mask}{A \code{\link[neuroim2]{LogicalNeuroVol-class}} defining the brain mask.}
 
-\item{offset}{Optional numeric vector of length p containing voxel-wise offsets.}
+\item{offset}{Optional numeric vector of length \eqn{p} (voxel-wise offsets).}
 
-\item{label}{Optional character string label for the object.}
+\item{label}{Optional character label for the object.}
 }
 \value{
-A new \code{\link{LatentNeuroVec-class}} object.
+A new \code{\link{LatentNeuroVec-class}} instance.
 }
 \description{
 Constructs a \code{\link{LatentNeuroVec-class}} object, which provides a memory-efficient
 representation of neuroimaging data using matrix factorization. This is particularly useful
-for dimensionality reduction techniques like PCA or ICA.
+for dimensionality reduction techniques (e.g., PCA or ICA).
 }
 \details{
 Construct a LatentNeuroVec Object
@@ -35,32 +35,32 @@ Construct a LatentNeuroVec Object
 library(Matrix)
 library(neuroim2)
 
-# Create example data
+# Example data
 n_timepoints <- 100
 n_components <- 10
 n_voxels <- 1000
 
-# Create basis functions and loadings
+# Create basis & loadings
 basis <- Matrix(rnorm(n_timepoints * n_components),
-               nrow = n_timepoints,
-               ncol = n_components)
+                nrow = n_timepoints,
+                ncol = n_components)
 loadings <- Matrix(rnorm(n_voxels * n_components),
-                  nrow = n_voxels,
-                  ncol = n_components,
-                  sparse = TRUE)
+                   nrow = n_voxels,
+                   ncol = n_components,
+                   sparse = TRUE)
 
-# Create space object for 10x10x10 volume with 100 timepoints
-space <- NeuroSpace(c(10,10,10,n_timepoints))
+# Create space (10x10x10 volume, 100 timepoints)
+spc <- NeuroSpace(c(10,10,10,n_timepoints))
 
 # Create mask
 mask_array <- array(TRUE, dim=c(10,10,10))
-mask <- LogicalNeuroVol(mask_array, NeuroSpace(c(10,10,10)))
+mask_vol   <- LogicalNeuroVol(mask_array, NeuroSpace(c(10,10,10)))
 
-# Create LatentNeuroVec
+# Construct LatentNeuroVec
 lvec <- LatentNeuroVec(basis = basis,
                        loadings = loadings,
-                       space = space,
-                       mask = mask)
+                       space = spc,
+                       mask = mask_vol)
 }
 
 }
