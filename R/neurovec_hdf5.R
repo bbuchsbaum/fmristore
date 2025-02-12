@@ -242,37 +242,37 @@ setMethod(
   }
 )
 
-#' Subset a 4D H5NeuroVec with arbitrary numeric i, j, k, l (bounding box)
-#'
-#' @description
-#' Handles \code{x[i,j,k,l]} subsetting. We read a bounding hyper-slab from HDF5 once,
-#' then pick out the requested points in correct order, avoiding loops in R.
-#'
-#' @param x \code{H5NeuroVec} (4D).
-#' @param i,j,k,l Numeric vectors of indices (possibly non-contiguous).
-#' @param drop Logical; drop dimensions of size 1?
-#' @param ... Ignored.
-#' @return An array of dimension \code{length(i) × length(j) × length(k) × length(l)},
-#'   dropped if \code{drop=TRUE}.
-#'
-#' @export
 setMethod(
   f = "[",
   signature = signature(x="H5NeuroVec", i="numeric", j="numeric", drop="ANY"),
   definition = function(x, i, j, k, l, ..., drop=TRUE) {
-    i <- as.numeric(i)
-    j <- as.numeric(j)
+    # Provide defaults if missing
+    if (missing(i)) i <- seq_len(dim(x)[1])
+    if (missing(j)) j <- seq_len(dim(x)[2])
+    if (missing(k)) k <- seq_len(dim(x)[3])
+    if (missing(l)) l <- seq_len(dim(x)[4])
 
-    if (missing(k)) {
-      k <- seq_len(dim(x)[3])
-    }
-    if (missing(l)) {
-      l <- seq_len(dim(x)[4])
+    # If *any* of i, j, k, l is empty => result is an empty array
+    #   e.g. shape [ length(i), length(j), length(k), length(l)] with one dimension = 0
+    if (!length(i) || !length(j) || !length(k) || !length(l)) {
+      # Build an empty array. The dimension that’s length-0
+      # remains 0 in the result.
+      out_dim <- c(length(i), length(j), length(k), length(l))
+      out_arr <- array(numeric(0), dim=out_dim)
+      if (drop) out_arr <- drop(out_arr)
+      return(out_arr)
     }
 
+    # Otherwise do normal bounding-box approach
+    # -------------------------------------------------------------
+    i <- as.numeric(i); j <- as.numeric(j); k <- as.numeric(k); l <- as.numeric(l)
+
+    # Basic range checks
     dims_x <- dim(x)
-    if (any(i<1|i>dims_x[1]) || any(j<1|j>dims_x[2]) ||
-        any(k<1|k>dims_x[3]) || any(l<1|l>dims_x[4])) {
+    if (any(i < 1 | i > dims_x[1]) ||
+        any(j < 1 | j > dims_x[2]) ||
+        any(k < 1 | k > dims_x[3]) ||
+        any(l < 1 | l > dims_x[4])) {
       stop("Subscript out of range in H5NeuroVec dimensions.")
     }
 
@@ -314,9 +314,9 @@ setMethod(
     loc_l <- l_off[idx_l]
 
     sub_lin_idx <- loc_i +
-      (loc_j-1)* subdimI +
-      (loc_k-1)* subdimI*subdimJ +
-      (loc_l-1)* subdimI*subdimJ*subdimK
+      (loc_j - 1)* subdimI +
+      (loc_k - 1)* subdimI*subdimJ +
+      (loc_l - 1)* subdimI*subdimJ*subdimK
 
     out_vals <- subvol_vec[sub_lin_idx]
 
@@ -455,6 +455,8 @@ to_nih5_vec <- function(vec,
 
   # 1) Coerce to DenseNeuroVec
   vec <- as(vec, "DenseNeuroVec")
+
+  chunk_dim <- pmin(chunk_dim, dim(vec))
 
   # 2) Check compression
   assert_that(compression >= 0 && compression <= 9)

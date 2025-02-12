@@ -53,7 +53,7 @@ H5NeuroVol <- function(file_name) {
 #' \code{(x,y,z)} coordinates, reads the minimal bounding box from HDF5 once,
 #' and extracts the requested values in the correct order.
 #'
-#' @param x A \code{\link{H5NeuroVol}} object.
+#' @param x An \code{\link{H5NeuroVol}} object.
 #' @param i A numeric vector of linear voxel indices (1-based).
 #'
 #' @return A numeric vector of length \code{length(i)} containing the voxel values
@@ -64,32 +64,44 @@ setMethod(
   f = "linear_access",
   signature = signature(x="H5NeuroVol", i="numeric"),
   definition = function(x, i) {
-    # 1) Convert linear -> (x,y,z)
+
+    # 1) Check range
+    n_vox <- prod(dim(x))  # total number of voxels in 3D
+    if (any(i < 1 | i > n_vox)) {
+      stop("Some linear indices are out of range 1..", n_vox)
+    }
+    # If you also want an error if i==0 is found, the above condition will catch it.
+
+    # 2) If i is empty => return empty
+    if (length(i) == 0) {
+      return(numeric(0))
+    }
+
+    # 3) Convert linear -> (x,y,z)
     coords <- arrayInd(i, dim(x))  # Nx3
 
-    # 2) bounding box
+    # 4) bounding box
     minx <- min(coords[,1]); maxx <- max(coords[,1])
     miny <- min(coords[,2]); maxy <- max(coords[,2])
     minz <- min(coords[,3]); maxz <- max(coords[,3])
 
-    # 3) Read that bounding box
-    # Adjust path if needed ("/data/elements" vs "/data"). We'll assume "/data/elements".
+    # 5) Read that bounding box from the dataset
     dset <- x@h5obj[["data/elements"]]
     subvol <- dset[minx:maxx, miny:maxy, minz:maxz, drop=FALSE]
+    # shape => (maxx - minx + 1) x (maxy - miny + 1) x (maxz - minz + 1)
 
-    # 4) Offset coords for subvol indexing
+    # 6) Offset coords to index subvol
     off_coords <- cbind(coords[,1] - minx + 1,
                         coords[,2] - miny + 1,
                         coords[,3] - minz + 1)
 
-    # 5) Gather values
+    # 7) Gather values
     n <- nrow(coords)
     out_vals <- numeric(n)
     for (k in seq_len(n)) {
-      cx <- off_coords[k,1]
-      cy <- off_coords[k,2]
-      cz <- off_coords[k,3]
-      out_vals[k] <- subvol[cx, cy, cz]
+      out_vals[k] <- subvol[ off_coords[k,1],
+                             off_coords[k,2],
+                             off_coords[k,3] ]
     }
     out_vals
   }
@@ -100,53 +112,86 @@ setMethod(
   f = "linear_access",
   signature = signature(x="H5NeuroVol", i="integer"),
   definition = function(x, i) {
-    callGeneric(x, as.numeric(i))
+    callGeneric(x, as.numeric(i))  # passes off to the numeric method above
   }
 )
 
-#' Subset a 3D H5NeuroVol via bounding box (vectorized indexing)
+
+
+#' 3D bracket subsetting for H5NeuroVol (handles partial arguments)
 #'
 #' @description
-#' Handles calls like \code{x[i, j, k]} where \code{i,j,k} are numeric vectors (potentially
-#' non-contiguous). Reads the minimal bounding box from HDF5 in one go, then picks out
-#' the requested values in correct order (without triple nested loops in R).
+#' Allows \code{h5vol[i, j, k]} where each of \code{i,j,k} may be missing.
+#' Missing arguments default to the entire range in that dimension.
+#' Zero-length arguments immediately yield an empty array of the correct shape.
 #'
-#' @param x A \code{\link{H5NeuroVol}} object (3D).
-#' @param i Numeric indices for dimension 1.
-#' @param j Numeric indices for dimension 2.
-#' @param k Numeric indices for dimension 3.
-#' @param drop Logical; if TRUE, drops dimensions of size 1.
-#' @param ... Ignored.
+#' @param x An \code{H5NeuroVol} instance
+#' @param i,j,k Numeric (or integer) index vectors for each dimension. If missing,
+#'   we take the full range in that dimension.
+#' @param drop Logical: whether to drop dimensions of size 1. Default \code{TRUE}.
+#' @param ... Unused
 #'
-#' @return An \code{array} of size \code{length(i) × length(j) × length(k)}, or fewer
-#'   dimensions if \code{drop=TRUE}.
+#' @return A numeric \code{array} of shape \code{c(length(i), length(j), length(k))},
+#'   or fewer dims if \code{drop=TRUE}.
 #'
 #' @export
 setMethod(
   f = "[",
-  signature = signature(x="H5NeuroVol", i="numeric", j="numeric", drop="ANY"),
+  signature = signature(x="H5NeuroVol"),
   definition = function(x, i, j, k, ..., drop=TRUE) {
-    # Convert i,j,k
+
+    # 1) Determine dimension of the underlying volume
+    dimx <- dim(x)  # c(X, Y, Z)
+    if (length(dimx) != 3) {
+      stop("H5NeuroVol is not 3D? Found dim=", paste(dimx, collapse="x"))
+    }
+
+    # 2) If i, j, k are missing, default them
+    if (missing(i)) {
+      i <- seq_len(dimx[1])
+    }
+    if (missing(j)) {
+      j <- seq_len(dimx[2])
+    }
+    if (missing(k)) {
+      k <- seq_len(dimx[3])
+    }
+
+    # Convert to numeric in case user gave integer
     i <- as.numeric(i)
     j <- as.numeric(j)
     k <- as.numeric(k)
 
-    # Basic bounds
-    dimx <- dim(x)
-    if (any(i<1 | i>dimx[1]) || any(j<1|j>dimx[2]) || any(k<1|k>dimx[3])) {
-      stop("Subscript out of range for H5NeuroVol dims.")
+    # 3) If any index has length=0 => return an empty array right away
+    if (length(i)==0 || length(j)==0 || length(k)==0) {
+      outdim <- c(length(i), length(j), length(k))
+      empty_arr <- array(numeric(0), dim=outdim)
+      if (drop) empty_arr <- drop(empty_arr)
+      return(empty_arr)
     }
 
-    # bounding box
-    minI <- min(i); maxI <- max(i)
-    minJ <- min(j); maxJ <- max(j)
-    minK <- min(k); maxK <- max(k)
+    # 4) Check out-of-range
+    if (min(i)<1 || max(i)>dimx[1]) {
+      stop("Subscript 'i' out of range for dimension 1")
+    }
+    if (min(j)<1 || max(j)>dimx[2]) {
+      stop("Subscript 'j' out of range for dimension 2")
+    }
+    if (min(k)<1 || max(k)>dimx[3]) {
+      stop("Subscript 'k' out of range for dimension 3")
+    }
 
-    # read bounding box
-    dset <- x@h5obj[["data/elements"]]
+    # 5) Determine bounding box
+    minI <- floor(min(i)); maxI <- ceiling(max(i))
+    minJ <- floor(min(j)); maxJ <- ceiling(max(j))
+    minK <- floor(min(k)); maxK <- ceiling(max(k))
+
+    # 6) Read the bounding box from the dataset
+    dset   <- x@h5obj[["data/elements"]]
     subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, drop=FALSE]
+    # shape => c((maxI-minI+1), (maxJ-minJ+1), (maxK-minK+1))
 
-    # offsets
+    # 7) We then re-map i,j,k into local sub-box coords
     i_off <- i - minI + 1
     j_off <- j - minJ + 1
     k_off <- k - minK + 1
@@ -154,31 +199,32 @@ setMethod(
     subdimI <- maxI - minI + 1
     subdimJ <- maxJ - minJ + 1
 
-    # result shape
-    nI <- length(i)
-    nJ <- length(j)
-    nK <- length(k)
-    out_dim <- c(nI, nJ, nK)
+    # We'll build the output array
+    out_dim <- c(length(i), length(j), length(k))
+    out_vals <- numeric(prod(out_dim))
 
-    # flatten subvol
+    # Flatten subvol
     subvol_vec <- as.vector(subvol)
 
-    # build linear indices
-    N <- nI * nJ * nK
-    ix_i <- rep(seq_len(nI), times=nJ*nK)
-    ix_j <- rep(rep(seq_len(nJ), each=nI), times=nK)
-    ix_k <- rep(seq_len(nK), each=nI*nJ)
+    # Build a systematic index
+    N  <- length(i) * length(j) * length(k)
+    ix_i <- rep(seq_along(i), times = length(j)*length(k))
+    ix_j <- rep(rep(seq_along(j), each=length(i)), times=length(k))
+    ix_k <- rep(seq_along(k), each = length(i)*length(j))
 
     loc_i <- i_off[ix_i]
     loc_j <- j_off[ix_j]
     loc_k <- k_off[ix_k]
 
+    # local 3D => linear index in subvol
     sub_lin_idx <- loc_i +
       (loc_j-1)* subdimI +
       (loc_k-1)* subdimI * subdimJ
 
     out_vals <- subvol_vec[sub_lin_idx]
-    arr_out <- array(out_vals, dim=out_dim)
+    arr_out  <- array(out_vals, dim=out_dim)
+
+    # 8) drop dims if requested
     if (drop) {
       arr_out <- drop(arr_out)
     }

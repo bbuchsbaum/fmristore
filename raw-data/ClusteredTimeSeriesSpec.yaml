@@ -1,0 +1,342 @@
+# Brain Time-Series HDF5 File Format (Extended Final Version)
+# Supports:
+#  - Full cluster-based data (voxel-level)
+#  - Summaries per cluster (summary-only or combined)
+#  - NIfTI-like header
+#  - Binary mask, cluster map, voxel coordinates
+#  - Global cluster metadata
+#  - Multiple scans, each with optional full data and/or summary data
+#  - "summary_only" attribute in /scans to signal if only summary data is present
+
+root:
+  # 1) NIfTI-like Header Group
+  header:
+    sizeof_hdr: int32               # Must be 348
+    data_type: str[10]              # Optional/unused
+    db_name: str[18]                # Optional/unused
+    extents: int32                  # Optional/unused
+    session_error: int16            # Optional/unused
+    regular: char                   # Optional/unused
+    dim_info: uint8                 # Slice ordering
+    dim:
+      - int16                       # dim[0]: # of dimensions, typically 4
+      - int16                       # dim[1]: X dimension
+      - int16                       # dim[2]: Y dimension
+      - int16                       # dim[3]: Z dimension
+      - int16                       # dim[4]: # of time points
+      - int16                       # dim[5] : Unused
+      - int16                       # dim[6] : Unused
+      - int16                       # dim[7] : Unused
+    intent_p1: float32              # For certain NIfTI codes
+    intent_p2: float32
+    intent_p3: float32
+    intent_code: int16
+    datatype: int16                 # E.g. 16 => float32
+    bitpix: int16                   # bits per voxel => 32 for float32
+    slice_start: int16
+    pixdim:
+      - float32                     # pixdim[0]: Unused
+      - float32                     # pixdim[1]: voxel width (x spacing)
+      - float32                     # pixdim[2]: voxel height (y spacing)
+      - float32                     # pixdim[3]: voxel depth (z spacing)
+      - float32                     # pixdim[4]: TR (time dimension spacing)
+      - float32                     # pixdim[5]: Unused
+      - float32                     # pixdim[6]: Unused
+      - float32                     # pixdim[7]: Unused
+    vox_offset: float32
+    scl_slope: float32
+    scl_inter: float32
+    slice_end: int16
+    slice_code: uint8
+    xyzt_units: uint8
+    cal_max: float32
+    cal_min: float32
+    slice_duration: float32
+    toffset: float32
+    glmax: int32
+    glmin: int32
+    descrip: str[80]
+    aux_file: str[24]
+    qform_code: int16
+    sform_code: int16
+    quatern_b: float32
+    quatern_c: float32
+    quatern_d: float32
+    qoffset_x: float32
+    qoffset_y: float32
+    qoffset_z: float32
+    srow_x:
+      - float32
+      - float32
+      - float32
+      - float32
+    srow_y:
+      - float32
+      - float32
+      - float32
+      - float32
+    srow_z:
+      - float32
+      - float32
+      - float32
+      - float32
+    intent_name: str[16]
+    magic: str[4]
+    notes:
+      - "This NIfTI-like header group may contain the standard 348-byte fields plus extras."
+      - "dim, pixdim, datatype, etc., align with typical NIfTI usage."
+
+  # 2) Binary Mask Dataset
+  mask:
+    path: "/mask"
+    datatype: uint8
+    dimensions:
+      - dim[1]
+      - dim[2]
+      - dim[3]
+    description: "3D binary volume (0 or 1) indicating valid voxels."
+
+  # 3) Cluster Map Dataset
+  cluster_map:
+    path: "/cluster_map"
+    datatype: int32
+    dimensions:
+      - number_of_nonzero_voxels
+    description: "1D array of cluster IDs for each non-zero voxel in the mask."
+
+  # 4) Voxel Coordinates
+  voxel_coords:
+    path: "/voxel_coords"
+    datatype: int32
+    dimensions:
+      - number_of_nonzero_voxels
+      - 3
+    description: "Coordinates (x,y,z) for each voxel in mask, aligned with cluster_map ordering."
+
+  # 5) Global Clusters Group
+  clusters:
+    path: "/clusters"
+    datasets:
+      - name: "cluster_ids"
+        datatype: int32
+        dimensions:
+          - number_of_clusters
+        data: [1, 2, 3, ...]
+        description: "Unique cluster IDs present in cluster_map."
+      - name: "cluster_meta"
+        datatype: compound
+        dimensions:
+          - number_of_clusters
+        fields:
+          - name: "cluster_id"
+            datatype: int32
+          - name: "description"
+            datatype: str
+          # Additional fields can be appended
+        data:
+          - cluster_id: 1
+            description: "Cluster One"
+          - cluster_id: 2
+            description: "Cluster Two"
+        description: "Metadata for each cluster, e.g., ID, label, etc."
+    notes:
+      - "cluster_ids array enumerates all possible IDs found in cluster_map."
+      - "cluster_meta can store descriptions or other fields about each cluster."
+
+  # 6) Scans Group (Contains all time-series data)
+  scans:
+    path: "/scans"
+    attributes:
+      summary_only: bool
+      # If summary_only=true, we do not store /clusters sub-groups for each scan
+      # or the user may still store them but typically we skip them.
+      # If summary_only=false, the file may contain the full voxel-level data, optionally plus summary data.
+
+    groups:
+      - name: "<scan_name>"
+        # Example: "run1", "run2", etc.
+        metadata:
+          subject_id: str
+          task: str
+          run_length: int32
+          TR: float32
+          session: str
+          # Additional custom fields possible
+        notes:
+          - "Scan-level metadata stored in a /metadata group or inline as needed."
+
+        # (A) Full Voxel-Level Data (Optional)
+        # Only present if summary_only=false, or if user wants both full + summary
+        clusters:
+          path: "/scans/<scan_name>/clusters"
+          datasets:
+            - name: "cluster_<cluster_id>"
+              datatype: float32
+              dimensions:
+                - number_of_voxels_in_this_cluster
+                - run_length
+              compression: gzip
+              description: "Full voxel-level data: shape [nVoxInCluster, nTime]."
+
+        # (B) Summary Data (Optional)
+        # If summary_only=true or user wants both, we may store a single dataset or multiple.
+        clusters_summary:
+          path: "/scans/<scan_name>/clusters_summary"
+          # Option 1: Single dataset named "summary_data" with shape [nTime, nClusters], each column is a cluster
+          datasets:
+            - name: "summary_data"
+              datatype: float32
+              dimensions:
+                - run_length
+                - number_of_clusters
+              compression: gzip
+              description: "Summary time-series for each cluster: shape [nTime, nClusters]."
+              notes:
+                - "This can represent e.g. mean signal in each cluster over time."
+                - "Column ordering can match 'cluster_ids' or a separate ordering."
+              # Option 2: Alternatively store multiple summary metrics in a single 3D dataset [nTime, nClusters, nMetrics]
+              # or store multiple datasets. But for a single-labeled approach, [nTime, nClusters] is typical.
+
+        notes:
+          - "Within each scan, we can store 'clusters' for full voxel-level data, 'clusters_summary' for summary data, or both."
+          - "If 'summary_only' is true, we typically omit 'clusters' sub-group and only have 'clusters_summary'."
+          - "If 'summary_only' is false, we usually have the voxel-level 'clusters' group, possibly plus the summary group."
+
+  # End of top-level 'root'
+  notes:
+    - "This extended format merges the original cluster-based time-series plus an optional summary approach."
+    - "Global 'summary_only' attribute in '/scans' indicates if the file omits the full data and only has summary data."
+    - "One can still store both sets if 'summary_only' = false."
+
+example:
+  root:
+    header:
+      sizeof_hdr: 348
+      dim: [4, 64, 64, 32, 120, 1, 1, 1]
+      pixdim: [0.0, 3.0, 3.0, 4.0, 2.0, 0.0, 0.0, 0.0]
+      intent_code: 0
+      datatype: 16
+      bitpix: 32
+      slice_start: 0
+      # ... (More NIfTI fields can appear if desired)
+    mask:
+      path: "/mask"
+      datatype: uint8
+      dimensions: [64,64,32]
+    cluster_map:
+      path: "/cluster_map"
+      datatype: int32
+      dimensions: [number_of_nonzero_voxels]
+    voxel_coords:
+      path: "/voxel_coords"
+      datatype: int32
+      dimensions: [number_of_nonzero_voxels, 3]
+    clusters:
+      path: "/clusters"
+      datasets:
+        - name: "cluster_ids"
+          datatype: int32
+          dimensions: [5]
+          data: [1, 2, 3, 4, 5]
+        - name: "cluster_meta"
+          datatype: compound
+          dimensions: [5]
+          fields:
+            - name: "cluster_id"
+              datatype: int32
+            - name: "description"
+              datatype: str
+          data:
+            - cluster_id: 1
+              description: "Occipital ROI"
+            - cluster_id: 2
+              description: "Temporal ROI"
+            - cluster_id: 3
+              description: "Parietal ROI"
+            - cluster_id: 4
+              description: "Frontal ROI"
+            - cluster_id: 5
+              description: "Cerebellum ROI"
+    scans:
+      path: "/scans"
+      attributes:
+        summary_only: false
+      groups:
+        - name: "run1"
+          metadata:
+            subject_id: "SUBJ01"
+            task: "visual"
+            run_length: 120
+            TR: 2.0
+            session: "sessA"
+          clusters:
+            path: "/scans/run1/clusters"
+            datasets:
+              - name: "cluster_1"
+                datatype: float32
+                dimensions: [1234, 120]
+                compression: gzip
+              - name: "cluster_2"
+                datatype: float32
+                dimensions: [1120, 120]
+                compression: gzip
+              - name: "cluster_3"
+                datatype: float32
+                dimensions: [1600, 120]
+                compression: gzip
+              - name: "cluster_4"
+                datatype: float32
+                dimensions: [980, 120]
+                compression: gzip
+              - name: "cluster_5"
+                datatype: float32
+                dimensions: [770, 120]
+                compression: gzip
+          clusters_summary:
+            path: "/scans/run1/clusters_summary"
+            datasets:
+              - name: "summary_data"
+                datatype: float32
+                dimensions: [120, 5]
+                compression: gzip
+                description: "Mean time-series for each of 5 clusters, shape [120,5]."
+        - name: "run2"
+          metadata:
+            subject_id: "SUBJ01"
+            task: "visual"
+            run_length: 120
+            TR: 2.0
+            session: "sessB"
+          clusters:
+            path: "/scans/run2/clusters"
+            datasets:
+              - name: "cluster_1"
+                datatype: float32
+                dimensions: [1250, 120]
+                compression: gzip
+              - name: "cluster_2"
+                datatype: float32
+                dimensions: [1100, 120]
+                compression: gzip
+              - name: "cluster_3"
+                datatype: float32
+                dimensions: [1580, 120]
+                compression: gzip
+              - name: "cluster_4"
+                datatype: float32
+                dimensions: [970, 120]
+                compression: gzip
+              - name: "cluster_5"
+                datatype: float32
+                dimensions: [800, 120]
+                compression: gzip
+          clusters_summary:
+            path: "/scans/run2/clusters_summary"
+            datasets:
+              - name: "summary_data"
+                datatype: float32
+                dimensions: [120, 5]
+                compression: gzip
+                description: "Mean time-series for each of 5 clusters."
+
+      # Add more runs as needed

@@ -42,41 +42,75 @@ NULL
 #' @return Either an \code{\link{H5ReducedClusteredVecSeq}} or an \code{\link{H5ClusteredVecSeq}}.
 #'
 #' @export
-read_clustered_dataset <- function(file, scan_names=NULL, prefer_reduced=FALSE) {
+read_clustered_dataset <- function(file, scan_names = NULL, prefer_reduced = FALSE) {
+  # 1) Open HDF5 file if 'file' is a character path
   if (is.character(file)) {
-    file <- hdf5r::H5File$new(file, mode="r")
+    file <- hdf5r::H5File$new(file, mode = "r")
   }
 
-  # 1) Parse /header
-  hdr_dim <- file$read("header/dim")  # c(4, X, Y, Z, nTimes, 1,1,1)
-  dims3d  <- hdr_dim[2:4]
+  ## 2) Read the header group data
+  #    "header/dim" => a 1D dataset of length 8, e.g. c(4, X, Y, Z, nTimes, 1,1,1)
+  hdr_dim <- file[["header/dim"]][]
+  if (length(hdr_dim) != 8) {
+    stop("Unexpected 'dim' dataset shape: should be length 8.")
+  }
+  # We assume 'hdr_dim' = [4, X, Y, Z, nTimes, 1, 1, 1]
+  dims_3d <- hdr_dim[2:4]
   nTimes  <- hdr_dim[5]
 
-  pixdim  <- file$read("header/pixdim")
+  # "header/pixdim" => also length 8, e.g. c(0, dx, dy, dz, TR, 0,0,0)
+  pixdim <- file[["header/pixdim"]][]
+  if (length(pixdim) != 8) {
+    stop("Unexpected 'pixdim' dataset shape: should be length 8.")
+  }
+
+  # Spacing = dx, dy, dz
   spacing <- pixdim[2:4]
 
-  # 2) Build mask
-  mask_arr <- file$read("mask")
-  spc      <- NeuroSpace(dim=dims3d, spacing=spacing)
+  ## 3) Read the 3D mask => /mask
+  # shape: (X, Y, Z)
+  mask_arr <- file[["mask"]][]
+  if (!all(dim(mask_arr) == dims_3d)) {
+    stop("Mismatch between 'mask' shape and 'header/dim' 3D portion.")
+  }
+  spc <- NeuroSpace(dim = dims_3d, spacing = spacing)
   mask_vol <- LogicalNeuroVol(as.logical(mask_arr), spc)
 
-  # 3) cluster_map, voxel_coords
-  cluster_map <- file$read("cluster_map")
-  tmp         <- file$read("voxel_coords")  # optional, if needed
+  ## 4) cluster_map => /cluster_map
+  # shape: (nVox) 1D
+  cluster_map <- file[["cluster_map"]][]
+  nVox <- sum(mask_vol)
 
-  # 4) Global /clusters => cluster_ids, cluster_meta
-  clus_grp     <- file$get("clusters")
-  cluster_ids  <- clus_grp$read("cluster_ids")
+  if (length(cluster_map) != nVox) {
+    stop("Length of 'cluster_map' does not match the number of TRUE voxels in 'mask'.")
+  }
+
+  ## 5) voxel_coords => /voxel_coords
+  # shape: (nVox, 3)
+  voxel_coords <- file[["voxel_coords"]][, ]
+  if (!all(dim(voxel_coords) == c(nVox, 3))) {
+    stop("Shape of 'voxel_coords' is not [nVox, 3].")
+  }
+
+  ## 6) The '/clusters' group => cluster_ids + optional cluster_meta
+  clus_grp <- file[["clusters"]]
+  if (is.null(clus_grp)) {
+    stop("File is missing the '/clusters' group.")
+  }
+  cluster_ids <- clus_grp[["cluster_ids"]][]
+  # cluster_ids is 1D, length == number_of_active_clusters_in_the_data
+  # possibly not the same as 1:10 but the actual set in the data
+
+  # cluster_metadata => stored in /clusters/cluster_meta if present
   cluster_metadata <- data.frame()
-
   if ("cluster_meta" %in% names(clus_grp)) {
-    meta_grp <- clus_grp$get("cluster_meta")
-    fields   <- meta_grp$names()
+    meta_grp <- clus_grp[["cluster_meta"]]
+    fields   <- names(meta_grp)
     meta_list <- list()
     for (f in fields) {
-      meta_list[[f]] <- meta_grp$read(f)
+      meta_list[[f]] <- meta_grp[[f]][]  # read entire dataset
     }
-    # if consistent length => as.data.frame
+    # If all have the same length, coerce to data frame
     lens <- sapply(meta_list, length)
     if (length(unique(lens)) == 1) {
       cluster_metadata <- as.data.frame(meta_list)
@@ -85,48 +119,69 @@ read_clustered_dataset <- function(file, scan_names=NULL, prefer_reduced=FALSE) 
     }
   }
 
+  # Optionally build a label_map if 'cluster_id' and 'description' columns exist
   label_map <- NULL
   if ("cluster_id" %in% names(cluster_metadata) &&
       "description" %in% names(cluster_metadata)) {
-    ids  <- cluster_metadata$cluster_id
-    desc <- cluster_metadata$description
+    # associate each cluster_id with a textual description
+    ids  <- cluster_metadata[["cluster_id"]]
+    desc <- cluster_metadata[["description"]]
     label_map <- setNames(as.list(ids), desc)
   }
+
+  # Construct the ClusteredNeuroVol
   cVol <- ClusteredNeuroVol(mask_vol, cluster_map, label_map)
 
-  # 5) /scans => attribute summary_only => bool
-  scans_grp <- file$get("scans")
-  sum_attr  <- scans_grp$attr_open("summary_only")$read()
-  sum_attr  <- isTRUE(sum_attr)
+  ## 7) The '/scans' group => check 'summary_only' attribute
+  scans_grp <- file[["scans"]]
+  if (is.null(scans_grp)) {
+    stop("File is missing the '/scans' group.")
+  }
+  # The hdf5r recommended way to get an attribute is via h5attr()
+  sum_attr <- h5attr(scans_grp, "summary_only")
+  summary_only <- isTRUE(sum_attr)
 
-  all_scans <- scans_grp$names()
+  # all scan subgroups in /scans
+  all_scans <- names(scans_grp)
+  # user might specify a subset
   if (is.null(scan_names)) {
     scan_names <- all_scans
   } else {
-    missing <- setdiff(scan_names, all_scans)
-    if (length(missing)) {
-      stop("Some requested scans not found: ", paste(missing, collapse=","))
+    missing_scans <- setdiff(scan_names, all_scans)
+    if (length(missing_scans) > 0) {
+      stop("Some requested scans not found: ", paste(missing_scans, collapse = ", "))
     }
   }
 
-  # read metadata for each scan
+  ## 8) For each scan, read the "metadata" group
+  #    We'll store that in out_scan_md[[scanName]]
   out_scan_md <- list()
   for (scn in scan_names) {
-    sgrp <- scans_grp$get(scn)
-    mg   <- sgrp$get("metadata")
-    flds <- mg$names()
-    s_meta <- list()
-    for (ff in flds) {
-      s_meta[[ff]] <- mg$read(ff)
+    sgrp <- scans_grp[[scn]]
+    if (is.null(sgrp)) {
+      stop("Scan subgroup not found: ", scn)
     }
-    out_scan_md[[scn]] <- s_meta
+    mg <- sgrp[["metadata"]]
+    if (is.null(mg)) {
+      # No metadata group => we can store an empty list
+      out_scan_md[[scn]] <- list()
+    } else {
+      flds <- names(mg)
+      s_meta <- list()
+      for (ff in flds) {
+        s_meta[[ff]] <- mg[[ff]][]
+      }
+      out_scan_md[[scn]] <- s_meta
+    }
   }
 
-  # Decision logic
-  # Case A: sum_attr=TRUE => definitely H5Reduced
-  # Case B: sum_attr=FALSE => build H5Clustered or maybe reduced if prefer_reduced=TRUE
-  if (sum_attr) {
-    # summary_only => H5Reduced
+  ## 9) Decide on what type of object to return
+  #    If summary_only => return H5ReducedClusteredVecSeq
+  #    Otherwise => H5ClusteredVecSeq
+  #    But if (prefer_reduced) and summary data is present => do that.
+
+  if (summary_only) {
+    # summary_only => definitely H5Reduced
     rseq <- new("H5ReducedClusteredVecSeq",
                 obj              = file,
                 scan_names       = scan_names,
@@ -139,10 +194,11 @@ read_clustered_dataset <- function(file, scan_names=NULL, prefer_reduced=FALSE) 
                 n_time           = rep(nTimes, length(scan_names)),
                 space            = spc)
     return(rseq)
+
   } else {
-    # summary_only=FALSE => full data available
+    # summary_only=FALSE => we wrote full voxel-level data
+    # If user set prefer_reduced=TRUE, check if we actually have /clusters_summary for each scan
     if (prefer_reduced) {
-      # check if each scan has clusters_summary/summary_data
       can_reduced <- TRUE
       for (scn in scan_names) {
         scn_path <- paste0("/scans/", scn, "/clusters_summary")
@@ -152,7 +208,7 @@ read_clustered_dataset <- function(file, scan_names=NULL, prefer_reduced=FALSE) 
         }
       }
       if (can_reduced) {
-        # build H5Reduced
+        # We can build an H5ReducedClusteredVecSeq
         rseq <- new("H5ReducedClusteredVecSeq",
                     obj              = file,
                     scan_names       = scan_names,
@@ -166,10 +222,10 @@ read_clustered_dataset <- function(file, scan_names=NULL, prefer_reduced=FALSE) 
                     space            = spc)
         return(rseq)
       } else {
-        message("Reduced summary data not found for all scans; falling back to full data.")
+        message("Reduced summary data not found for all scans; returning full data object.")
       }
     }
-    # fallback => build H5ClusteredVecSeq
+    # Fallback => full data => H5ClusteredVecSeq
     cseq <- new("H5ClusteredVecSeq",
                 obj              = file,
                 scan_names       = scan_names,
@@ -181,7 +237,6 @@ read_clustered_dataset <- function(file, scan_names=NULL, prefer_reduced=FALSE) 
     return(cseq)
   }
 }
-
 #' Write a cluster-based time-series dataset to an HDF5 file
 #'
 #' @description
@@ -224,11 +279,10 @@ write_clustered_dataset <- function(file,
                                     cluster_metadata = NULL,
                                     summary_only    = FALSE,
                                     compression     = 4,
-                                    chunk_size      = 1024)
-{
+                                    chunk_size      = 1024) {
   newly_opened <- FALSE
   if (is.character(file)) {
-    file <- hdf5r::H5File$new(file, mode="w")
+    file <- hdf5r::H5File$new(file, mode = "w")
     newly_opened <- TRUE
   }
 
@@ -238,170 +292,168 @@ write_clustered_dataset <- function(file,
             inherits(mask, "LogicalNeuroVol"),
             inherits(clusters, "ClusteredNeuroVol"))
 
-  # Decide # timepoints
+  # Decide on number of timepoints
   if (!summary_only) {
-    # Using NeuroVec => check consistent time dimension
+    # For full NeuroVecs, ensure all have the same 4th dimension
     nTimes_each <- sapply(vecs, function(v) dim(v)[4])
     if (length(unique(nTimes_each)) != 1) {
       stop("All NeuroVec objects must share the same number of timepoints.")
     }
     nTimes <- nTimes_each[1]
   } else {
-    # Summaries => [nTime, nClusters]
+    # For summaries: each summary matrix must have the same number of rows (timepoints)
     rowCounts <- sapply(vecs, nrow)
     if (length(unique(rowCounts)) != 1) {
-      stop("All summary matrices must share the same # of rows (timepoints).")
+      stop("All summary matrices must share the same number of rows (timepoints).")
     }
     nTimes <- rowCounts[1]
   }
 
-  # 1) Write minimal NIfTI-like header
+  ## 1) Write a minimal NIfTI-like header in group "header"
   hdr_grp <- file$create_group("header")
   dims_3d <- dim(mask)
   hdr_dim <- c(4L, dims_3d, nTimes, 1L, 1L, 1L)
-  hdr_grp$create_dataset(
-    "dim",
-    dims  = 8,
-    dtype = hdf5r::h5types$H5T_NATIVE_INT16
-  )$write(hdr_dim)
+  hdr_dim_arr <- array(hdr_dim, dim = c(8))
+  # Instead of using a non-existent create_attribute(), assign the dataset:
+  hdr_grp[["dim"]] <- hdr_dim_arr
 
   sp <- space(mask)
-  # If user metadata for first scan has "TR", use it; else default 2.0
-  pixdim <- c(
-    0,
-    sp@spacing[1],
-    sp@spacing[2],
-    sp@spacing[3],
-    scan_metadata[[1]]$TR %||% 2.0,
-    0, 0, 0
-  )
-  hdr_grp$create_dataset(
-    "pixdim",
-    dims  = 8,
-    dtype = hdf5r::h5types$H5T_NATIVE_FLOAT
-  )$write(as.numeric(pixdim))
+  # Use the TR value from the first scan’s metadata (or use a default)
+  pixdim <- c(0,
+              sp@spacing[1],
+              sp@spacing[2],
+              sp@spacing[3],
+              scan_metadata[[1]]$TR,
+              0, 0, 0)
+  hdr_grp[["pixdim"]] <- pixdim
 
-  # 2) /mask => [X,Y,Z]
+  ## 2) Write the mask dataset (/mask)
   mask_arr <- as.array(mask)
-  file$create_dataset(
+  dset <- file$create_dataset(
     "mask",
-    dims  = dims_3d,
+    robj = mask_arr@.Data,
     dtype = hdf5r::h5types$H5T_NATIVE_UINT8
-  )$write(as.integer(mask_arr))
+  )
+  dset[,,] <- mask_arr
 
-  # 3) /cluster_map => length sum(mask)
+  ## 3) Write the cluster map (/cluster_map)
   nVox <- sum(mask)
-  file$create_dataset(
+  dset <- file$create_dataset(
     "cluster_map",
     dims  = nVox,
     dtype = hdf5r::h5types$H5T_NATIVE_INT32
-  )$write(as.integer(clusters@clusters))
+  )
+  dset[] <- clusters@clusters
 
-  # 4) /voxel_coords => [nVox, 3]
-  vox_coords <- which(mask, arr.ind=TRUE)
-  file$create_dataset(
+  ## 4) Write voxel coordinates (/voxel_coords)
+  vox_coords <- which(mask, arr.ind = TRUE)
+  dset <- file$create_dataset(
     "voxel_coords",
     dims  = c(nVox, 3),
     dtype = hdf5r::h5types$H5T_NATIVE_INT32
-  )$write(vox_coords)
+  )
+  dset[,] <- vox_coords
 
-  # 5) /clusters => cluster_ids + optional metadata
-  clus_grp    <- file$create_group("clusters")
+  ## 5) Write cluster IDs and (optionally) cluster metadata in group "/clusters"
+  clus_grp <- file$create_group("clusters")
   cluster_ids <- sort(unique(clusters@clusters))
-  clus_grp$create_dataset(
+  dset <- clus_grp$create_dataset(
     "cluster_ids",
     dims  = length(cluster_ids),
     dtype = hdf5r::h5types$H5T_NATIVE_INT32
-  )$write(as.integer(cluster_ids))
+  )
+  dset[] <- cluster_ids
 
   if (!is.null(cluster_metadata)) {
     meta_grp <- clus_grp$create_group("cluster_meta")
     if (is.data.frame(cluster_metadata)) {
       for (coln in names(cluster_metadata)) {
         dat <- cluster_metadata[[coln]]
-        meta_grp$create_dataset(
+        dset <- meta_grp$create_dataset(
           coln,
           dims  = length(dat),
           dtype = guess_h5_type(dat)
-        )$write(dat)
+        )
+        dset[] <- dat
       }
     } else if (is.list(cluster_metadata)) {
       for (fld in names(cluster_metadata)) {
         dat <- cluster_metadata[[fld]]
-        meta_grp$create_dataset(
+        dset <- meta_grp$create_dataset(
           fld,
           dims  = length(dat),
           dtype = guess_h5_type(dat)
-        )$write(dat)
+        )
+        dset[] <- dat
       }
     }
   }
 
-  # 6) /scans => summary_only attribute
+  ## 6) Create the "scans" group and assign the "summary_only" attribute
   scans_grp <- file$create_group("scans")
-  scans_grp$create_attribute(
-    "summary_only",
-    space = hdf5r::H5S$new(dims=1),
-    dtype = hdf5r::h5types$H5T_NATIVE_HBOOL
-  )$write(as.logical(summary_only))
+  h5attr(scans_grp, "summary_only") <- as.logical(summary_only)
 
-  # 7) Write each scan
+  ## 7) Write each scan’s data and metadata
   for (i in seq_along(vecs)) {
-    sname   <- scan_names[i]
+    sname <- scan_names[i]
     scn_grp <- scans_grp$create_group(sname)
 
-    # /scans/<scan_name>/metadata
+    ## Write scan metadata into /scans/<scan_name>/metadata
     meta_subgrp <- scn_grp$create_group("metadata")
-    smeta       <- scan_metadata[[i]]
+    smeta <- scan_metadata[[i]]
     for (fld in names(smeta)) {
       dat <- smeta[[fld]]
-      meta_subgrp$create_dataset(
+      dset <- meta_subgrp$create_dataset(
         fld,
         dims  = length(dat),
         dtype = guess_h5_type(dat)
-      )$write(dat)
+      )
+      dset[] <- dat
     }
 
     if (!summary_only) {
-      # Full voxel-level data => /clusters
+      ## For full voxel-level data: write into /scans/<scan_name>/clusters
       cl_subgrp <- scn_grp$create_group("clusters")
-      # build [nVox, nTimes]
-      mat_data <- as.matrix(vecs[[i]])[mask, ]  # => [nVox, nTimes]
+      # Extract data as a matrix [nVox, nTimes] (only for voxels in mask)
+      mat_data <- as.matrix(vecs[[i]])[mask, ]
       for (cid in cluster_ids) {
-        idx   <- which(clusters@clusters == cid)
-        cdata <- mat_data[idx, , drop=FALSE]
+        idx <- which(clusters@clusters == cid)
+        cdata <- mat_data[idx, , drop = FALSE]
         dname <- paste0("cluster_", cid)
         chunk_dims <- c(min(nrow(cdata), chunk_size),
-                        min(nTimes,      chunk_size))
-        cl_subgrp$create_dataset(
+                        min(nTimes, chunk_size))
+        dset <- cl_subgrp$create_dataset(
           dname,
-          dims      = c(nrow(cdata), nTimes),
-          dtype     = hdf5r::h5types$H5T_NATIVE_FLOAT,
-          chunk     = chunk_dims,
-          gzip_level= compression
-        )$write(cdata)
+          dims = c(nrow(cdata), nTimes),
+          dtype = hdf5r::h5types$H5T_NATIVE_FLOAT,
+          chunk = chunk_dims,
+          gzip_level = compression
+        )
+        dset[] <- cdata
       }
     } else {
-      # Summary-only => single dataset summary_data => shape [nTime, nClusters]
+      ## For summary-only data: each scan is stored as a single dataset "summary_data"
+      ## in group /scans/<scan_name>/clusters_summary. Its shape must be [nTime, nClusters].
       cl_subgrp <- scn_grp$create_group("clusters_summary")
-      summ_mat  <- vecs[[i]]  # user gave [nTime, nClusters]
+      summ_mat <- vecs[[i]]  # user–provided summary matrix
+      # IMPORTANT: The number of columns in summ_mat must equal the number of active clusters
       if (ncol(summ_mat) != length(cluster_ids)) {
-        stop("Summary matrix has # of columns != # of cluster IDs!")
+        stop("Summary matrix has number of columns not equal to number of cluster IDs!")
       }
       chunk_dims <- c(min(nrow(summ_mat), chunk_size),
                       min(ncol(summ_mat), chunk_size))
       dset <- cl_subgrp$create_dataset(
         "summary_data",
-        dims       = dim(summ_mat),
-        dtype      = hdf5r::h5types$H5T_NATIVE_FLOAT,
-        chunk      = chunk_dims,
+        dims = dim(summ_mat),
+        dtype = hdf5r::h5types$H5T_NATIVE_FLOAT,
+        chunk = chunk_dims,
         gzip_level = compression
       )
-      dset$write(summ_mat)
+      dset[,] <- summ_mat
     }
   }
 
-  # 8) Return appropriate object
+  ## 8) Return the appropriate object
   out_clust_md <- data.frame()
   if (!is.null(cluster_metadata)) {
     if (is.data.frame(cluster_metadata)) {
@@ -413,29 +465,27 @@ write_clustered_dataset <- function(file,
 
   sp <- space(mask)
   if (!summary_only) {
-    # Return H5ClusteredVecSeq
     obj <- new("H5ClusteredVecSeq",
-               obj              = file,
-               scan_names       = scan_names,
-               mask             = mask,
-               clusters         = clusters,
-               scan_metadata    = scan_metadata,
+               obj = file,
+               scan_names = scan_names,
+               mask = mask,
+               clusters = clusters,
+               scan_metadata = scan_metadata,
                cluster_metadata = out_clust_md,
-               space            = sp)
+               space = sp)
     return(obj)
   } else {
-    # Return H5ReducedClusteredVecSeq
     obj <- new("H5ReducedClusteredVecSeq",
-               obj              = file,
-               scan_names       = scan_names,
-               mask             = mask,
-               clusters         = clusters,
-               scan_metadata    = scan_metadata,
+               obj = file,
+               scan_names = scan_names,
+               mask = mask,
+               clusters = clusters,
+               scan_metadata = scan_metadata,
                cluster_metadata = out_clust_md,
-               cluster_names    = character(length(cluster_ids)),
-               cluster_ids      = as.integer(cluster_ids),
-               n_time           = rep(nTimes, length(scan_names)),
-               space            = sp)
+               cluster_names = character(length(cluster_ids)),
+               cluster_ids = as.integer(cluster_ids),
+               n_time = rep(nTimes, length(scan_names)),
+               space = sp)
     return(obj)
   }
 }
@@ -445,7 +495,7 @@ write_clustered_dataset <- function(file,
 #' @keywords internal
 guess_h5_type <- function(x) {
   if (is.character(x)) {
-    return(hdf5r::h5types$H5T_STRING)
+    return(hdf5r::H5T_STRING$new(size = Inf))
   } else if (is.integer(x)) {
     return(hdf5r::h5types$H5T_NATIVE_INT32)
   } else if (is.numeric(x)) {

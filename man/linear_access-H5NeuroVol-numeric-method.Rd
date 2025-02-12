@@ -7,7 +7,7 @@
 \S4method{linear_access}{H5NeuroVol,numeric}(x, i)
 }
 \arguments{
-\item{x}{A \code{\link{H5NeuroVol}} object.}
+\item{x}{An \code{\link{H5NeuroVol}} object.}
 
 \item{i}{A numeric vector of linear voxel indices (1-based).}
 }

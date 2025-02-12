@@ -138,3 +138,82 @@ setMethod(
   }
 )
 
+#' Pretty Printer for H5ReducedClusteredVecSeq
+#'
+#' @description
+#' Displays a concise but nicely formatted summary of an \code{H5ReducedClusteredVecSeq},
+#' including information about the scans, clusters, and data location.
+#'
+#' @importFrom crayon bold blue silver yellow green magenta
+#' @importFrom methods show
+#' @export
+setMethod(
+  f = "show",
+  signature = "H5ReducedClusteredVecSeq",
+  definition = function(object) {
+    # Header line
+    cat("\n", crayon::bold(crayon::blue("H5ReducedClusteredVecSeq")), "\n", sep="")
+
+    # Basic info block: how many scans, how many clusters, shape, etc.
+    n_scans <- length(object@scan_names)
+    n_clusters <- length(object@cluster_ids)
+
+    cat(crayon::silver("────────────────────────────────────────\n"))
+    cat(crayon::bold(crayon::yellow("Basic Info")), "\n")
+    cat(crayon::silver(" • "), crayon::green("Number of scans:"), n_scans, "\n")
+    cat(crayon::silver(" • "), crayon::green("Number of clusters:"), n_clusters, "\n")
+
+    # Time points (n_time slot is a numeric vector specifying time lengths per scan)
+    # If all scans share the same time length, we show one number; otherwise we show a range
+    if (length(unique(object@n_time)) == 1) {
+      cat(crayon::silver(" • "), crayon::green("Time points per scan:"),
+          unique(object@n_time), "\n")
+    } else {
+      cat(crayon::silver(" • "), crayon::green("Time points (per scan):"),
+          paste(object@n_time, collapse=", "), "\n")
+    }
+
+    # Possibly show a short listing of scan names
+    cat(crayon::bold("\nScan Names"), ":\n")
+    if (n_scans <= 5) {
+      cat("  ", paste(object@scan_names, collapse=", "), "\n")
+    } else {
+      preview <- paste(head(object@scan_names, 5), collapse=", ")
+      remainder <- n_scans - 5
+      cat("  ", preview, crayon::silver(paste0("... (", remainder, " more)")), "\n")
+    }
+
+    # Show a snippet about the cluster metadata
+    cat(crayon::bold("\nCluster Metadata"), ":\n")
+    if (nrow(object@cluster_metadata) == 0) {
+      cat(crayon::silver("  No cluster_metadata table.\n"))
+    } else {
+      md_cols <- names(object@cluster_metadata)
+      cat(crayon::silver("  Columns:"), paste(md_cols, collapse=", "), "\n")
+      # Optionally show first few rows
+      cat(crayon::silver("  #rows="), nrow(object@cluster_metadata), "\n")
+    }
+
+    # Show if we have cluster_names
+    if (length(object@cluster_names) > 0) {
+      cat(crayon::bold("\nCluster Names"), ":\n")
+      if (length(object@cluster_names) <= 6) {
+        cat("  ", paste(object@cluster_names, collapse=", "), "\n")
+      } else {
+        preview <- paste(head(object@cluster_names, 6), collapse=", ")
+        cat("  ", preview, " ...\n")
+      }
+    }
+
+    # Show info about the underlying file
+    cat(crayon::bold("\nStorage:"), "\n")
+    if (object@obj$is_valid) {
+      cat(crayon::silver(" • "), "HDF5 file: ", crayon::magenta(object@obj$get_filename()), "\n", sep="")
+    } else {
+      cat(crayon::silver(" • "), "HDF5 file is ", crayon::red("CLOSED"), "\n", sep="")
+    }
+
+    cat("\n")
+  }
+)
+

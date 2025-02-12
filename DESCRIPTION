@@ -15,6 +15,7 @@ Imports:
     Matrix,
     hdf5r,
     assertthat,
+    crayon,
     neuroim2 (>= 0.8.0)
 Suggests:
     testthat,

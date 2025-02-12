@@ -365,3 +365,152 @@ setMethod(
     result_mat
   }
 )
+
+
+
+#' Pretty Printer for H5ClusteredVec
+#'
+#' @description
+#' Displays a concise, nicely formatted summary of an \code{H5ClusteredVec},
+#' including the scan name, the cluster assignments, and the underlying
+#' HDF5 file information.
+#'
+#' @importFrom crayon bold blue silver yellow green magenta red
+#' @importFrom methods show
+#' @export
+setMethod(
+  f = "show",
+  signature = "H5ClusteredVec",
+  definition = function(object) {
+    # Heading
+    cat("\n", crayon::bold(crayon::blue("H5ClusteredVec")), "\n", sep = "")
+
+    # Basic line
+    cat(crayon::silver("────────────────────────────────────────\n"))
+    cat(crayon::bold(crayon::yellow("Basic Info")), "\n")
+
+    # 1) Scan Name
+    cat(crayon::silver(" • "), crayon::green("Scan Name:"), object@scan_name, "\n")
+
+    # 2) Active voxels in mask
+    n_vox <- sum(object@mask)
+    cat(crayon::silver(" • "), crayon::green("Active voxels in mask:"), n_vox, "\n")
+
+    # 3) Number of clusters
+    cluster_ids <- unique(object@clusters@clusters)
+    n_clusters  <- length(cluster_ids)
+    cat(crayon::silver(" • "), crayon::green("Number of clusters:"), n_clusters, "\n")
+
+    # 4) Attempt to read a time dimension
+    #    We'll assume each cluster dataset is shaped (nVoxInCluster, nTime)
+    #    so we fetch the second dimension from the first cluster (if we can).
+    n_time <- NA  # if file is closed or no clusters, remains NA
+    if (object@obj$is_valid) {
+      if (n_clusters > 0) {
+        grp_path <- file.path("/scans", object@scan_name, "clusters")
+        first_cid <- cluster_ids[1]  # pick the first cluster
+        ds_name   <- paste0("cluster_", first_cid)
+
+        # Safely attempt to read dims
+        ds <- object@obj$get(file.path(grp_path, ds_name))
+        if (!is.null(ds)) {
+          dims_ds <- ds$dims()
+          # dims_ds is e.g. [nVoxInThisCluster, nTime]
+          if (length(dims_ds) == 2) {
+            n_time <- dims_ds[2]
+          }
+          ds$close()
+        }
+      }
+    }
+
+    # Print # time points (if known)
+    if (!is.na(n_time)) {
+      cat(crayon::silver(" • "), crayon::green("Time points:"), n_time, "\n")
+    } else {
+      cat(crayon::silver(" • "), crayon::green("Time points:"), "Unknown (file closed or no clusters)\n")
+    }
+
+    # Storage Info
+    cat(crayon::bold("\nStorage:"), "\n")
+    if (object@obj$is_valid) {
+      cat(crayon::silver(" • "), "HDF5 file: ",
+          crayon::magenta(object@obj$get_filename()), "\n", sep="")
+    } else {
+      cat(crayon::silver(" • "), "HDF5 file is ",
+          crayon::red("CLOSED"), "\n", sep="")
+    }
+
+    cat("\n")
+  }
+)
+
+
+#' Pretty Printer for H5ClusteredVecSeq
+#'
+#' @description
+#' Displays a concise, nicely formatted summary of an \code{H5ClusteredVecSeq},
+#' including the number of scans, the cluster assignments, and the underlying
+#' HDF5 file information.
+#'
+#' @importFrom crayon bold blue silver yellow green magenta red
+#' @importFrom methods show
+#' @export
+setMethod(
+  f = "show",
+  signature = "H5ClusteredVecSeq",
+  definition = function(object) {
+    # Header line
+    cat("\n", crayon::bold(crayon::blue("H5ClusteredVecSeq")), "\n", sep="")
+
+    # Basic Info section
+    cat(crayon::silver("────────────────────────────────────────\n"))
+    cat(crayon::bold(crayon::yellow("Basic Info")), "\n")
+
+    # Number of scans
+    n_scans <- length(object@scan_names)
+    cat(crayon::silver(" • "), crayon::green("Number of scans:"), n_scans, "\n")
+
+    # Number of active voxels from the mask
+    n_vox <- sum(object@mask)
+    cat(crayon::silver(" • "), crayon::green("Active voxels in mask:"), n_vox, "\n")
+
+    # Number of clusters (based on the cluster assignment vector)
+    # If object@clusters is a ClusteredNeuroVol, it has @clusters slot
+    # storing the per-voxel cluster assignment:
+    n_clusters <- length(unique(object@clusters@clusters))
+    cat(crayon::silver(" • "), crayon::green("Number of clusters:"), n_clusters, "\n")
+
+    # Possibly show partial scan names
+    cat(crayon::bold("\nScan Names:"), "\n")
+    if (n_scans <= 5) {
+      cat("  ", paste(object@scan_names, collapse=", "), "\n")
+    } else {
+      preview <- paste(utils::head(object@scan_names, 5), collapse=", ")
+      remainder <- n_scans - 5
+      cat("  ", preview, crayon::silver(paste0(" ... (", remainder, " more)")), "\n")
+    }
+
+    # Show snippet of cluster metadata columns
+    cat(crayon::bold("\nCluster Metadata:"), "\n")
+    if (nrow(object@cluster_metadata) == 0) {
+      cat(crayon::silver("  No cluster_metadata table.\n"))
+    } else {
+      md_cols <- names(object@cluster_metadata)
+      cat(crayon::silver("  Columns:"), paste(md_cols, collapse=", "), "\n")
+      cat(crayon::silver("  #rows="), nrow(object@cluster_metadata), "\n")
+    }
+
+    # Show HDF5 storage info
+    cat(crayon::bold("\nStorage:"), "\n")
+    if (object@obj$is_valid) {
+      cat(crayon::silver(" • "), "HDF5 file: ",
+          crayon::magenta(object@obj$get_filename()), "\n", sep="")
+    } else {
+      cat(crayon::silver(" • "), "HDF5 file is ",
+          crayon::red("CLOSED"), "\n", sep="")
+    }
+
+    cat("\n")
+  }
+)
