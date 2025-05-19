@@ -88,6 +88,39 @@ ensure_mask <- function(mask, h5, space, path = "/mask") {
   return(m)
 }
 
+#' Assert that an HDF5 path exists
+#'
+#' Checks for the existence of a dataset or group within an HDF5 file and
+#' stops with a clear error message if the path is missing.
+#'
+#' @param h5 A valid open `H5File` object.
+#' @param path The path to check within the file.
+#' @param desc Optional description of what the path represents. This is used
+#'   in the error message.
+#' @return Invisible `TRUE` if the path exists.
+#' @keywords internal
+assert_h5_path <- function(h5, path, desc = "Path") {
+  if (!inherits(h5, "H5File") || !h5$is_valid) {
+    stop("assert_h5_path: 'h5' must be a valid and open H5File object.")
+  }
+  if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
+    stop("assert_h5_path: 'path' must be a single, non-empty character string.")
+  }
+
+  exists <- tryCatch(h5$exists(path), error = function(e) {
+    stop(sprintf("assert_h5_path: Error checking existence of '%s': %s",
+                 path, conditionMessage(e)))
+  })
+
+  if (!isTRUE(exists)) {
+    fname <- tryCatch(h5$get_filename(), error = function(e) "<unknown>")
+    stop(sprintf("%s not found at path '%s' in HDF5 file '%s'",
+                 desc, path, fname))
+  }
+
+  invisible(TRUE)
+}
+
 #' Read data from an HDF5 dataset
 #'
 #' Safely reads data from a specified dataset path within an HDF5 file,
@@ -152,12 +185,63 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
   }, finally = {
     # Ensure dataset handle is closed
     if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-      try(dset$close(), silent = TRUE)
+      close_h5_safely(dset)
     }
   })
 
   return(data)
-} 
+}
+
+#' Convenience wrapper to read a subset from an HDF5 dataset
+#'
+#' Opens the requested dataset, reads a subset using \code{$read()} and then
+#' ensures the dataset handle is closed.  This avoids repetitive open/read/close
+#' boilerplate when subsetting.
+#'
+#' @param h5 An open \code{H5File} handle.
+#' @param path Character string path to the dataset within \code{h5}.
+#' @param index Optional list of indices passed to \code{$read()} via the
+#'   \code{index} argument.
+#' @return The subset of data read from the dataset.
+#' @keywords internal
+h5_read_subset <- function(h5, path, index = NULL) {
+  if (!inherits(h5, "H5File") || !h5$is_valid) {
+    stop("h5_read_subset: 'h5' must be a valid open H5File object.")
+  }
+  if (!is.character(path) || length(path) != 1L || !nzchar(path)) {
+    stop("h5_read_subset: 'path' must be a single, non-empty character string.")
+  }
+
+  if (!h5$exists(path)) {
+    stop(sprintf("h5_read_subset: dataset '%s' not found in file '%s'",
+                 path, h5$get_filename()))
+  }
+
+  dset <- NULL
+  out <- NULL
+  tryCatch({
+    dset <- h5[[path]]
+    read_args <- list()
+    if (!is.null(index)) {
+      if (!is.list(index)) {
+        stop("h5_read_subset: 'index' must be a list when provided.")
+      }
+      read_args$index <- index
+    }
+    if (length(read_args) == 0L) {
+      out <- dset$read()
+    } else {
+      out <- do.call(dset$read, read_args)
+    }
+  }, error = function(e) {
+    stop(sprintf("h5_read_subset: failed reading subset from '%s': %s",
+                 path, conditionMessage(e)))
+  }, finally = {
+    fmristore:::close_h5_safely(dset)
+  })
+
+  out
+}
 
 # -------------------------------------------------------------------------
 # Helpers

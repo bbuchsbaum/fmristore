@@ -39,8 +39,8 @@ NULL
   
   # Local on.exit for HDF5 handles opened within this helper
   on.exit({
-    if (!is.null(vox_coords_dset) && inherits(vox_coords_dset, "H5D") && vox_coords_dset$is_valid) try(vox_coords_dset$close(), silent = TRUE)
-    if (!is.null(mask_dset_val) && inherits(mask_dset_val, "H5D") && mask_dset_val$is_valid) try(mask_dset_val$close(), silent = TRUE)
+    if (!is.null(vox_coords_dset) && inherits(vox_coords_dset, "H5D") && vox_coords_dset$is_valid) close_h5_safely(vox_coords_dset)
+    if (!is.null(mask_dset_val) && inherits(mask_dset_val, "H5D") && mask_dset_val$is_valid) close_h5_safely(mask_dset_val)
   }, add = TRUE) # Add to existing on.exit handlers if any in calling scope (though this is top-level helper)
 
   tryCatch({
@@ -289,12 +289,12 @@ H5ClusterExperiment <- function(file,
   opened_datasets <- list() 
   on.exit({
     # Close datasets first
-    lapply(opened_datasets, function(ds) if (!is.null(ds) && is(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE))
+    lapply(opened_datasets, function(ds) if (!is.null(ds) && is(ds, "H5D") && ds$is_valid) close_h5_safely(ds))
     # Then close groups
-    lapply(opened_groups, function(grp) if (!is.null(grp) && is(grp, "H5Group") && grp$is_valid) try(grp$close(), silent = TRUE))
+    lapply(opened_groups, function(grp) if (!is.null(grp) && is(grp, "H5Group") && grp$is_valid) close_h5_safely(grp))
     # Finally, close file if opened here and not keeping open
     if (opened_here && !keep_handle_open && !is.null(h5obj) && h5obj$is_valid) {
-         try(h5obj$close(), silent = TRUE)
+         close_h5_safely(h5obj)
     }
     # TODO: Add finalizer registration if keep_handle_open is TRUE
   }, add = TRUE)
@@ -513,7 +513,7 @@ H5ClusterExperiment <- function(file,
          }, finally = {
              # Close the group if we opened it just for the check
              if (!is.null(summary_group) && inherits(summary_group, "H5Group") && summary_group$is_valid) {
-                 try(summary_group$close(), silent = TRUE)
+                 close_h5_safely(summary_group)
              }
          })
     }
