@@ -207,7 +207,7 @@ test_that("LabeledVolumeSet partial usage + memoise=TRUE", {
   write_labeled_vec(vec=vec, mask=mask_vol, labels=labels, file=tmpfile, compression=1)
 
   # read it with memoise=TRUE
-  lvs <- read_labeled_vec(tmpfile, memoise=TRUE)
+  lvs <- read_labeled_vec(tmpfile)
   expect_s4_class(lvs, "LabeledVolumeSet")
 
   # check subsetting => [i,j,k,l]

@@ -260,7 +260,6 @@ test_that("warning for mismatched summary_only attribute", {
   expect_s4_class(exp_warn@runs[[1]], "H5ClusteredRunFull")
 })
 
-})
 
 test_that("dataset cluster_meta is read as data.frame", {
   tf <- tempfile(fileext = ".h5")
