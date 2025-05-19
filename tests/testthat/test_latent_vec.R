@@ -654,25 +654,25 @@ create_minimal_latent_h5 <- function(file_path, X=5,Y=5,Z=3,Tval=10,Kval=4) {
     
     # /header group and datasets
     hdr_grp <- h5f$create_group("header")
-    hdr_grp$create_dataset("dim", data = as.integer(c(4, X, Y, Z, Tval, 1, 1, 1)), dtype = h5types$H5T_NATIVE_INT32)
+    hdr_grp$create_dataset("dim", robj = as.integer(c(4, X, Y, Z, Tval, 1, 1, 1)), dtype = h5types$H5T_NATIVE_INT32)
     # Add other minimal required header elements if validate_latent_file checks them before structure
-    hdr_grp$create_dataset("pixdim", data = as.double(c(0,1,1,1,1,0,0,0)), dtype = h5types$H5T_NATIVE_DOUBLE) # Example
+    hdr_grp$create_dataset("pixdim", robj = as.double(c(0,1,1,1,1,0,0,0)), dtype = h5types$H5T_NATIVE_DOUBLE) # Example
     
     # /mask dataset
     mask_data <- array(1L, dim = c(X,Y,Z)) # All 1s for simplicity
-    h5f$create_dataset("mask", data = mask_data, dtype = h5types$H5T_NATIVE_INT32)
+    h5f$create_dataset("mask", robj = mask_data, dtype = h5types$H5T_NATIVE_INT32)
     nVox_mask <- sum(mask_data)
 
     # /basis group and dataset (dense for simplicity)
     basis_grp <- h5f$create_group("basis")
     basis_mat_data <- matrix(runif(Kval * nVox_mask), nrow = Kval, ncol = nVox_mask)
-    basis_grp$create_dataset("basis_matrix", data = basis_mat_data, dtype = h5types$H5T_NATIVE_DOUBLE)
+    basis_grp$create_dataset("basis_matrix", robj = basis_mat_data, dtype = h5types$H5T_NATIVE_DOUBLE)
 
     # /scans group and a scan with embedding
     scans_grp <- h5f$create_group("scans")
     scan1_grp <- scans_grp$create_group("scan1")
     embedding_data <- matrix(runif(Tval * Kval), nrow = Tval, ncol = Kval)
-    scan1_grp$create_dataset("embedding", data = embedding_data, dtype = h5types$H5T_NATIVE_DOUBLE)
+    scan1_grp$create_dataset("embedding", robj = embedding_data, dtype = h5types$H5T_NATIVE_DOUBLE)
     
     # Optional: /offset
     # h5f$create_dataset("offset", data = rnorm(nVox_mask), dtype = h5types$H5T_NATIVE_DOUBLE)
@@ -763,21 +763,21 @@ test_that("validate_latent_file detects /header/dim not starting with 4", {
     h5f <- H5File$new(temp_h5_malformed, mode = "w")
     hdr_grp <- h5f$create_group("header")
     # Malformed dim: starts with 3 instead of 4
-    hdr_grp$create_dataset("dim", data = as.integer(c(3, X, Y, Z, Tval, 1, 1, 1)), dtype = h5types$H5T_NATIVE_INT32)
-    hdr_grp$create_dataset("pixdim", data = as.double(c(0,1,1,1,1,0,0,0)), dtype = h5types$H5T_NATIVE_DOUBLE)
+    hdr_grp$create_dataset("dim", robj = as.integer(c(3, X, Y, Z, Tval, 1, 1, 1)), dtype = h5types$H5T_NATIVE_INT32)
+    hdr_grp$create_dataset("pixdim", robj = as.double(c(0,1,1,1,1,0,0,0)), dtype = h5types$H5T_NATIVE_DOUBLE)
     
     mask_data <- array(1L, dim = c(X,Y,Z))
-    h5f$create_dataset("mask", data = mask_data, dtype = h5types$H5T_NATIVE_INT32)
+    h5f$create_dataset("mask", robj = mask_data, dtype = h5types$H5T_NATIVE_INT32)
     nVox_mask <- sum(mask_data)
 
     basis_grp <- h5f$create_group("basis")
     basis_mat_data <- matrix(runif(Kval * nVox_mask), nrow = Kval, ncol = nVox_mask)
-    basis_grp$create_dataset("basis_matrix", data = basis_mat_data, dtype = h5types$H5T_NATIVE_DOUBLE)
+    basis_grp$create_dataset("basis_matrix", robj = basis_mat_data, dtype = h5types$H5T_NATIVE_DOUBLE)
 
     scans_grp <- h5f$create_group("scans")
     scan1_grp <- scans_grp$create_group("scan1")
     embedding_data <- matrix(runif(Tval * Kval), nrow = Tval, ncol = Kval)
-    scan1_grp$create_dataset("embedding", data = embedding_data, dtype = h5types$H5T_NATIVE_DOUBLE)
+    scan1_grp$create_dataset("embedding", robj = embedding_data, dtype = h5types$H5T_NATIVE_DOUBLE)
   }, finally = {
     if (!is.null(h5f) && h5f$is_valid) h5f$close_all()
   })
