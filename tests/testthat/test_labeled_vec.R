@@ -419,3 +419,26 @@ test_that("local_tempfile path is respected", {
   expect_false(file.exists(tmp))
 })
 
+
+
+# Regression: label round-trip without /original_labels dataset
+
+test_that("labels persist without /original_labels", {
+  skip_if_not_installed("hdf5r")
+
+  toy <- make_toy_vec(nx = 2, ny = 2, nz = 1, nvol = 2)
+  vec  <- toy$vec
+  mask <- toy$mask
+  lbls <- c("cond/A", "cond B")
+
+  tmp <- withr::local_tempfile(fileext = ".h5")
+  write_labeled_vec(vec, mask, lbls, tmp)
+
+  h5 <- hdf5r::H5File$new(tmp, "r")
+  expect_false(h5$exists("/original_labels"))
+  h5$close_all()
+
+  lvs <- read_labeled_vec(tmp)
+  expect_identical(lvs@labels, lbls)
+  close(lvs)
+})

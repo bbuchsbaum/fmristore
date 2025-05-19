@@ -346,18 +346,6 @@ read_labeled_vec <- function(file_path) {
 
   # Read labels from root level
   labels_arr <- .rd_root("labels")
-  
-  # Check if we have sanitized labels (original_labels dataset exists)
-  original_labels <- .rd_root("original_labels")
-  has_sanitized_labels <- !is.null(original_labels)
-  
-  # Use the original labels if available, otherwise use the standard labels
-  if (has_sanitized_labels) {
-    # Keep track of the sanitized->original mapping
-    safe_labels <- labels_arr
-    labels_arr <- original_labels
-  }
-
   if (is.null(labels_arr)) {
       stop("Mandatory '/labels' dataset not found at file root.")
   }
@@ -434,8 +422,6 @@ read_labeled_vec <- function(file_path) {
   load_env$mask_idx <- which(as.logical(mask_arr)==TRUE) # Ensure logical mask used
   load_env$dims     <- c(X,Y,Z)
   load_env$space    <- spc
-  # Store original labels 
-  load_env$original_labels <- labels_arr
   # Remove sanitize function from environment
   # load_env$sanitize_label <- function(lbl) { gsub("[^A-Za-z0-9_.-]", "_", lbl) }
 
@@ -541,7 +527,6 @@ setMethod(
     # 1) Figure out any missing dims => use full range
     dims_3d <- dim(space(x@mask))
     nVols   <- length(x@labels)
-
     # Handle missing i/j/k/l by using full ranges
     if (missing(i)) i <- seq_len(dims_3d[1])
     if (missing(j)) j <- seq_len(dims_3d[2])
