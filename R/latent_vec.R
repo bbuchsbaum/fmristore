@@ -158,6 +158,17 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
     stop(paste0("'loadings' must have ", cardinality, " rows (i.e. #non-zero in mask)"))
   }
 
+  # Ensure all numeric inputs are finite
+  if (!all(is.finite(basis))) {
+    stop("'basis' must contain only finite values")
+  }
+  if (!all(is.finite(loadings))) {
+    stop("'loadings' must contain only finite values")
+  }
+  if (length(offset) > 0 && !all(is.finite(offset))) {
+    stop("'offset' must contain only finite values")
+  }
+
   # Convert basis/loadings to Matrix objects, choosing dense/sparse based on density
   if (is.matrix(basis) && !is(basis, "Matrix")) {
       density_basis <- sum(basis != 0) / length(basis)

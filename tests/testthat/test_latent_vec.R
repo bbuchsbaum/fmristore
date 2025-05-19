@@ -251,9 +251,28 @@ test_that("LatentNeuroVec constructor validates dimensions correctly", {
                
   # Invalid: Offset length mismatch
   offset_bad_len <- rnorm(comps$nVox + 1)
-  expect_error(LatentNeuroVec(basis=comps$basis, loadings=comps$loadings, 
-                              space=comps$space, mask=comps$mask, offset=offset_bad_len), 
+  expect_error(LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
+                              space=comps$space, mask=comps$mask, offset=offset_bad_len),
                regexp="'offset' length must match number of rows in 'loadings'")
+
+  # Invalid: Non-finite values
+  basis_bad_na <- comps$basis
+  basis_bad_na[1,1] <- NA_real_
+  expect_error(LatentNeuroVec(basis=basis_bad_na, loadings=comps$loadings,
+                              space=comps$space, mask=comps$mask, offset=comps$offset),
+               regexp="basis.*finite")
+
+  loadings_bad_inf <- comps$loadings
+  loadings_bad_inf[1,1] <- Inf
+  expect_error(LatentNeuroVec(basis=comps$basis, loadings=loadings_bad_inf,
+                              space=comps$space, mask=comps$mask, offset=comps$offset),
+               regexp="loadings.*finite")
+
+  offset_bad_na2 <- comps$offset
+  offset_bad_na2[1] <- NA_real_
+  expect_error(LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
+                              space=comps$space, mask=comps$mask, offset=offset_bad_na2),
+               regexp="offset.*finite")
                
   # Invalid: Mask space mismatch
   # TODO LogicalNeuroVol constructor is not working as expected
