@@ -225,64 +225,65 @@ H5ClusterRunSummary <- function(file, scan_name,
   # --- 4. Read dataset dimensions and reconcile cluster info --- 
   final_n_time <- NA_integer_
   final_n_clusters <- NA_integer_
-  ds <- NULL
-  final_cluster_names <- cluster_names # Start with provided names
-  final_cluster_ids <- cluster_ids     # Start with provided IDs
-  
-  tryCatch({
-      ds <- h5obj[[dset_path]]
-      dset_dims <- ds$dims
-      
-      if (length(dset_dims) != 2) {
-          stop(sprintf("Summary dataset '%s' does not have 2 dimensions (found %d).", dset_path, length(dset_dims)))
-      }
-      final_n_time <- dset_dims[1]
-      final_n_clusters <- dset_dims[2]
+  final_cluster_names <- cluster_names
+  final_cluster_ids <- cluster_ids
 
-      # Reconcile cluster_names and cluster_ids
-      # ... (existing reconciliation logic, assumed to be correct)
-      # Example: if names/ids are empty, try to get from attributes or generate
-      if (length(final_cluster_names) == 0 && length(final_cluster_ids) == 0) {
-          # Attempt to read from attributes or generate
-          # This part of the logic might be more complex in the actual code
-          if (ds$attr_exists("cluster_names")) {
-              final_cluster_names <- ds$attr_read("cluster_names")
-          }
-          if (ds$attr_exists("cluster_ids")) {
-              final_cluster_ids <- ds$attr_read("cluster_ids")
-          }
-          
-          # Ensure lengths match final_n_clusters
-          if (length(final_cluster_names) > 0 && length(final_cluster_names) != final_n_clusters) {
-              stop(sprintf("Read cluster_names length (%d) mismatch with dataset columns (%d).", length(final_cluster_names), final_n_clusters))
-          }
-          if (length(final_cluster_ids) > 0 && length(final_cluster_ids) != final_n_clusters) {
-              stop(sprintf("Read cluster_ids length (%d) mismatch with dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
-          }
-          
-          if (length(final_cluster_names) == 0 && final_n_clusters > 0) {
-              final_cluster_names <- paste0("Cluster", seq_len(final_n_clusters)) # Default names
-          }
-          if (length(final_cluster_ids) == 0 && final_n_clusters > 0) {
-              # If clusters object available, try to match, otherwise generate
-              if (!is.null(clusters) && length(unique(clusters@clusters)) == final_n_clusters) {
-                  final_cluster_ids <- sort(unique(clusters@clusters)) # A plausible default
-              } else {
-                  final_cluster_ids <- seq_len(final_n_clusters) # Default IDs
-              }
-          }
+  dataset_dims <- NULL
+  dataset_attrs <- NULL
 
+  info_res <- tryCatch({
+    with_h5_dataset(h5obj, dset_path, function(ds) {
+      list(
+        dims = ds$dims,
+        names = if (ds$attr_exists("cluster_names")) ds$attr_read("cluster_names") else character(),
+        ids   = if (ds$attr_exists("cluster_ids")) ds$attr_read("cluster_ids") else integer()
+      )
+    })
+  }, error = function(e) {
+    if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+    stop(sprintf("[H5ClusterRunSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
+  })
+
+  dataset_dims <- info_res$dims
+  if (length(dataset_dims) != 2) {
+    if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+    stop(sprintf("Summary dataset '%s' does not have 2 dimensions (found %d).", dset_path, length(dataset_dims)))
+  }
+  final_n_time <- dataset_dims[1]
+  final_n_clusters <- dataset_dims[2]
+
+  if (length(final_cluster_names) == 0 && length(final_cluster_ids) == 0) {
+    final_cluster_names <- info_res$names
+    final_cluster_ids   <- info_res$ids
+
+    if (length(final_cluster_names) > 0 && length(final_cluster_names) != final_n_clusters) {
+      stop(sprintf("Read cluster_names length (%d) mismatch with dataset columns (%d).", length(final_cluster_names), final_n_clusters))
+    }
+    if (length(final_cluster_ids) > 0 && length(final_cluster_ids) != final_n_clusters) {
+      stop(sprintf("Read cluster_ids length (%d) mismatch with dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
+    }
+
+    if (length(final_cluster_names) == 0 && final_n_clusters > 0) {
+      final_cluster_names <- paste0("Cluster", seq_len(final_n_clusters))
+    }
+    if (length(final_cluster_ids) == 0 && final_n_clusters > 0) {
+      if (!is.null(clusters) && length(unique(clusters@clusters)) == final_n_clusters) {
+        final_cluster_ids <- sort(unique(clusters@clusters))
+      } else {
+        final_cluster_ids <- seq_len(final_n_clusters)
       }
-      
-      if (length(final_cluster_names) != final_n_clusters) {
-          stop(sprintf("Final cluster_names length (%d) does not match dataset columns (%d).", length(final_cluster_names), final_n_clusters))
-      }
-      if (length(final_cluster_ids) != final_n_clusters) {
-          stop(sprintf("Final cluster_ids length (%d) does not match dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
-      }
-      if (!is.integer(final_cluster_ids)) {
-          final_cluster_ids <- as.integer(final_cluster_ids)
-      }
+    }
+  }
+
+  if (length(final_cluster_names) != final_n_clusters) {
+    stop(sprintf("Final cluster_names length (%d) does not match dataset columns (%d).", length(final_cluster_names), final_n_clusters))
+  }
+  if (length(final_cluster_ids) != final_n_clusters) {
+    stop(sprintf("Final cluster_ids length (%d) does not match dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
+  }
+  if (!is.integer(final_cluster_ids)) {
+    final_cluster_ids <- as.integer(final_cluster_ids)
+  }
 
   }, error = function(e) {
       if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds)
