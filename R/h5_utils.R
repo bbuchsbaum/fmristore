@@ -185,7 +185,7 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
   }, finally = {
     # Ensure dataset handle is closed
     if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-      try(dset$close(), silent = TRUE)
+      close_h5_safely(dset)
     }
   })
 

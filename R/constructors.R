@@ -285,11 +285,11 @@ H5ClusterRunSummary <- function(file, scan_name,
       }
 
   }, error = function(e) {
-      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE)
+      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds)
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
       stop(sprintf("[H5ClusterRunSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
   }, finally = {
-      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE)
+      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds)
   })
 
   # --- 5. Create the object ---
