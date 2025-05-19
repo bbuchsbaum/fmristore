@@ -108,9 +108,8 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             row_offsets_in_dataset <- as.integer(row_offsets_in_dataset)
 
             # Accessing obj slot from H5ClusteredArray
-            if (!x@obj$exists(dset_path)){
-                stop(sprintf("Dataset for cluster %d not found at path: %s", cid, dset_path))
-            }
+            assert_h5_path(x@obj, dset_path,
+                           sprintf("Dataset for cluster %d", cid))
             ds <- x@obj[[dset_path]]
             # Simplified on.exit handling: rely on hdf5r GC or explicit closure later
             # on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) ds$close(), add = TRUE, after = FALSE)
@@ -798,9 +797,8 @@ setMethod(
     dset_path <- file.path("/scans", x@scan_name, "clusters_summary", x@summary_dset)
 
     tryCatch({
-        if (!x@obj$exists(dset_path)) {
-            stop(sprintf("[as.matrix,H5ClusterRunSummary] Summary dataset not found at path: %s", dset_path))
-        }
+        assert_h5_path(x@obj, dset_path,
+                       "[as.matrix,H5ClusterRunSummary] Summary dataset")
         ds <- x@obj[[dset_path]]
         on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE), add = TRUE)
 
@@ -974,20 +972,10 @@ make_run_summary <- function(file_source, scan_name,
   n_clusters_in_dset <- NA_integer_
   ds <- NULL
 
-  # Check existence, catching potential HDF5 errors if path exists up to parent but not final object
-  path_exists <- tryCatch({
-      h5obj$exists(dset_path)
-  }, error = function(e) {
-      # If H5Lexists fails because the link itself is missing within an existing group,
-      # treat it as FALSE for our purpose (dataset not found)
-      # More specific error checking could be added here if needed
-      warning(sprintf("[make_run_summary] Suppressed HDF5 error during existence check for '%s': %s", dset_path, conditionMessage(e)))
-      FALSE
-  })
 
-  if (!path_exists) {
-    stop(sprintf("[make_run_summary] Summary dataset not found at expected path: %s", dset_path))
-  }
+  # Ensure the summary dataset exists
+  assert_h5_path(h5obj, dset_path,
+                 "[make_run_summary] Summary dataset")
 
   tryCatch({
       ds <- h5obj[[dset_path]]
