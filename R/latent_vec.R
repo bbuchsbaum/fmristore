@@ -620,11 +620,21 @@ setMethod(
     n_time_req <- out_dim[4]
 
     # 1. Map requested (i, j, k) coordinates to 1D indices in the full 3D space
-    coords_req_3d <- expand.grid(i, j, k) # Data frame of requested coordinates
+    #    Avoid `expand.grid(i, j, k)` which can allocate a very large
+    #    intermediate data frame.  Instead compute linear indices in chunks
+    #    with `k` as the outer loop and the i/j grid precomputed once.
     dims_space_3d <- dims_full[1:3]
-    linear_idx_3d <- coords_req_3d[,1] + 
-                     (coords_req_3d[,2]-1)*dims_space_3d[1] + 
-                     (coords_req_3d[,3]-1)*dims_space_3d[1]*dims_space_3d[2]
+    linear_idx_3d <- integer(n_vox_req)
+
+    ij_grid <- outer(i, j, function(ii, jj) ii + (jj - 1L) * dims_space_3d[1])
+    ij_step <- length(i) * length(j)
+
+    for (kk in seq_along(k)) {
+      start <- (kk - 1L) * ij_step + 1L
+      end <- kk * ij_step
+      linear_idx_3d[start:end] <-
+        ij_grid + (k[kk] - 1L) * dims_space_3d[1] * dims_space_3d[2]
+    }
     
     # 2. Map these 3D linear indices to rows in loadings/offset using the mask map
     #    `rowmap` will have 0 for out-of-mask voxels.
