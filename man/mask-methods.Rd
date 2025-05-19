@@ -4,7 +4,7 @@
 \name{mask}
 \alias{mask}
 \alias{mask,H5ClusteredArray-method}
-\alias{mask,H5ClusteredExperiment-method}
+\alias{mask,H5ClusterExperiment-method}
 \alias{mask,LatentNeuroVec-method}
 \title{Get the mask volume}
 \usage{
@@ -12,12 +12,12 @@ mask(x, ...)
 
 \S4method{mask}{H5ClusteredArray}(x)
 
-\S4method{mask}{H5ClusteredExperiment}(x)
+\S4method{mask}{H5ClusterExperiment}(x)
 
 \S4method{mask}{LatentNeuroVec}(x)
 }
 \arguments{
-\item{x}{H5ClusteredExperiment object}
+\item{x}{H5ClusterExperiment object}
 
 \item{...}{Additional arguments}
 }
@@ -47,17 +47,17 @@ if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   message("Skipping mask example for LatentNeuroVec: helper not available.")
 }
 
-# For H5ClusteredExperiment:
-if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+# For H5ClusterExperiment:
+if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-    exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+    exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
     mask_vol_exp <- mask(exp_obj)
     print(mask_vol_exp)
   }, error = function(e) {
-    message("mask example for H5ClusteredExperiment failed: ", e$message)
+    message("mask example for H5ClusterExperiment failed: ", e$message)
   }, finally = {
     if (!is.null(exp_obj)) try(close(exp_obj), silent = TRUE)
     if (!is.null(temp_exp_file) && file.exists(temp_exp_file)) {
@@ -65,22 +65,22 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
     }
   })
 } else {
-  message("Skipping mask example for H5ClusteredExperiment: helper not available.")
+  message("Skipping mask example for H5ClusterExperiment: helper not available.")
 }
 
 }
 \seealso{
 Other H5Clustered: 
-\code{\link{$,H5ClusteredExperiment-method}},
+\code{\link{$,H5ClusterExperiment-method}},
 \code{\link{H5ClusteredArray-class}},
-\code{\link{H5ClusteredExperiment}},
-\code{\link{H5ClusteredExperiment-class}},
-\code{\link{H5ClusteredRunFull-class}},
-\code{\link{H5ClusteredRunSummary-class}},
-\code{\link{[,H5ClusteredRunFull,ANY,ANY,ANY-method}},
+\code{\link{H5ClusterExperiment}},
+\code{\link{H5ClusterExperiment-class}},
+\code{\link{H5ClusterRun-class}},
+\code{\link{H5ClusterRunSummary-class}},
+\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{cluster_metadata,H5ClusteredExperiment-method}},
+\code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
 \code{\link{h5file,H5ClusteredArray-method}},
@@ -88,11 +88,11 @@ Other H5Clustered:
 \code{\link{make_run_full}()},
 \code{\link{make_run_summary}()},
 \code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusteredExperiment-method}},
-\code{\link{scan_metadata,H5ClusteredExperiment-method}},
-\code{\link{scan_names,H5ClusteredExperiment-method}},
+\code{\link{n_scans,H5ClusterExperiment-method}},
+\code{\link{scan_metadata,H5ClusterExperiment-method}},
+\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
 \code{\link{series_concat}()},
-\code{\link{show,H5ClusteredRunFull-method}}
+\code{\link{show,H5ClusterRun-method}}
 }
 \concept{H5Clustered}

@@ -55,7 +55,7 @@ Other columns will be written as part of a compound dataset.}
 Invisibly returns `NULL`. Called for its side effect of creating the HDF5 file.
 }
 \description{
-Writes neuroimaging data structured according to the H5ClusteredExperiment
+Writes neuroimaging data structured according to the H5ClusterExperiment
 specification into an HDF5 file.
 
 This function takes R objects representing the mask, cluster definitions,

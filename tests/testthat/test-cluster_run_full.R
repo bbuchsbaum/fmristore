@@ -156,13 +156,13 @@ test_that("make_run_full constructs object correctly from file path", {
   on.exit(cleanup_test_file(setup_info))
 
   # Use new constructor
-  run_full <- H5ClusteredRunFull(file = setup_info$filepath,
+  run_full <- H5ClusterRun(file = setup_info$filepath,
                                  scan_name = setup_info$scan_name,
                                  mask = setup_info$mask,
                                  clusters = setup_info$clusters,
                                  n_time = setup_info$n_time) 
   
-  expect_s4_class(run_full, "H5ClusteredRunFull")
+  expect_s4_class(run_full, "H5ClusterRun")
   expect_equal(run_full@scan_name, setup_info$scan_name)
   expect_equal(run_full@n_time, setup_info$n_time)
   expect_equal(run_full@n_voxels, sum(setup_info$mask))
@@ -188,7 +188,7 @@ test_that("make_run_full constructs object correctly from open H5File handle", {
   filepath <- h5f$get_filename()
   
   # Create the object with the new constructor
-  run_full_open <- H5ClusteredRunFull(file = filepath,
+  run_full_open <- H5ClusterRun(file = filepath,
                                      scan_name = setup_info$scan_name,
                                      mask = setup_info$mask,
                                      clusters = setup_info$clusters,
@@ -201,7 +201,7 @@ test_that("make_run_full constructs object correctly from open H5File handle", {
   }
   run_full_open@obj <- h5f  # Use our existing handle
   
-  expect_s4_class(run_full_open, "H5ClusteredRunFull")
+  expect_s4_class(run_full_open, "H5ClusterRun")
   expect_true(run_full_open@obj$is_valid)
   expect_equal(h5file(run_full_open)$get_filename(), h5f$get_filename())
   # Don't close run_full_open@obj here, as it shares the handle with h5f which is closed by on.exit
@@ -212,7 +212,7 @@ test_that("make_run_full reads n_time from HDF5 attributes if NULL", {
   on.exit(cleanup_test_file(setup_attr))
 
   # Use new constructor
-  run_attr <- H5ClusteredRunFull(file = setup_attr$filepath,
+  run_attr <- H5ClusterRun(file = setup_attr$filepath,
                                  scan_name = setup_attr$scan_name,
                                  mask = setup_attr$mask,
                                  clusters = setup_attr$clusters,
@@ -227,7 +227,7 @@ test_that("make_run_full reads n_time from HDF5 metadata dataset if NULL", {
   on.exit(cleanup_test_file(setup_meta))
 
   # Use new constructor
-  run_meta <- H5ClusteredRunFull(file = setup_meta$filepath,
+  run_meta <- H5ClusterRun(file = setup_meta$filepath,
                                  scan_name = setup_meta$scan_name,
                                  mask = setup_meta$mask,
                                  clusters = setup_meta$clusters,
@@ -243,7 +243,7 @@ test_that("make_run_full infers n_time from first cluster dataset if NULL and ot
 
   # Use new constructor
   expect_message( # Expect message about inference
-      run_infer <- H5ClusteredRunFull(file = setup_none$filepath,
+      run_infer <- H5ClusterRun(file = setup_none$filepath,
                                     scan_name = setup_none$scan_name,
                                     mask = setup_none$mask,
                                     clusters = setup_none$clusters,
@@ -266,18 +266,18 @@ test_that("make_run_full throws errors for invalid inputs", {
   bad_clusters@clusters <- bad_clusters@clusters[-1] # Mismatched length
 
   # Use new constructor for error checks
-  expect_error(H5ClusteredRunFull("nonexistent.h5", "s1", setup_info$mask, setup_info$clusters, 10), "HDF5 file does not exist") # Error from open_h5
+  expect_error(H5ClusterRun("nonexistent.h5", "s1", setup_info$mask, setup_info$clusters, 10), "HDF5 file does not exist") # Error from open_h5
   # Original tests for bad mask/cluster types are now implicitly tested by `is()` checks inside the constructor
-  # expect_error(H5ClusteredRunFull(setup_info$filepath, setup_info$scan_name, 1, setup_info$clusters, setup_info$n_time), "must be a LogicalNeuroVol")
-  # expect_error(H5ClusteredRunFull(setup_info$filepath, setup_info$scan_name, setup_info$mask, 1, setup_info$n_time), "must be a ClusteredNeuroVol")
+  # expect_error(H5ClusterRun(setup_info$filepath, setup_info$scan_name, 1, setup_info$clusters, setup_info$n_time), "must be a LogicalNeuroVol")
+  # expect_error(H5ClusterRun(setup_info$filepath, setup_info$scan_name, setup_info$mask, 1, setup_info$n_time), "must be a ClusteredNeuroVol")
   # Test dimension mismatch (uses check_same_dims)
-  expect_error(H5ClusteredRunFull(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=bad_mask, clusters=setup_info$clusters, n_time=setup_info$n_time), "Dimensions of 'mask' and 'clusters' must match")
+  expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=bad_mask, clusters=setup_info$clusters, n_time=setup_info$n_time), "Dimensions of 'mask' and 'clusters' must match")
   # Test cluster length mismatch
-  expect_error(H5ClusteredRunFull(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=setup_info$mask, clusters=bad_clusters, n_time=setup_info$n_time), "Mismatch: clusters@clusters length")
+  expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=setup_info$mask, clusters=bad_clusters, n_time=setup_info$n_time), "Mismatch: clusters@clusters length")
   # Test error if n_time cannot be determined
   setup_uninferrable <- setup_test_file_full(clear_cluster_data = TRUE)
   on.exit(cleanup_test_file(setup_uninferrable), add = TRUE)
-  expect_error(H5ClusteredRunFull(file = setup_uninferrable$filepath,
+  expect_error(H5ClusterRun(file = setup_uninferrable$filepath,
                                   scan_name = setup_uninferrable$scan_name,
                                   mask = setup_uninferrable$mask,
                                   clusters = setup_uninferrable$clusters,
@@ -290,7 +290,7 @@ test_that("make_run_full stops if n_time determined is invalid", {
   on.exit(cleanup_test_file(setup_info))
   
   # Use new constructor
-  expect_error(H5ClusteredRunFull(file = setup_info$filepath,
+  expect_error(H5ClusterRun(file = setup_info$filepath,
                                   scan_name = setup_info$scan_name,
                                   mask = setup_info$mask,
                                   clusters = setup_info$clusters,
@@ -303,7 +303,7 @@ test_that("make_run_full errors when cluster dataset has wrong dimensions", {
   on.exit(cleanup_test_file(setup_bad))
 
   expect_error(
-    H5ClusteredRunFull(file = setup_bad$filepath,
+    H5ClusterRun(file = setup_bad$filepath,
                        scan_name = setup_bad$scan_name,
                        mask = setup_bad$mask,
                        clusters = setup_bad$clusters,
@@ -319,7 +319,7 @@ test_that("series() retrieves correct voxel time series", {
   setup_info <- setup_test_file_full()
   on.exit(cleanup_test_file(setup_info))
 
-  run_full <- H5ClusteredRunFull(file = setup_info$filepath,
+  run_full <- H5ClusterRun(file = setup_info$filepath,
                                  scan_name = setup_info$scan_name,
                                  mask = setup_info$mask,
                                  clusters = setup_info$clusters,
@@ -354,7 +354,7 @@ test_that("linear_access reconstructs voxel values", {
   setup_info <- setup_test_file_full()
   on.exit(cleanup_test_file(setup_info))
 
-  run_full <- H5ClusteredRunFull(file = setup_info$filepath,
+  run_full <- H5ClusterRun(file = setup_info$filepath,
                                  scan_name = setup_info$scan_name,
                                  mask = setup_info$mask,
                                  clusters = setup_info$clusters,

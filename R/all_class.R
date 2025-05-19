@@ -396,14 +396,14 @@ setClass("LabeledVolumeSet",
 #' @importFrom hdf5r H5File
 #' @importFrom methods validObject
 #' @importClassesFrom neuroim2 LogicalNeuroVol ClusteredNeuroVol
-#' @family H5Clustered
+#' @family H5Cluster
 #'
 #' @examples
 #' # H5ClusteredArray is a virtual class and cannot be directly instantiated.
-#' # See its subclasses H5ClusteredRunFull and H5ClusteredRunSummary for examples.
+#' # See its subclasses H5ClusterRun and H5ClusterRunSummary for examples.
 #' 
 #' # You can check if an object inherits from it:
-#' # run_object <- H5ClusteredRunFull(...) # Assuming run_object is created
+#' # run_object <- H5ClusterRun(...) # Assuming run_object is created
 #' # inherits(run_object, "H5ClusteredArray") # Should return TRUE
 #'
 #' @export
@@ -452,7 +452,7 @@ setClass("H5ClusteredArray",
          },
          contains = "VIRTUAL")
 
-#' H5ClusteredRunFull Class
+#' H5ClusterRun Class
 #'
 #' @description
 #' Represents a single "run" or "scan" of full voxel-level clustered time-series data
@@ -464,10 +464,10 @@ setClass("H5ClusteredArray",
 #' @slot compress A \code{logical} indicating if compression was intended or used (metadata).
 #' Inherits slots `obj`, `mask`, `clusters`, `n_voxels` from `H5ClusteredArray`.
 #'
-#' @seealso \code{\link{H5ClusteredArray-class}}, \code{\link{H5ClusteredRunSummary-class}}
-#' @family H5Clustered
+#' @seealso \code{\link{H5ClusteredArray-class}}, \code{\link{H5ClusterRunSummary-class}}
+#' @family H5Cluster
 #' @export
-setClass("H5ClusteredRunFull",
+setClass("H5ClusterRun",
          slots = c(
              scan_name = "character",
              n_time    = "integer",
@@ -481,7 +481,7 @@ setClass("H5ClusteredRunFull",
          ),
          contains = "H5ClusteredArray")
 
-#' H5ClusteredRunSummary Class
+#' H5ClusterRunSummary Class
 #'
 #' @description
 #' Represents a single "run" or "scan" containing only *summary* time-series data
@@ -497,10 +497,10 @@ setClass("H5ClusteredRunFull",
 #' Inherits slots `obj`, `mask`, `n_voxels` from `H5ClusteredArray`.
 #' Note: The `clusters` slot inherited from `H5ClusteredArray` might be NULL or contain the map for reference, but voxel-level access methods are typically disabled/error.
 #'
-#' @seealso \code{\link{H5ClusteredArray-class}}, \code{\link{H5ClusteredRunFull-class}}
-#' @family H5Clustered
+#' @seealso \code{\link{H5ClusteredArray-class}}, \code{\link{H5ClusterRun-class}}
+#' @family H5Cluster
 #' @export
-setClass("H5ClusteredRunSummary",
+setClass("H5ClusterRunSummary",
          slots = c(
             scan_name     = "character",
             n_time        = "integer",
@@ -517,24 +517,24 @@ setClass("H5ClusteredRunSummary",
          ),
          contains = "H5ClusteredArray")
 
-#' H5ClusteredExperiment Class
+#' H5ClusterExperiment Class
 #'
 #' @description
 #' Represents a collection of clustered neuroimaging runs (scans) stored within a single HDF5 file.
-#' It acts as a container for `H5ClusteredRunFull` and/or `H5ClusteredRunSummary` objects,
+#' It acts as a container for `H5ClusterRun` and/or `H5ClusterRunSummary` objects,
 #' along with associated metadata.
 #'
 #' This class facilitates managing multiple runs that share the same mask and cluster definitions.
 #'
 #' @slot runs A `list` where each element is an object inheriting from `H5ClusteredArray`
-#'   (typically `H5ClusteredRunFull` or `H5ClusteredRunSummary`).
+#'   (typically `H5ClusterRun` or `H5ClusterRunSummary`).
 #' @slot scan_metadata A `list` containing metadata for each scan in the `runs` list.
 #' @slot cluster_metadata A `data.frame` containing metadata associated with the clusters.
 #'
-#' @seealso \code{\link{H5ClusteredRunFull-class}}, \code{\link{H5ClusteredRunSummary-class}}
-#' @family H5Clustered
+#' @seealso \code{\link{H5ClusterRun-class}}, \code{\link{H5ClusterRunSummary-class}}
+#' @family H5Cluster
 #' @export
-setClass("H5ClusteredExperiment",
+setClass("H5ClusterExperiment",
          slots = c(
              runs             = "list",
              scan_metadata    = "list",
@@ -594,7 +594,7 @@ setClass("H5ClusteredExperiment",
                         errors <- c(errors, sprintf("Run %d has a different mask object than Run 1.", i))
                     }
                     # Check clusters consistency (using identical)
-                    # Need to handle NULL case for H5ClusteredRunSummary
+                    # Need to handle NULL case for H5ClusterRunSummary
                     if (!identical(first_run@clusters, current_run@clusters)) {
                          # Allow comparison if both are NULL (summary runs might have NULL clusters)
                          if (!(is.null(first_run@clusters) && is.null(current_run@clusters))) {
@@ -609,32 +609,32 @@ setClass("H5ClusteredExperiment",
          # Does not contain H5ClusteredArray
 )
 
-#' @seealso \code{\link{H5ClusteredRunFull-class}}, \code{\link{H5ClusteredRunSummary-class}}
-#' @family H5Clustered
+#' @seealso \code{\link{H5ClusterRun-class}}, \code{\link{H5ClusterRunSummary-class}}
+#' @family H5Cluster
 #'
 #' @examples
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5ClusteredExperiment", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#'     exists("H5ClusterExperiment", where = "package:fmristore") &&
+#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'
 #'   temp_exp_file <- NULL
 #'   exp <- NULL
 #'   tryCatch({
 #'     # 1. Create an HDF5 file for an experiment containing runs
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
 #'     
 #'     # 2. Load the experiment using the constructor
-#'     exp <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     exp <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # 3. Show the experiment object
 #'     print(exp)
 #'     print(names(runs(exp))) # Show the names of the runs it loaded
 #'     
 #'   }, error = function(e) {
-#'     message("H5ClusteredExperiment example failed: ", e$message)
+#'     message("H5ClusterExperiment example failed: ", e$message)
 #'   }, finally = {
-#'     # Close H5ClusteredExperiment handle (closes underlying file)
+#'     # Close H5ClusterExperiment handle (closes underlying file)
 #'     if (!is.null(exp)) try(close(exp), silent = TRUE)
 #'     # Cleanup temporary file
 #'     if (!is.null(temp_exp_file) && file.exists(temp_exp_file)) {
@@ -642,11 +642,11 @@ setClass("H5ClusteredExperiment",
 #'     }
 #'   })
 #' } else {
-#'   message("Skipping H5ClusteredExperiment example: dependencies or helper not available.")
+#'   message("Skipping H5ClusterExperiment example: dependencies or helper not available.")
 #' }
 #'
 #' @export
-setClass("H5ClusteredExperiment",
+setClass("H5ClusterExperiment",
          slots = c(
              runs             = "list",
              scan_metadata    = "list",
@@ -706,7 +706,7 @@ setClass("H5ClusteredExperiment",
                         errors <- c(errors, sprintf("Run %d has a different mask object than Run 1.", i))
                     }
                     # Check clusters consistency (using identical)
-                    # Need to handle NULL case for H5ClusteredRunSummary
+                    # Need to handle NULL case for H5ClusterRunSummary
                     if (!identical(first_run@clusters, current_run@clusters)) {
                          # Allow comparison if both are NULL (summary runs might have NULL clusters)
                          if (!(is.null(first_run@clusters) && is.null(current_run@clusters))) {

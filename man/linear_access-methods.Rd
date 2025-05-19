@@ -4,8 +4,8 @@
 \name{linear_access-methods}
 \alias{linear_access-methods}
 \alias{linear_access}
-\alias{linear_access,H5ClusteredRunFull,numeric-method}
-\alias{linear_access,H5ClusteredRunSummary,numeric-method}
+\alias{linear_access,H5ClusterRun,numeric-method}
+\alias{linear_access,H5ClusterRunSummary,numeric-method}
 \alias{linear_access,H5NeuroVec,numeric-method}
 \alias{linear_access,H5NeuroVec,integer-method}
 \alias{linear_access,H5NeuroVol,numeric-method}
@@ -15,9 +15,9 @@
 \usage{
 linear_access(x, i, ...)
 
-\S4method{linear_access}{H5ClusteredRunFull,numeric}(x, i, ...)
+\S4method{linear_access}{H5ClusterRun,numeric}(x, i, ...)
 
-\S4method{linear_access}{H5ClusteredRunSummary,numeric}(x, i, ...)
+\S4method{linear_access}{H5ClusterRunSummary,numeric}(x, i, ...)
 
 \S4method{linear_access}{H5NeuroVec,numeric}(x, i)
 
@@ -30,7 +30,7 @@ linear_access(x, i, ...)
 \S4method{linear_access}{LatentNeuroVec,numeric}(x, i)
 }
 \arguments{
-\item{x}{An \code{H5ClusteredRunFull} object.}
+\item{x}{An \code{H5ClusterRun} object.}
 
 \item{i}{A numeric vector of 4D linear indices.}
 
@@ -52,32 +52,32 @@ numeric index that spans the entire 4D space of the object (X, Y, Z, Time).
 Refer to the documentation for \code{linear_access} in the \code{neuroim2} package
 for general details about the generic concept.
 
-Provides 4D linear access to data in an \code{H5ClusteredRunFull} object.
+Provides 4D linear access to data in an \code{H5ClusterRun} object.
 It reconstructs voxel values on the fly from the HDF5 file based on their cluster assignments.
 Values for voxels outside the mask are returned as 0.
 }
 \examples{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5ClusteredExperiment", where = "package:fmristore") &&
+    exists("H5ClusterExperiment", where = "package:fmristore") &&
     exists("linear_access", where = "package:neuroim2") &&
-    !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+    !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 
   temp_exp_file <- NULL
   exp_obj <- NULL
   run_full <- NULL
 
   tryCatch({
-    # Create a minimal H5ClusteredExperiment
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment(
+    # Create a minimal H5ClusterExperiment
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
       master_mask_dims = c(3L, 3L, 2L), # Small dimensions
       num_master_clusters = 2L,
       n_time_run1 = 4L, # For Run1_Full
       n_time_run2 = 0   # No need for Run2_Summary here
     )
-    exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+    exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
     
-    # Access the H5ClusteredRunFull object (helper creates "Run1_Full")
+    # Access the H5ClusterRun object (helper creates "Run1_Full")
     # The runs() method should give access to the list of runs
     available_runs <- runs(exp_obj)
     run_full <- available_runs[["Run1_Full"]] # Assuming helper creates this scan name
@@ -95,7 +95,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       
       if (length(indices_to_access) > 0) {
          accessed_values <- neuroim2::linear_access(run_full, indices_to_access)
-         cat("Accessed values for H5ClusteredRunFull:\n")
+         cat("Accessed values for H5ClusterRun:\n")
          print(accessed_values)
          cat("Number of values accessed:", length(accessed_values), "\n")
       } else {
@@ -106,7 +106,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     }
     
   }, error = function(e) {
-    message("linear_access example for H5ClusteredRunFull failed: ", e$message)
+    message("linear_access example for H5ClusterRun failed: ", e$message)
     if (!is.null(temp_exp_file)) message("Temporary file was: ", temp_exp_file)
   }, finally = {
     if (!is.null(exp_obj)) try(close(exp_obj), silent = TRUE)
@@ -116,24 +116,24 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     }
   })
 } else {
-  message("Skipping linear_access H5ClusteredRunFull example: dependencies/helpers not available.")
+  message("Skipping linear_access H5ClusterRun example: dependencies/helpers not available.")
 }
 }
 \seealso{
 \code{neuroim2::\link[neuroim2]{linear_access}}, specific methods like
-  \code{\link{linear_access,H5ClusteredRunFull-method}}.
+  \code{\link{linear_access,H5ClusterRun-method}}.
 
 Other H5Clustered: 
-\code{\link{$,H5ClusteredExperiment-method}},
+\code{\link{$,H5ClusterExperiment-method}},
 \code{\link{H5ClusteredArray-class}},
-\code{\link{H5ClusteredExperiment}},
-\code{\link{H5ClusteredExperiment-class}},
-\code{\link{H5ClusteredRunFull-class}},
-\code{\link{H5ClusteredRunSummary-class}},
-\code{\link{[,H5ClusteredRunFull,ANY,ANY,ANY-method}},
+\code{\link{H5ClusterExperiment}},
+\code{\link{H5ClusterExperiment-class}},
+\code{\link{H5ClusterRun-class}},
+\code{\link{H5ClusterRunSummary-class}},
+\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{cluster_metadata,H5ClusteredExperiment-method}},
+\code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
 \code{\link{h5file,H5ClusteredArray-method}},
@@ -141,24 +141,24 @@ Other H5Clustered:
 \code{\link{make_run_summary}()},
 \code{\link{mask}()},
 \code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusteredExperiment-method}},
-\code{\link{scan_metadata,H5ClusteredExperiment-method}},
-\code{\link{scan_names,H5ClusteredExperiment-method}},
+\code{\link{n_scans,H5ClusterExperiment-method}},
+\code{\link{scan_metadata,H5ClusterExperiment-method}},
+\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
 \code{\link{series_concat}()},
-\code{\link{show,H5ClusteredRunFull-method}}
+\code{\link{show,H5ClusterRun-method}}
 
 Other H5Clustered: 
-\code{\link{$,H5ClusteredExperiment-method}},
+\code{\link{$,H5ClusterExperiment-method}},
 \code{\link{H5ClusteredArray-class}},
-\code{\link{H5ClusteredExperiment}},
-\code{\link{H5ClusteredExperiment-class}},
-\code{\link{H5ClusteredRunFull-class}},
-\code{\link{H5ClusteredRunSummary-class}},
-\code{\link{[,H5ClusteredRunFull,ANY,ANY,ANY-method}},
+\code{\link{H5ClusterExperiment}},
+\code{\link{H5ClusterExperiment-class}},
+\code{\link{H5ClusterRun-class}},
+\code{\link{H5ClusterRunSummary-class}},
+\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{cluster_metadata,H5ClusteredExperiment-method}},
+\code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
 \code{\link{h5file,H5ClusteredArray-method}},
@@ -166,12 +166,12 @@ Other H5Clustered:
 \code{\link{make_run_summary}()},
 \code{\link{mask}()},
 \code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusteredExperiment-method}},
-\code{\link{scan_metadata,H5ClusteredExperiment-method}},
-\code{\link{scan_names,H5ClusteredExperiment-method}},
+\code{\link{n_scans,H5ClusterExperiment-method}},
+\code{\link{scan_metadata,H5ClusterExperiment-method}},
+\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
 \code{\link{series_concat}()},
-\code{\link{show,H5ClusteredRunFull-method}}
+\code{\link{show,H5ClusterRun-method}}
 }
 \concept{H5Clustered}
 \keyword{internal}

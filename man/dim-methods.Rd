@@ -2,10 +2,10 @@
 % Please edit documentation in R/all_generic.R, R/cluster_array.R
 \name{dim}
 \alias{dim}
-\alias{dim,H5ClusteredRunFull-method}
+\alias{dim,H5ClusterRun-method}
 \title{Get Dimensions of an Object (Methods for base R Generic)}
 \usage{
-\S4method{dim}{H5ClusteredRunFull}(x)
+\S4method{dim}{H5ClusterRun}(x)
 }
 \arguments{
 \item{x}{An object for which a `dim` method is defined.}
@@ -23,19 +23,19 @@ vector indicating the size of each dimension (e.g., X, Y, Z, Time).
 }
 \seealso{
 \code{base::\link[base]{dim}}, specific methods like
-  \code{dim,H5ClusteredRunFull-method} (if defined and exported).
+  \code{dim,H5ClusterRun-method} (if defined and exported).
 
 Other H5Clustered: 
-\code{\link{$,H5ClusteredExperiment-method}},
+\code{\link{$,H5ClusterExperiment-method}},
 \code{\link{H5ClusteredArray-class}},
-\code{\link{H5ClusteredExperiment}},
-\code{\link{H5ClusteredExperiment-class}},
-\code{\link{H5ClusteredRunFull-class}},
-\code{\link{H5ClusteredRunSummary-class}},
-\code{\link{[,H5ClusteredRunFull,ANY,ANY,ANY-method}},
+\code{\link{H5ClusterExperiment}},
+\code{\link{H5ClusterExperiment-class}},
+\code{\link{H5ClusterRun-class}},
+\code{\link{H5ClusterRunSummary-class}},
+\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{cluster_metadata,H5ClusteredExperiment-method}},
+\code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{h5file,H5ClusteredArray-method}},
 \code{\link{linear_access-methods}},
@@ -43,12 +43,12 @@ Other H5Clustered:
 \code{\link{make_run_summary}()},
 \code{\link{mask}()},
 \code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusteredExperiment-method}},
-\code{\link{scan_metadata,H5ClusteredExperiment-method}},
-\code{\link{scan_names,H5ClusteredExperiment-method}},
+\code{\link{n_scans,H5ClusterExperiment-method}},
+\code{\link{scan_metadata,H5ClusterExperiment-method}},
+\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
 \code{\link{series_concat}()},
-\code{\link{show,H5ClusteredRunFull-method}}
+\code{\link{show,H5ClusterRun-method}}
 }
 \concept{H5Clustered}
 \keyword{internal}

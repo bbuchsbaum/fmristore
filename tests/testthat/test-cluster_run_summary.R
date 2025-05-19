@@ -66,12 +66,12 @@ create_dummy_clustered_summary_h5 <- function(filepath,
 
 
 
-test_that("H5ClusteredRunSummary constructor works with file path", {
+test_that("H5ClusterRunSummary constructor works with file path", {
   setup_info <- create_dummy_clustered_summary_h5(tempfile(fileext = ".h5"))
   on.exit(unlink(setup_info$filepath), add = TRUE)
 
   # Use new constructor
-  run_summary <- H5ClusteredRunSummary(file = setup_info$filepath,
+  run_summary <- H5ClusterRunSummary(file = setup_info$filepath,
                                        scan_name = setup_info$scan_name,
                                        mask = setup_info$mask,
                                        clusters = setup_info$clusters,
@@ -80,7 +80,7 @@ test_that("H5ClusteredRunSummary constructor works with file path", {
                                        summary_dset = setup_info$summary_dset_name
                                        )
 
-  expect_s4_class(run_summary, "H5ClusteredRunSummary")
+  expect_s4_class(run_summary, "H5ClusterRunSummary")
   expect_equal(run_summary@scan_name, setup_info$scan_name)
   expect_equal(run_summary@n_time, setup_info$n_time)
   expect_equal(run_summary@cluster_names, setup_info$cluster_names)
@@ -92,7 +92,7 @@ test_that("H5ClusteredRunSummary constructor works with file path", {
   h5file(run_summary)$close_all()
 })
 
-test_that("H5ClusteredRunSummary constructor works with open H5File handle (via make_run_summary)", {
+test_that("H5ClusterRunSummary constructor works with open H5File handle (via make_run_summary)", {
   setup_info <- create_dummy_clustered_summary_h5(tempfile(fileext = ".h5"))
   on.exit(unlink(setup_info$filepath), add = TRUE)
 
@@ -112,12 +112,12 @@ test_that("H5ClusteredRunSummary constructor works with open H5File handle (via 
     "deprecated"
   )
 
-  expect_s4_class(run_summary_open, "H5ClusteredRunSummary")
+  expect_s4_class(run_summary_open, "H5ClusterRunSummary")
   expect_true(run_summary_open@obj$is_valid)
   expect_equal(h5file(run_summary_open)$get_filename(), h5f$get_filename())
 })
 
-test_that("H5ClusteredRunSummary constructor errors work", {
+test_that("H5ClusterRunSummary constructor errors work", {
   setup_info <- create_dummy_clustered_summary_h5(tempfile(fileext = ".h5"))
   on.exit(unlink(setup_info$filepath), add = TRUE)
   
@@ -126,18 +126,18 @@ test_that("H5ClusteredRunSummary constructor errors work", {
   on.exit(if(h5f_err$is_valid) h5f_err$close_all(), add = TRUE)
 
   # Use new constructor for error checks
-  expect_error(H5ClusteredRunSummary(file = "nonexistent.h5", scan_name = "s1", mask = setup_info$mask, 
+  expect_error(H5ClusterRunSummary(file = "nonexistent.h5", scan_name = "s1", mask = setup_info$mask, 
   clusters = setup_info$clusters), regexp="does not exist")
   # Test invalid scan_name within an existing file
-  expect_error(H5ClusteredRunSummary(file = setup_info$filepath, 
+  expect_error(H5ClusterRunSummary(file = setup_info$filepath, 
                                      scan_name = "wrong_scan_name", mask = setup_info$mask, 
                                      clusters = setup_info$clusters), 
                                      "Summary dataset not found")
   # Test invalid summary_dset name
-  expect_error(H5ClusteredRunSummary(file = setup_info$filepath, scan_name = setup_info$scan_name, mask = setup_info$mask, clusters = setup_info$clusters, summary_dset="wrong_name"), "Summary dataset not found")
+  expect_error(H5ClusterRunSummary(file = setup_info$filepath, scan_name = setup_info$scan_name, mask = setup_info$mask, clusters = setup_info$clusters, summary_dset="wrong_name"), "Summary dataset not found")
 })
 
-test_that("H5ClusteredRunSummary cluster name/ID reconciliation works", {
+test_that("H5ClusterRunSummary cluster name/ID reconciliation works", {
   setup_info <- create_dummy_clustered_summary_h5(tempfile(fileext = ".h5"))
   on.exit(unlink(setup_info$filepath), add = TRUE)
   
@@ -146,7 +146,7 @@ test_that("H5ClusteredRunSummary cluster name/ID reconciliation works", {
   
   # Case 1: Provided names/IDs match dataset columns
   # Use new constructor (need file path)
-  run_summary <- H5ClusteredRunSummary(file = setup_info$filepath,
+  run_summary <- H5ClusterRunSummary(file = setup_info$filepath,
                                        scan_name = setup_info$scan_name,
                                        mask = setup_info$mask,
                                        clusters = setup_info$clusters,
@@ -160,7 +160,7 @@ test_that("H5ClusteredRunSummary cluster name/ID reconciliation works", {
   # Case 2: Mismatched provided names (warning, reset to Col_X)
   # Use new constructor
   expect_warning(
-      run_summary_badnames <- H5ClusteredRunSummary(file = setup_info$filepath,
+      run_summary_badnames <- H5ClusterRunSummary(file = setup_info$filepath,
                                                 scan_name = setup_info$scan_name,
                                                 mask = setup_info$mask,
                                                 clusters = setup_info$clusters,
@@ -170,7 +170,7 @@ test_that("H5ClusteredRunSummary cluster name/ID reconciliation works", {
       "Final number of cluster names.*does not match dataset columns"
   )
   expect_warning( # Second warning about resetting
-      H5ClusteredRunSummary(file = setup_info$filepath,
+      H5ClusterRunSummary(file = setup_info$filepath,
                          scan_name = setup_info$scan_name,
                          mask = setup_info$mask,
                          clusters = setup_info$clusters,
@@ -185,7 +185,7 @@ test_that("H5ClusteredRunSummary cluster name/ID reconciliation works", {
   
   # Case 3: No names/IDs provided, derive from clusters object
   # Use new constructor
-  run_summary_derive <- H5ClusteredRunSummary(file = setup_info$filepath,
+  run_summary_derive <- H5ClusterRunSummary(file = setup_info$filepath,
                                             scan_name = setup_info$scan_name,
                                             mask = setup_info$mask,
                                             clusters = setup_info$clusters,
@@ -199,7 +199,7 @@ test_that("H5ClusteredRunSummary cluster name/ID reconciliation works", {
   # Case 4: No names/IDs/clusters provided, derive from dataset cols (Col_X)
   # Use new constructor
   expect_warning(
-      run_summary_defaults <- H5ClusteredRunSummary(file = setup_info$filepath,
+      run_summary_defaults <- H5ClusterRunSummary(file = setup_info$filepath,
                                                 scan_name = setup_info$scan_name,
                                                 mask = setup_info$mask,
                                                 clusters = NULL, # No clusters object
@@ -214,7 +214,7 @@ test_that("H5ClusteredRunSummary cluster name/ID reconciliation works", {
   
 })
 
-test_that("as.matrix method for H5ClusteredRunSummary works", {
+test_that("as.matrix method for H5ClusterRunSummary works", {
   setup_info <- create_dummy_clustered_summary_h5(tempfile(fileext = ".h5"))
   on.exit(unlink(setup_info$filepath), add = TRUE)
   
@@ -276,7 +276,7 @@ test_that("make_run_summary generates default names/ids and as.data.frame works"
                                      ),
       regexp="Generated default" # Warning for names
     )
-  expect_s4_class(run_summary_defaults, "H5ClusteredRunSummary")
+  expect_s4_class(run_summary_defaults, "H5ClusterRunSummary")
   n_clusters_expected <- ncol(setup_info$summary_data)
   expected_names <- paste0("Col_", seq_len(n_clusters_expected))
   expected_ids <- seq_len(n_clusters_expected)

@@ -2,10 +2,10 @@
 #' @importFrom methods is
 NULL
 
-# Contains methods and helper functions for H5ClusteredExperiment objects
+# Contains methods and helper functions for H5ClusterExperiment objects
 
 # Helper function for stricter validation of a user-provided mask against HDF5 content
-# Internal to H5ClusteredExperiment constructor logic
+# Internal to H5ClusterExperiment constructor logic
 #
 # @param user_mask The mask object provided by the user (already passed basic checks by ensure_mask).
 # @param h5_handle An open H5File handle to the experiment file.
@@ -24,7 +24,7 @@ NULL
     stop("Internal Error: .validate_user_provided_mask_h5 requires a NeuroSpace object for master_space.")
   }
 
-  message("[H5ClusteredExperiment] Performing stricter HDF5-based validation for user-provided mask...")
+  message("[H5ClusterExperiment] Performing stricter HDF5-based validation for user-provided mask...")
   
   # 1. Check consistency with cluster map length (number of active voxels)
   if (sum(user_mask@.Data) != expected_cmap_len) {
@@ -68,15 +68,15 @@ NULL
     stop("User-provided mask's pattern of TRUE voxels does not match the pattern derived from the HDF5 file ('/voxel_coords' or '/mask'). User mask override rejected.")
   }
   
-  message("[H5ClusteredExperiment] User-provided mask pattern validation successful.")
+  message("[H5ClusterExperiment] User-provided mask pattern validation successful.")
   invisible(NULL)
 }
 
-#' @describeIn series_concat Concatenate voxel time series for H5ClusteredExperiment
+#' @describeIn series_concat Concatenate voxel time series for H5ClusterExperiment
 #' @export
-#' @family H5Clustered
+#' @family H5Cluster
 setMethod("series_concat",
-  signature(experiment = "H5ClusteredExperiment", mask_idx = "numeric"),
+  signature(experiment = "H5ClusterExperiment", mask_idx = "numeric"),
   function(experiment, mask_idx, run_indices = NULL) {
 
   if (length(experiment@runs) == 0) {
@@ -107,8 +107,8 @@ setMethod("series_concat",
   for (idx in run_indices) {
     current_run <- experiment@runs[[idx]]
 
-    if (!is(current_run, "H5ClusteredRunFull")) {
-      stop(sprintf("[series_concat] Run %d (scan: '%s') is not an H5ClusteredRunFull object. Voxel-level series cannot be extracted.",
+    if (!is(current_run, "H5ClusterRun")) {
+      stop(sprintf("[series_concat] Run %d (scan: '%s') is not an H5ClusterRun object. Voxel-level series cannot be extracted.",
                    idx, current_run@scan_name))
     }
 
@@ -151,11 +151,11 @@ setMethod("series_concat",
 })
 
 
-#' @describeIn matrix_concat Concatenate summary matrices for H5ClusteredExperiment
+#' @describeIn matrix_concat Concatenate summary matrices for H5ClusterExperiment
 #' @export
-#' @family H5Clustered
+#' @family H5Cluster
 setMethod("matrix_concat",
-  signature(experiment = "H5ClusteredExperiment"),
+  signature(experiment = "H5ClusterExperiment"),
   function(experiment, run_indices = NULL) {
 
   if (length(experiment@runs) == 0) {
@@ -184,8 +184,8 @@ setMethod("matrix_concat",
   for (idx in run_indices) {
     current_run <- experiment@runs[[idx]]
 
-    if (!is(current_run, "H5ClusteredRunSummary")) {
-      stop(sprintf("[matrix_concat] Run %d (scan: '%s') is not an H5ClusteredRunSummary object. Summary matrix cannot be extracted.",
+    if (!is(current_run, "H5ClusterRunSummary")) {
+      stop(sprintf("[matrix_concat] Run %d (scan: '%s') is not an H5ClusterRunSummary object. Summary matrix cannot be extracted.",
                    idx, current_run@scan_name))
     }
 
@@ -224,15 +224,15 @@ setMethod("matrix_concat",
 })
 
 
-#' Constructor for H5ClusteredExperiment Objects
+#' Constructor for H5ClusterExperiment Objects
 #'
 #' @description
-#' Creates a new `H5ClusteredExperiment` object, representing a collection of
+#' Creates a new `H5ClusterExperiment` object, representing a collection of
 #' clustered neuroimaging runs sharing a common HDF5 file, mask, and cluster map.
 #'
 #' This function handles opening the HDF5 file (if a path is provided),
 #' identifying available scans, and creating the appropriate run objects
-#' (`H5ClusteredRunFull` or `H5ClusteredRunSummary`) for each scan based on
+#' (`H5ClusterRun` or `H5ClusterRunSummary`) for each scan based on
 #' the available data within the HDF5 file structure (following the
 #' ClusteredTimeSeriesSpec).
 #'
@@ -263,12 +263,12 @@ setMethod("matrix_concat",
 #'   object. If \code{FALSE}, the handle is closed after reading metadata.
 #'   *Note:* For most operations, the handle needs to remain open.
 #'
-#' @return A new \code{H5ClusteredExperiment} object.
+#' @return A new \code{H5ClusterExperiment} object.
 #' @importFrom hdf5r H5File list.groups H5A H5D h5attr h5attr_names
 #' @importFrom methods new is
 #' @export
-#' @family H5Clustered
-H5ClusteredExperiment <- function(file,
+#' @family H5Cluster
+H5ClusterExperiment <- function(file,
                                   scan_names = NULL,
                                   mask = NULL,
                                   clusters = NULL,
@@ -304,13 +304,13 @@ H5ClusteredExperiment <- function(file,
   h5obj <- fh$h5
   # Defer closing the file only if we opened it and the user doesn't want to keep it open.
   # Note: keep_handle_open is TRUE by default, so defer usually won't close it here.
-  # The H5ClusteredExperiment object's finalizer handles closing if keep_handle_open=TRUE.
+  # The H5ClusterExperiment object's finalizer handles closing if keep_handle_open=TRUE.
   defer({
       if (fh$owns && !keep_handle_open && h5obj$is_valid) {
-          message("[H5ClusteredExperiment] Closing HDF5 file handle opened by constructor.")
+          message("[H5ClusterExperiment] Closing HDF5 file handle opened by constructor.")
           try(h5obj$close_all(), silent = TRUE)
       }
-  }, envir = parent.frame()) # Defer in the context of the calling function H5ClusteredExperiment
+  }, envir = parent.frame()) # Defer in the context of the calling function H5ClusterExperiment
 
   # --- Read Header Info and Create Master NeuroSpace ---
   master_space <- NULL
@@ -374,7 +374,7 @@ H5ClusteredExperiment <- function(file,
       master_space <- NeuroSpace(dim = XYZ_dims, spacing = spacing_dims, trans = transform_mat)
       
   }, error = function(e) {
-      stop(sprintf("[H5ClusteredExperiment] Failed to read header and create NeuroSpace: %s", e$message))
+      stop(sprintf("[H5ClusterExperiment] Failed to read header and create NeuroSpace: %s", e$message))
   })
   # Header group is automatically closed by on.exit if added to opened_groups
 
@@ -441,7 +441,7 @@ H5ClusteredExperiment <- function(file,
   # --- 2. Determine Scan Names ---
   scans_group_path <- "/scans"
   if (!h5obj$exists(scans_group_path)) {
-    stop(sprintf("[H5ClusteredExperiment] Scans group not found at '%s'.", scans_group_path))
+    stop(sprintf("[H5ClusterExperiment] Scans group not found at '%s'.", scans_group_path))
   }
   scans_group <- h5obj[[scans_group_path]]; opened_groups[["scans"]] <- scans_group
 
@@ -467,18 +467,18 @@ H5ClusteredExperiment <- function(file,
   
   if (is.null(scan_names)) {
     if (length(available_scans) == 0) {
-      warning("[H5ClusteredExperiment] No scan groups found under '/scans'.")
+      warning("[H5ClusterExperiment] No scan groups found under '/scans'.")
       scan_names <- character(0)
     } else {
       scan_names <- available_scans
     }
   } else {
     if (!is.character(scan_names) || length(scan_names) == 0) {
-        stop("[H5ClusteredExperiment] Provided 'scan_names' must be a non-empty character vector.")
+        stop("[H5ClusterExperiment] Provided 'scan_names' must be a non-empty character vector.")
     }
     missing_scans <- setdiff(scan_names, available_scans)
     if (length(missing_scans) > 0) {
-      stop(sprintf("[H5ClusteredExperiment] Specified scan names not found under '/scans': %s",
+      stop(sprintf("[H5ClusterExperiment] Specified scan names not found under '/scans': %s",
                    paste(missing_scans, collapse=", ")))
     }
     # Keep only requested scans in the specified order
@@ -504,7 +504,7 @@ H5ClusteredExperiment <- function(file,
     if (has_summary_data) {
          summary_group <- NULL
          tryCatch({
-             # Only need to check existence, H5ClusteredRunSummary will open group/dataset
+             # Only need to check existence, H5ClusterRunSummary will open group/dataset
              # summary_group <- h5obj[[summary_group_path]]; opened_groups[[paste0(sname,"_summary")]] <- summary_group
              summary_group <- h5obj[[summary_group_path]] # Open just to check dataset existence
              summary_dset_exists <- summary_group$exists(summary_dset_name)
@@ -568,7 +568,7 @@ H5ClusteredExperiment <- function(file,
         if (!has_summary_data) stop("Internal logic error: create_summary is TRUE but has_summary_data is FALSE") # Should not happen
         tryCatch({
             # Use the canonical constructor
-            runs_list[[sname]] <- H5ClusteredRunSummary(
+            runs_list[[sname]] <- H5ClusterRunSummary(
               file = h5obj, # MODIFIED: Pass H5File handle
               scan_name = sname,
               mask = mask,       # Pass validated mask
@@ -577,7 +577,7 @@ H5ClusteredExperiment <- function(file,
               # cluster_ids = integer(),     # Let constructor handle defaults/loading
               summary_dset = summary_dset_name
             )
-        }, error=function(e) stop(sprintf("Failed to create H5ClusteredRunSummary for scan '%s': %s", sname, e$message)))
+        }, error=function(e) stop(sprintf("Failed to create H5ClusterRunSummary for scan '%s': %s", sname, e$message)))
 
     } else {
 
@@ -588,7 +588,7 @@ H5ClusteredExperiment <- function(file,
 
         tryCatch({
              # Use the canonical constructor
-             runs_list[[sname]] <- H5ClusteredRunFull(
+             runs_list[[sname]] <- H5ClusterRun(
                file = h5obj, # MODIFIED: Pass H5File handle
                scan_name = sname,
                mask = mask,       # Pass validated mask
@@ -596,13 +596,13 @@ H5ClusteredExperiment <- function(file,
                n_time = scan_specific_n_time # Pass potential n_time from metadata
                # compress = ? # Let constructor handle reading compress attr if needed
              )
-         }, error=function(e) stop(sprintf("Failed to create H5ClusteredRunFull for scan '%s': %s", sname, e$message)))
+         }, error=function(e) stop(sprintf("Failed to create H5ClusterRun for scan '%s': %s", sname, e$message)))
     }
   }
 
   if (!is.null(summary_only_attr)) {
     if (isTRUE(summary_only_attr) && found_full) {
-      warning("[H5ClusteredExperiment] '/scans@summary_only' is TRUE but full data was found in at least one scan.")
+      warning("[H5ClusterExperiment] '/scans@summary_only' is TRUE but full data was found in at least one scan.")
     }
   }
 
@@ -664,14 +664,14 @@ H5ClusteredExperiment <- function(file,
       }
       cluster_metadata <- global_meta_df
   } else {
-      if (!is.data.frame(cluster_metadata)) stop("[H5ClusteredExperiment] Provided 'cluster_metadata' must be a data.frame.")
+      if (!is.data.frame(cluster_metadata)) stop("[H5ClusterExperiment] Provided 'cluster_metadata' must be a data.frame.")
       # User provided metadata overrides loaded
   }
   
   # --- 7. Override scan metadata if provided ---
   if (!is.null(scan_metadata)) {
        if (!is.list(scan_metadata) || length(scan_metadata) != length(runs_list)) {
-            stop(sprintf("[H5ClusteredExperiment] Provided 'scan_metadata' must be a list of length %d.", length(runs_list)))
+            stop(sprintf("[H5ClusterExperiment] Provided 'scan_metadata' must be a list of length %d.", length(runs_list)))
        }
        # Merge/replace carefully. For now, just replace.
        # Ensure names match if replacing
@@ -683,7 +683,7 @@ H5ClusteredExperiment <- function(file,
   }
 
   # --- 8. Create Experiment Object ---
-  exp_obj <- new("H5ClusteredExperiment",
+  exp_obj <- new("H5ClusterExperiment",
                  runs = runs_list,
                  scan_metadata = final_scan_metadata,
                  cluster_metadata = cluster_metadata)
@@ -718,7 +718,7 @@ H5ClusteredExperiment <- function(file,
 }
 
 
-#' Accessor Methods for H5ClusteredExperiment
+#' Accessor Methods for H5ClusterExperiment
 
 #' Access Slots/Properties using `$`
 #'
@@ -727,13 +727,13 @@ H5ClusteredExperiment <- function(file,
 #' first run object stored within the experiment.
 #' Also provides access to the experiment's own slots (`runs`, `scan_metadata`, `cluster_metadata`).
 #'
-#' @param x An `H5ClusteredExperiment` object.
+#' @param x An `H5ClusterExperiment` object.
 #' @param name The name of the property or slot to access (`mask`, `clusters`, `obj`, `runs`, `scan_metadata`, `cluster_metadata`).
 #'
 #' @return The requested object or value.
 #' @export
-#' @family H5Clustered
-setMethod("$", "H5ClusteredExperiment", function(x, name) {
+#' @family H5Cluster
+setMethod("$", "H5ClusterExperiment", function(x, name) {
     # Check for experiment's own slots first
     if (name %in% slotNames(x)) {
         return(slot(x, name))
@@ -753,18 +753,18 @@ setMethod("$", "H5ClusteredExperiment", function(x, name) {
     } 
     
     # Default behavior or error for unknown names
-    # stop(sprintf("'%s' is not a valid slot or accessible property for H5ClusteredExperiment", name))
+    # stop(sprintf("'%s' is not a valid slot or accessible property for H5ClusterExperiment", name))
     # Returning NULL might be safer than erroring? Or follow default $ behavior if possible.
     return(NULL) 
 })
 
 #' Get the HDF5 file object via generic
-#' @param x H5ClusteredExperiment object
+#' @param x H5ClusterExperiment object
 #' @return The HDF5 file object from the first run.
 #' @rdname h5file-methods
 #' @export
-#' @family H5Clustered
-setMethod("h5file", "H5ClusteredExperiment", function(x) {
+#' @family H5Cluster
+setMethod("h5file", "H5ClusterExperiment", function(x) {
     if (length(x@runs) == 0) {
         stop("Cannot get HDF5 file object: Experiment contains no runs.")
     }
@@ -773,12 +773,12 @@ setMethod("h5file", "H5ClusteredExperiment", function(x) {
 })
 
 #' Get the mask object via generic
-#' @param x H5ClusteredExperiment object
+#' @param x H5ClusterExperiment object
 #' @return The mask object from the first run.
 #' @rdname mask-methods
 #' @export
-#' @family H5Clustered
-setMethod("mask", "H5ClusteredExperiment", function(x) {
+#' @family H5Cluster
+setMethod("mask", "H5ClusterExperiment", function(x) {
      if (length(x@runs) == 0) {
         stop("Cannot get mask object: Experiment contains no runs.")
     }
@@ -786,12 +786,12 @@ setMethod("mask", "H5ClusteredExperiment", function(x) {
 })
 
 #' Get the clusters object via generic
-#' @param x H5ClusteredExperiment object
+#' @param x H5ClusterExperiment object
 #' @return The clusters object from the first run.
 #' @rdname clusters-methods
 #' @export
-#' @family H5Clustered
-setMethod("clusters", "H5ClusteredExperiment", function(x) {
+#' @family H5Cluster
+setMethod("clusters", "H5ClusterExperiment", function(x) {
      if (length(x@runs) == 0) {
         stop("Cannot get clusters object: Experiment contains no runs.")
     }
@@ -799,49 +799,49 @@ setMethod("clusters", "H5ClusteredExperiment", function(x) {
 })
 
 #' Get scan names
-#' @param x H5ClusteredExperiment object
+#' @param x H5ClusterExperiment object
 #' @return Character vector of scan names.
 #' @rdname scan_names-methods
 #' @export
-#' @family H5Clustered
-setMethod("scan_names", "H5ClusteredExperiment", function(x) {
+#' @family H5Cluster
+setMethod("scan_names", "H5ClusterExperiment", function(x) {
     names(x@runs) %||% character(0)
 })
 
 #' Get number of scans
-#' @param x H5ClusteredExperiment object
+#' @param x H5ClusterExperiment object
 #' @return Integer number of scans.
 #' @rdname n_scans-methods
 #' @export
-#' @family H5Clustered
-setMethod("n_scans", "H5ClusteredExperiment", function(x) {
+#' @family H5Cluster
+setMethod("n_scans", "H5ClusterExperiment", function(x) {
     length(x@runs)
 })
 
 #' Get scan metadata
-#' @param x H5ClusteredExperiment object
+#' @param x H5ClusterExperiment object
 #' @return List of scan metadata.
 #' @rdname scan_metadata-methods
 #' @export
-#' @family H5Clustered
-setMethod("scan_metadata", "H5ClusteredExperiment", function(x) {
+#' @family H5Cluster
+setMethod("scan_metadata", "H5ClusterExperiment", function(x) {
     x@scan_metadata
 })
 
 #' Get cluster metadata
-#' @param x H5ClusteredExperiment object
+#' @param x H5ClusterExperiment object
 #' @return Data frame of cluster metadata.
 #' @rdname cluster_metadata-methods
 #' @export
-#' @family H5Clustered
-setMethod("cluster_metadata", "H5ClusteredExperiment", function(x) {
+#' @family H5Cluster
+setMethod("cluster_metadata", "H5ClusterExperiment", function(x) {
     x@cluster_metadata
 })
 
 #' @rdname show-methods
 #' @importFrom methods show
-setMethod("show", "H5ClusteredExperiment", function(object) {
-  cat("\nH5ClusteredExperiment\n")
+setMethod("show", "H5ClusterExperiment", function(object) {
+  cat("\nH5ClusterExperiment\n")
   cat("  # runs        :", length(object@runs), "\n")
   # Use %||% which should be defined in io_h5_helpers.R now
   num_clusters <- length(object@cluster_metadata$cluster_id) %||% 
@@ -858,4 +858,4 @@ setMethod("show", "H5ClusteredExperiment", function(object) {
   }
 })
 
-# TODO: Add show method for H5ClusteredExperiment 
+# TODO: Add show method for H5ClusterExperiment 

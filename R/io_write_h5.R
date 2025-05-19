@@ -29,7 +29,7 @@ validate_runs_data <- function(rd) {
 #' Write Clustered Experiment Data to HDF5
 #'
 #' @description
-#' Writes neuroimaging data structured according to the H5ClusteredExperiment
+#' Writes neuroimaging data structured according to the H5ClusterExperiment
 #' specification into an HDF5 file.
 #'
 #' This function takes R objects representing the mask, cluster definitions,

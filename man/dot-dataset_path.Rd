@@ -19,6 +19,6 @@ A character string representing the HDF5 dataset path.
 \description{
 An internal generic function used to determine the HDF5 path to the dataset
 corresponding to a specific cluster ID within a given run object.
-Concrete subclasses (like `H5ClusteredRunFull`) must implement a method for this generic.
+Concrete subclasses (like `H5ClusterRun`) must implement a method for this generic.
 }
 \keyword{internal}
