@@ -111,6 +111,19 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
                 dset_path,
                 list(row_offsets_in_dataset, time_indices)
             )
+            # Accessing obj slot from H5ClusteredArray
+            assert_h5_path(x@obj, dset_path,
+                           sprintf("Dataset for cluster %d", cid))
+            ds <- x@obj[[dset_path]]
+            # Simplified on.exit handling: rely on hdf5r GC or explicit closure later
+            # on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) ds$close(), add = TRUE, after = FALSE)
+
+            cluster_data_subset <- ds[row_offsets_in_dataset, time_indices, drop = FALSE]
+
+            # Close dataset handle immediately after reading
+            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
+                 close_h5_safely(ds)
+            }
 
             expected_rows <- length(row_indices_in_result)
             if (!is.matrix(cluster_data_subset) ||
@@ -123,6 +136,9 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             result_mat[row_indices_in_result, ] <- cluster_data_subset
 
         }, error = function(e) {
+            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
+                close_h5_safely(ds)
+            }
             stop(sprintf("[.get_cluster_timeseries] Failed processing cluster %d at path '%s'. Original error: %s", cid, dset_path, e$message))
         })
     } # End loop over clusters
@@ -700,7 +716,7 @@ make_run_full <- function(file_source, scan_name,
                         }, error = function(e) {
                             warning(sprintf("[make_run_full] Error reading dimensions from '%s': %s", dset_path_cid1, e$message))
                         }, finally = {
-                             if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE) # Close dataset handle
+                             if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds) # Close dataset handle
                         })
                     } else {
                        warning(sprintf("[make_run_full] Could not find or access dataset for first cluster (%d) at path '%s' to infer n_time.", first_cid, dset_path_cid1 %||% "(path generation failed)"))
@@ -785,18 +801,17 @@ setMethod(
     dset_path <- file.path("/scans", x@scan_name, "clusters_summary", x@summary_dset)
 
     tryCatch({
-        if (!x@obj$exists(dset_path)) {
-            stop(sprintf("[as.matrix,H5ClusterRunSummary] Summary dataset not found at path: %s", dset_path))
-        }
+        assert_h5_path(x@obj, dset_path,
+                       "[as.matrix,H5ClusterRunSummary] Summary dataset")
         ds <- x@obj[[dset_path]]
-        on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE), add = TRUE)
+        on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds), add = TRUE)
 
         mat_data <- ds$read() # Use $read() instead of []
 
     }, error = function(e) {
         # Ensure ds handle is closed on error
         if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-            try(ds$close(), silent = TRUE)
+            close_h5_safely(ds)
         }
         stop(sprintf("[as.matrix,H5ClusterRunSummary] Failed to read summary data for scan '%s' from '%s'. Original error: %s",
                      x@scan_name, dset_path, e$message))
@@ -961,20 +976,10 @@ make_run_summary <- function(file_source, scan_name,
   n_clusters_in_dset <- NA_integer_
   ds <- NULL
 
-  # Check existence, catching potential HDF5 errors if path exists up to parent but not final object
-  path_exists <- tryCatch({
-      h5obj$exists(dset_path)
-  }, error = function(e) {
-      # If H5Lexists fails because the link itself is missing within an existing group,
-      # treat it as FALSE for our purpose (dataset not found)
-      # More specific error checking could be added here if needed
-      warning(sprintf("[make_run_summary] Suppressed HDF5 error during existence check for '%s': %s", dset_path, conditionMessage(e)))
-      FALSE
-  })
 
-  if (!path_exists) {
-    stop(sprintf("[make_run_summary] Summary dataset not found at expected path: %s", dset_path))
-  }
+  # Ensure the summary dataset exists
+  assert_h5_path(h5obj, dset_path,
+                 "[make_run_summary] Summary dataset")
 
   tryCatch({
       ds <- h5obj[[dset_path]]
@@ -1066,7 +1071,7 @@ make_run_summary <- function(file_source, scan_name,
       stop(sprintf("[make_run_summary] Error accessing or validating summary dataset \'%s\'. Original error: %s", dset_path, e$message))
   }, finally = {
       if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-          try(ds$close(), silent = TRUE)
+          close_h5_safely(ds)
       }
   })
 

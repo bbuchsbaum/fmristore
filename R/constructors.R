@@ -213,23 +213,14 @@ H5ClusterRunSummary <- function(file, scan_name,
   summary_group_path <- file.path(scan_group_path, "clusters_summary")
   dset_path <- file.path(summary_group_path, summary_dset)
   
-  path_ok <- TRUE
-  error_msg <- NULL
-  if (!tryCatch(h5obj$exists(scan_group_path), error = function(e) FALSE)) {
-      path_ok <- FALSE
-      error_msg <- sprintf("Scan group not found at: %s", scan_group_path)
-  } else if (!tryCatch(h5obj$exists(summary_group_path), error = function(e) FALSE)) {
-      path_ok <- FALSE
-      error_msg <- sprintf("Summary group not found at: %s", summary_group_path)
-  } else if (!tryCatch(h5obj$exists(dset_path), error = function(e) FALSE)) {
-      path_ok <- FALSE
-      error_msg <- sprintf("Summary dataset not found at: %s", dset_path)
-  }
-  
-  if (!path_ok) {
+  tryCatch({
+      assert_h5_path(h5obj, scan_group_path, "scan group")
+      assert_h5_path(h5obj, summary_group_path, "summary group")
+      assert_h5_path(h5obj, dset_path, "summary dataset")
+  }, error = function(e) {
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-      stop(paste0("[H5ClusterRunSummary] ", error_msg))
-  }
+      stop(paste0("[H5ClusterRunSummary] ", e$message))
+  })
   
   # --- 4. Read dataset dimensions and reconcile cluster info --- 
   final_n_time <- NA_integer_
@@ -294,11 +285,11 @@ H5ClusterRunSummary <- function(file, scan_name,
       }
 
   }, error = function(e) {
-      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE)
+      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds)
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
       stop(sprintf("[H5ClusterRunSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
   }, finally = {
-      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) try(ds$close(), silent = TRUE)
+      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds)
   })
 
   # --- 5. Create the object ---
