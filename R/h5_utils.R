@@ -88,6 +88,39 @@ ensure_mask <- function(mask, h5, space, path = "/mask") {
   return(m)
 }
 
+#' Assert that an HDF5 path exists
+#'
+#' Checks for the existence of a dataset or group within an HDF5 file and
+#' stops with a clear error message if the path is missing.
+#'
+#' @param h5 A valid open `H5File` object.
+#' @param path The path to check within the file.
+#' @param desc Optional description of what the path represents. This is used
+#'   in the error message.
+#' @return Invisible `TRUE` if the path exists.
+#' @keywords internal
+assert_h5_path <- function(h5, path, desc = "Path") {
+  if (!inherits(h5, "H5File") || !h5$is_valid) {
+    stop("assert_h5_path: 'h5' must be a valid and open H5File object.")
+  }
+  if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
+    stop("assert_h5_path: 'path' must be a single, non-empty character string.")
+  }
+
+  exists <- tryCatch(h5$exists(path), error = function(e) {
+    stop(sprintf("assert_h5_path: Error checking existence of '%s': %s",
+                 path, conditionMessage(e)))
+  })
+
+  if (!isTRUE(exists)) {
+    fname <- tryCatch(h5$get_filename(), error = function(e) "<unknown>")
+    stop(sprintf("%s not found at path '%s' in HDF5 file '%s'",
+                 desc, path, fname))
+  }
+
+  invisible(TRUE)
+}
+
 #' Read data from an HDF5 dataset
 #'
 #' Safely reads data from a specified dataset path within an HDF5 file,
