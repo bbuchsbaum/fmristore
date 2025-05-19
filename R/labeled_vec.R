@@ -29,6 +29,12 @@
 #' augment *some* additional fields (e.g., \code{qform_code=1L}). See implementation
 #' notes for which fields are protected.
 #'
+#' @section Lifecycle Management:
+#' The HDF5 file is opened in write mode and the resulting handle is returned
+#' without being automatically closed. **It is the caller's responsibility to
+#' close this handle** (via \code{h5file$close_all()} or \code{close()}) when
+#' finished working with the file.
+#'
 #' @param vec A 4D \code{\link[neuroim2]{NeuroVec}} with dimension \code{[X,Y,Z,nVols]}.
 #' @param mask A \code{\link[neuroim2]{LogicalNeuroVol}} of shape \code{[X,Y,Z]}
 #'   (the same 3D shape as \code{vec}).
@@ -44,8 +50,9 @@
 #'   `vec` or `mask` (like `dim`, `pixdim`, quaternion fields) cannot be overridden here.
 #' @param verbose Logical, whether to print verbose messages during processing.
 #'
-#' @return Invisibly returns the \code{\link[hdf5r]{H5File}} object, which now
-#'   has all the data and header info stored in it.
+#' @return Invisibly returns the open \code{\link[hdf5r]{H5File}} handle
+#'   containing the written data. The caller should close this handle when
+#'   finished.
 #'
 #' @seealso
 #' \code{\link[neuroim2]{matrixToQuatern}} for how the quaternion is derived,
@@ -111,8 +118,6 @@ write_labeled_vec <- function(vec,
   # === Open file using helper ===
   fh <- open_h5(file, mode = "w") # Use write mode
   h5obj <- fh$h5
-  # Use on.exit within the function frame, using safe helper
-  if (fh$owns) on.exit(safe_h5_close(h5obj), add = TRUE)
   
   # Get dimensions (already validated above)
   X <- nd[1]; Y <- nd[2]; Z <- nd[3]
