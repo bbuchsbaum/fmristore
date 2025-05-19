@@ -41,8 +41,9 @@ Default is \code{hdf5r::h5types$H5T_NATIVE_DOUBLE}.}
 \item{verbose}{Logical, whether to print verbose messages during processing.}
 }
 \value{
-Invisibly returns the \code{\link[hdf5r]{H5File}} object, which now
-  has all the data and header info stored in it.
+Invisibly returns the open \code{\link[hdf5r]{H5File}} handle containing
+  the written data. Close this handle with \code{close()} or
+  \code{h5file\$close_all()} when finished.
 }
 \description{
 Creates an HDF5 file following a NIfTI-like header layout, storing:
@@ -72,6 +73,11 @@ We store a subset of NIfTI-like header fields in the \code{/header} group.
 The user can supply \code{header_values} (a named list) to override or
 augment *some* additional fields (e.g., \code{qform_code=1L}). See implementation
 notes for which fields are protected.
+}
+\section{Lifecycle Management}{
+The file is opened in write mode and the resulting HDF5 handle is returned
+without being automatically closed. It is the user's responsibility to close
+this handle once writing is complete.
 }
 \seealso{
 \code{\link[neuroim2]{matrixToQuatern}} for how the quaternion is derived,
