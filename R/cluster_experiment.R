@@ -250,10 +250,14 @@ setMethod("matrix_concat",
 #'   from the HDF5 file. If provided, its length should match the number of scans.
 #' @param cluster_metadata (Optional) A data.frame to override or supplement
 #'   cluster metadata read from `/clusters/cluster_meta` in the HDF5 file.
-#' @param summary_preference (Optional) Character string: "require" (only load summary runs, error if missing),
-#'    "prefer" (load summary if available, else full), "ignore" (load full runs only). Default is often "prefer".
-#'    This influences whether `make_run_summary` or `make_run_full` is called.
-#'    *Note: This parameter requires careful implementation based on HDF5 content checks.*
+#' @param summary_preference (Optional) Character string controlling which run type to load.
+#'   If \code{NULL} (default), the constructor reads the \code{/scans@summary_only}
+#'   attribute to choose a default: \code{"require"} if \code{summary_only=TRUE},
+#'   \code{"ignore"} if \code{summary_only=FALSE}, otherwise \code{"prefer"}.
+#'   Explicit values can be "require" (only load summary runs, error if missing),
+#'   "prefer" (load summary if available, else full), or "ignore" (load full runs only).
+#'   This influences whether \code{make_run_summary} or \code{make_run_full} is called.
+#'   *Note: This parameter requires careful implementation based on HDF5 content checks.*
 #' @param keep_handle_open (Logical) Only relevant if \code{file_source} is a path.
 #'   If \code{TRUE} (default), the HDF5 file handle is kept open within the returned
 #'   object. If \code{FALSE}, the handle is closed after reading metadata.
@@ -270,7 +274,7 @@ H5ClusteredExperiment <- function(file,
                                   clusters = NULL,
                                   scan_metadata = NULL,
                                   cluster_metadata = NULL,
-                                  summary_preference = "prefer", # TODO: Implement logic based on this
+                                  summary_preference = NULL,
                                   keep_handle_open = TRUE # TODO: Implement finalizer logic if TRUE
                                   ) {
 
@@ -440,6 +444,23 @@ H5ClusteredExperiment <- function(file,
     stop(sprintf("[H5ClusteredExperiment] Scans group not found at '%s'.", scans_group_path))
   }
   scans_group <- h5obj[[scans_group_path]]; opened_groups[["scans"]] <- scans_group
+
+  # Read summary_only attribute if present
+  summary_only_attr <- NULL
+  if ("summary_only" %in% h5attr_names(scans_group)) {
+    summary_only_attr <- tryCatch(h5attr(scans_group, "summary_only"),
+                                  error = function(e) NULL)
+  }
+
+  if (is.null(summary_preference)) {
+    if (isTRUE(summary_only_attr)) {
+      summary_preference <- "require"
+    } else if (identical(summary_only_attr, FALSE)) {
+      summary_preference <- "ignore"
+    } else {
+      summary_preference <- "prefer"
+    }
+  }
   
   # Use names() to list only direct members of /scans
   available_scans <- tryCatch(names(scans_group), error=function(e) character(0))
@@ -469,6 +490,9 @@ H5ClusteredExperiment <- function(file,
   final_scan_metadata <- vector("list", length(scan_names))
   names(final_scan_metadata) <- scan_names
 
+  found_full <- FALSE
+  found_summary <- FALSE
+
   for (sname in scan_names) {
     scan_path <- file.path(scans_group_path, sname)
     has_full_data = h5obj$exists(file.path(scan_path, "clusters"))
@@ -493,6 +517,9 @@ H5ClusteredExperiment <- function(file,
              }
          })
     }
+
+    found_full <- found_full || has_full_data
+    found_summary <- found_summary || summary_dset_exists
     
     create_summary <- FALSE
     if (summary_preference == "require") {
@@ -570,6 +597,12 @@ H5ClusteredExperiment <- function(file,
                # compress = ? # Let constructor handle reading compress attr if needed
              )
          }, error=function(e) stop(sprintf("Failed to create H5ClusteredRunFull for scan '%s': %s", sname, e$message)))
+    }
+  }
+
+  if (!is.null(summary_only_attr)) {
+    if (isTRUE(summary_only_attr) && found_full) {
+      warning("[H5ClusteredExperiment] '/scans@summary_only' is TRUE but full data was found in at least one scan.")
     }
   }
 
