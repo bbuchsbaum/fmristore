@@ -2133,8 +2133,8 @@ setMethod(
     
     # Mask information
     mask_array <- as.logical(as.array(x@mask))
-    
-    
+    mask_indices <- which(mask_array)
+
     for (t in seq_len(space_dims[4])) {
       # Get the basis vector for this time point
       basis_t <- x@basis[t, , drop = FALSE]
@@ -2146,9 +2146,6 @@ setMethod(
       # Map these values back to 3D space using the mask 
       # Initialize a 3D array for this time point
       vol_3d <- array(0, dim = space_dims[1:3])
-      
-      # Get indices in 3D space corresponding to non-zero mask elements
-      mask_indices <- which(mask_array)
       
       # Place values at the correct indices
       vol_3d[mask_indices] <- values_in_mask
