@@ -346,3 +346,29 @@ map_dtype <- function(h5t) {
     }
   )
 }
+
+#' Evaluate code with an open HDF5 dataset, closing it afterwards
+#'
+#' Opens a dataset, passes it to a function, and ensures the dataset handle is
+#' closed when finished.
+#'
+#' @param h5 An open `H5File` handle.
+#' @param path Path to the dataset within the file.
+#' @param FUN Function executed with the open dataset as its single argument.
+#' @return The result of `FUN`.
+#' @keywords internal
+with_h5_dataset <- function(h5, path, FUN) {
+  ds <- NULL
+  on.exit(if (!is.null(ds)) close_h5_safely(ds), add = TRUE)
+  ds <- h5[[path]]
+  FUN(ds)
+}
+
+#' Obtain the dimensions of an HDF5 dataset
+#'
+#' @inheritParams with_h5_dataset
+#' @return Integer vector of dataset dimensions.
+#' @keywords internal
+h5_dataset_dims <- function(h5, path) {
+  with_h5_dataset(h5, path, function(ds) ds$dims)
+}
