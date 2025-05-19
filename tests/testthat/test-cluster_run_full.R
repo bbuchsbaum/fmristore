@@ -40,7 +40,8 @@ create_dummy_clustered_full_h5 <- function(filepath,
                                            n_time = 12,
                                            scan_name = "scan_full1",
                                            cluster_ids = 1:3,
-                                           auto_n_time_location = "none") { # "none", "attribute", "metadata"
+                                           auto_n_time_location = "none", # "none", "attribute", "metadata"
+                                           invalid_cluster_shape = FALSE) {
 
   n_clusters <- length(cluster_ids)
   n_vox_total <- prod(dims)
@@ -111,7 +112,12 @@ create_dummy_clustered_full_h5 <- function(filepath,
       }
 
       # Write dataset
-      scan_clus_grp[[paste0("cluster_", cid)]] <- cluster_mat
+      if (invalid_cluster_shape && cid == cluster_ids[1]) {
+        # Add an extra singleton dimension to make the dataset 3D
+        scan_clus_grp[[paste0("cluster_", cid)]] <- array(cluster_mat, dim = c(dim(cluster_mat), 1))
+      } else {
+        scan_clus_grp[[paste0("cluster_", cid)]] <- cluster_mat
+      }
       cluster_data_list[[as.character(cid)]] <- cluster_mat
 
       # Fill expected full array (for testing subsets later)
@@ -290,6 +296,20 @@ test_that("make_run_full stops if n_time determined is invalid", {
                                   clusters = setup_info$clusters,
                                   n_time = NULL), 
                "must be a single positive integer")
+})
+
+test_that("make_run_full errors when cluster dataset has wrong dimensions", {
+  setup_bad <- setup_test_file_full(invalid_cluster_shape = TRUE)
+  on.exit(cleanup_test_file(setup_bad))
+
+  expect_error(
+    H5ClusteredRunFull(file = setup_bad$filepath,
+                       scan_name = setup_bad$scan_name,
+                       mask = setup_bad$mask,
+                       clusters = setup_bad$clusters,
+                       n_time = NULL),
+    "malformed per specification"
+  )
 })
 
 # Add data access, dim, show tests later... 

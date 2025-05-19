@@ -707,7 +707,8 @@ make_run_full <- function(file_source, scan_name,
                                 n_time <- dims[2]
                                 message(sprintf("[make_run_full] Inferred n_time = %d from dataset '%s'.", n_time, dset_path_cid1))
                             } else {
-                                warning(sprintf("[make_run_full] Dataset '%s' does not have 2 dimensions. Cannot infer n_time.", dset_path_cid1))
+                                stop(sprintf("[make_run_full] Dataset '%s' is malformed per specification: expected 2 dimensions, got %d.",
+                                             dset_path_cid1, length(dims)))
                             }
                         }, error = function(e) {
                             warning(sprintf("[make_run_full] Error reading dimensions from '%s': %s", dset_path_cid1, e$message))

@@ -259,3 +259,39 @@ test_that("warning for mismatched summary_only attribute", {
   expect_warning(exp_warn <- H5ClusteredExperiment(tf), "/scans@summary_only")
   expect_s4_class(exp_warn@runs[[1]], "H5ClusteredRunFull")
 })
+
+})
+
+test_that("dataset cluster_meta is read as data.frame", {
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+
+  msp <- NeuroSpace(c(2,2,1), c(1,1,1))
+  mask <- LogicalNeuroVol(array(TRUE, dim = c(2,2,1)), msp)
+  clus <- ClusteredNeuroVol(mask, c(1L,2L,1L,2L))
+
+  full_data_list <- list(
+    cluster_1 = matrix(rnorm(2*3), 2, 3),
+    cluster_2 = matrix(rnorm(2*3), 2, 3)
+  )
+  runs <- list(list(scan_name = "run1", type = "full", data = full_data_list))
+  meta_df <- data.frame(cluster_id=c(1L,2L), desc=c("A","B"))
+
+  write_clustered_experiment_h5(tf, mask, clus, runs,
+                                cluster_metadata = meta_df,
+                                overwrite = TRUE, verbose = FALSE)
+
+  h5f <- H5File$new(tf, mode="r+")
+  meta_grp <- h5f[["/clusters/cluster_meta"]]
+  meta_list <- lapply(names(meta_grp), function(nm) meta_grp[[nm]][])
+  names(meta_list) <- names(meta_grp)
+  df <- as.data.frame(meta_list)
+  h5f$link_delete("/clusters/cluster_meta")
+  h5f$create_dataset("/clusters/cluster_meta", df)
+  h5f$close_all()
+
+  exp <- H5ClusteredExperiment(tf)
+  expect_s3_class(exp@cluster_metadata, "data.frame")
+  expect_setequal(names(exp@cluster_metadata), names(meta_df))
+  expect_equal(nrow(exp@cluster_metadata), nrow(meta_df))
+})
