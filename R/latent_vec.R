@@ -864,51 +864,44 @@ to_h5_latentvec <- function(vec, file_name=NULL, data_type="FLOAT",
     file_name <- tempfile(fileext = ".lv.h5")
   }
 
-  # Use open_h5 for file creation/handling
-  fh <- open_h5(file_name, mode = "w") # Use write mode
+  fh <- open_h5(file_name, mode = "w")
   h5obj <- fh$h5
   defer(if (fh$owns) h5obj$close_all(), envir = parent.frame())
- 
+
   tryCatch({
       message("[to_h5_latentvec] Writing LatentNeuroVec to: ", file_name)
-      
-      # Write class type and spec version as root attributes
+
       hdf5r::h5attr(h5obj, "latent_spec_version") <- "1.0"
       hdf5r::h5attr(h5obj, "rtype") <- class(vec)
       hdf5r::h5attr(h5obj, "voxel_order") <- "column-major"
-      
-      # --- 1. Prepare Header Info (logic remains the same) --- 
+
       sp <- neuroim2::space(vec)
       dims_vec <- dim(sp)
       if (length(dims_vec) != 4) stop("LatentNeuroVec space must be 4D.")
       X <- dims_vec[1]; Y <- dims_vec[2]; Z <- dims_vec[3]; T_vec <- dims_vec[4]
-      
+
       tmat <- trans(sp)
-      q <- tryCatch(neuroim2::matrixToQuatern(tmat), error = function(e) {
-          warning("Failed to convert transform matrix to quaternions: ", e$message, ". Using default.")
-          list(quaternion = c(0,0,0), qoffset = c(0,0,0), qfac = 1)
-      })
+      q <- tryCatch(neuroim2::matrixToQuatern(tmat),
+                    error = function(e) {
+                       warning("Failed to convert transform matrix to quaternions: ", e$message, ". Using default.")
+                       list(quaternion=c(0,0,0), qoffset=c(0,0,0), qfac=1)
+                    })
       sp_spacing <- spacing(sp)
-      sp_origin <- origin(sp)
       if (length(sp_spacing) < 3) sp_spacing <- c(sp_spacing, rep(1, 3 - length(sp_spacing)))
-      if (length(sp_origin) < 3) sp_origin <- c(sp_origin, rep(0, 3 - length(sp_origin)))
-      
       TR <- attr(sp, "TR") %||% 0.0
-      
-      # Determine internal HDF5 data type (logic remains the same)
-      h5dtype_internal <- switch(toupper(data_type), 
-                    "FLOAT"   = hdf5r::h5types$H5T_NATIVE_FLOAT,
-                    "DOUBLE"  = hdf5r::h5types$H5T_NATIVE_DOUBLE,
-                    hdf5r::h5types$H5T_NATIVE_FLOAT)
+
+      h5dtype_internal <- switch(toupper(data_type),
+                        "FLOAT"   = hdf5r::h5types$H5T_NATIVE_FLOAT,
+                        "DOUBLE"  = hdf5r::h5types$H5T_NATIVE_DOUBLE,
+                        hdf5r::h5types$H5T_NATIVE_FLOAT)
       if (is.null(h5dtype_internal)) stop(paste0("Invalid data_type specified: ", data_type))
-      
-      # Map to NIFTI codes (logic remains the same)
+
       dtype_text <- h5dtype_internal$to_text()
-      nifti_dt_map <- list("H5T_NATIVE_FLOAT"=16L, "H5T_IEEE_F32LE"=16L, 
+      nifti_dt_map <- list("H5T_NATIVE_FLOAT"=16L, "H5T_IEEE_F32LE"=16L,
                            "H5T_NATIVE_DOUBLE"=64L, "H5T_IEEE_F64LE"=64L,
-                           "H5T_NATIVE_INT"=8L, "H5T_STD_I32LE"=8L, 
+                           "H5T_NATIVE_INT"=8L, "H5T_STD_I32LE"=8L,
                            "H5T_NATIVE_SHORT"=4L)
-      nifti_bp_map <- list("H5T_NATIVE_FLOAT"=32L, "H5T_IEEE_F32LE"=32L, 
+      nifti_bp_map <- list("H5T_NATIVE_FLOAT"=32L, "H5T_IEEE_F32LE"=32L,
                            "H5T_NATIVE_DOUBLE"=64L, "H5T_IEEE_F64LE"=64L,
                            "H5T_NATIVE_INT"=32L, "H5T_STD_I32LE"=32L,
                            "H5T_NATIVE_SHORT"=16L)
@@ -917,22 +910,21 @@ to_h5_latentvec <- function(vec, file_name=NULL, data_type="FLOAT",
       if (nifti_datatype_code == 0L) {
           warning("Could not map data_type ", data_type, " (", dtype_text, ") to NIfTI codes.")
       }
-      
-      # Construct header field list (logic remains the same)
+
       hdr_fields <- list(
-        sizeof_hdr = 348L, data_type = "", db_name = "", extents = 0L, 
+        sizeof_hdr = 348L, data_type = "", db_name = "", extents = 0L,
         session_error = 0L, regular = "", dim_info = 0L,
-        dim = c(4L, X, Y, Z, T_vec, 1L, 1L, 1L), 
-        intent_p1 = 0.0, intent_p2 = 0.0, intent_p3 = 0.0, intent_code = 0L, 
-        datatype = nifti_datatype_code, bitpix = nifti_bitpix, 
-        slice_start = 0L, 
-        pixdim = c(q$qfac %||% 1.0, sp_spacing[1], sp_spacing[2], sp_spacing[3], TR, 0.0, 0.0, 0.0), 
-        vox_offset = 0.0, scl_slope = 1.0, scl_inter = 0.0, 
-        slice_end = as.integer(Z - 1), slice_code = 0L, xyzt_units = 10L, 
-        cal_max = 0.0, cal_min = 0.0, slice_duration = 0.0, toffset = 0.0, 
-        glmax = 0L, glmin = 0L, 
+        dim = c(4L, X, Y, Z, T_vec, 1L, 1L, 1L),
+        intent_p1 = 0.0, intent_p2 = 0.0, intent_p3 = 0.0, intent_code = 0L,
+        datatype = nifti_datatype_code, bitpix = nifti_bitpix,
+        slice_start = 0L,
+        pixdim = c(q$qfac %||% 1.0, sp_spacing[1], sp_spacing[2], sp_spacing[3], TR, 0.0, 0.0, 0.0),
+        vox_offset = 0.0, scl_slope = 1.0, scl_inter = 0.0,
+        slice_end = as.integer(Z - 1), slice_code = 0L, xyzt_units = 10L,
+        cal_max = 0.0, cal_min = 0.0, slice_duration = 0.0, toffset = 0.0,
+        glmax = 0L, glmin = 0L,
         descrip = paste("LatentNeuroVec data:", vec@label %||% "(no label)"),
-        aux_file = "", qform_code = 1L, sform_code = 0L, 
+        aux_file = "", qform_code = 1L, sform_code = 0L,
         quatern_b = q$quaternion[1], quatern_c = q$quaternion[2], quatern_d = q$quaternion[3],
         qoffset_x = q$qoffset[1], qoffset_y = q$qoffset[2], qoffset_z = q$qoffset[3],
         srow_x = c(tmat[1,1], tmat[1,2], tmat[1,3], tmat[1,4]),
@@ -940,187 +932,161 @@ to_h5_latentvec <- function(vec, file_name=NULL, data_type="FLOAT",
         srow_z = c(tmat[3,1], tmat[3,2], tmat[3,3], tmat[3,4]),
         intent_name = "", magic = "n+1"
       )
-      
-      # --- 2. Write Header Group --- 
-      message("[to_h5_latentvec] Writing Header Group...") 
-      # No need to create hdr_grp explicitly, h5_write handles parents
-      # hdr_grp <- h5obj$create_group("/header") 
-      # --- USE h5_write for header fields --- 
-      tryCatch({
-          for (nm in names(hdr_fields)) {
-             # Construct full path for h5_write
-             field_path <- file.path("/header", nm)
-             # Use h5_write (from h5_utils.R)
-             h5_write(h5obj, field_path, hdr_fields[[nm]], 
-                      dtype = guess_h5_type(hdr_fields[[nm]]), # Let h5_write handle type
-                      overwrite = TRUE) 
-          }
-          # Write qfac separately using h5_write (ensures correct type handling)
-          h5_write(h5obj, "/header/qfac", q$qfac %||% 1.0, 
-                   dtype = h5types$H5T_NATIVE_DOUBLE, # Explicitly double
-                   overwrite = TRUE)
-          
-      }, error = function(e) {
-          # Handle potential errors during header writing
-          warning(paste0("[to_h5_latentvec] Error writing header fields: ", e$message))
-          # Depending on severity, might want to stop() instead
-      })
-      # --- END HEADER WRITE using h5_write --- 
-      message("[to_h5_latentvec] Header Group DONE.")
 
-      # --- 3. Write Mask Dataset using h5_write --- 
-      message("[to_h5_latentvec] Writing Mask Dataset...")
-      mask_vol <- vec@mask
-      if (!inherits(mask_vol, "LogicalNeuroVol")) stop("vec@mask is not a LogicalNeuroVol")
-      mask_arr <- array(as.integer(mask_vol@.Data), dim = dim(mask_vol))
-      mask_chunk_dim <- c(min(32, X), min(32, Y), min(32, Z)) # Recommended chunking
-      h5_write(h5obj, "/mask", mask_arr, 
-               dtype = hdf5r::h5types$H5T_NATIVE_UCHAR, 
-               chunk_dims = mask_chunk_dim, compression = compression, 
-               overwrite = TRUE) # Note: nbit not directly supported by h5_write yet
-      nVox_mask <- sum(mask_vol)
-     
+      .write_header(h5obj, hdr_fields, q$qfac %||% 1.0)
 
-      # --- 3a. Write Voxel Coords using h5_write --- 
-      message("[to_h5_latentvec] Writing Voxel Coords...")
-      mask_indices <- which(mask_arr == 1L) 
-      coords_to_write <- NULL
-      if (length(mask_indices) > 0) {
-          coords <- arrayInd(mask_indices, .dim = dim(mask_arr)) 
-          coords_to_write <- matrix(as.integer(coords - 1), nrow = length(mask_indices), ncol = 3) 
-          if (nrow(coords_to_write) != nVox_mask) {
-              stop("Internal dimension mismatch: voxel_coords rows != non-zero count in mask")
-          }
-      } else {
-          warning("Mask is empty; writing empty /voxel_coords dataset.")
-          coords_to_write <- matrix(integer(), nrow = 0, ncol = 3)
-      }
-      coord_chunk_dims <- if (nrow(coords_to_write) > 0) c(min(1024, nrow(coords_to_write)), 3) else NULL
-      h5_write(h5obj, "/voxel_coords", coords_to_write, 
-               dtype = hdf5r::h5types$H5T_NATIVE_INT32, 
-               chunk_dims = coord_chunk_dims, compression = compression, 
-               overwrite = TRUE) # nbit not directly supported
+      nvox <- .write_mask(h5obj, vec@mask, compression)
 
-      # --- 4. Write Basis Matrix (Spatial Components) using h5_write --- 
-      message("[to_h5_latentvec] Writing Basis Group (spatial components)...")
-      h5obj$create_group("/basis") # Create group first
-    
-      t_loadings <- Matrix::t(vec@loadings)
-      k <- nrow(t_loadings)
-      nVox_basis <- ncol(t_loadings)
-      if (nVox_basis != nVox_mask) {
-          stop(paste0("Internal dimension mismatch: spatial basis columns (", nVox_basis,") != nVox in mask (", nVox_mask,")"))
-      }
-      
-      density <- Matrix::nnzero(t_loadings) / length(t_loadings)
-      write_sparse <- density < 0.30 
-      message(paste0("  Spatial basis density: ", round(density*100, 2), "%. Writing as ", if(write_sparse) "SPARSE" else "DENSE", "."))
+      basis_info <- .write_basis(h5obj, vec@loadings, h5dtype_internal,
+                                 compression, vec@offset, nvox)
 
-      if (!write_sparse) {
-          dense_chunk_dims <- c(k, min(1024, nVox_basis)) # Chunk along voxels
-          h5_write(h5obj, "/basis/basis_matrix", as.matrix(t_loadings), 
-                   dtype = h5dtype_internal, 
-                   chunk_dims = dense_chunk_dims, compression = compression, 
-                   overwrite = TRUE) # nbit not supported
-      } else {
-          sparse_grp <- h5obj$create_group("/basis/basis_matrix_sparse")
-          # Write sparse attributes
-          hdf5r::h5attr(sparse_grp, "storage") <- "csc"
-          hdf5r::h5attr(sparse_grp, "shape") <- dim(t_loadings) # Use dim of original sparse matrix
-          
-          if (!inherits(t_loadings, "dgCMatrix")) {
-              message("  Converting spatial basis to dgCMatrix for sparse storage...")
-              t_loadings_csc <- as(t_loadings, "CsparseMatrix")
-          } else {
-              t_loadings_csc <- t_loadings
-          }
-          
-          nnz <- length(t_loadings_csc@x)
-          target_min_chunk <- 128 * 1024
-          element_size <- h5dtype_internal$get_size()
-          chunk_len <- max(1L, floor(target_min_chunk / element_size))
-          if (nnz > 0 && chunk_len > nnz) chunk_len <- nnz else if(nnz == 0) chunk_len <- NULL
-          
-          # Write sparse triplet datasets using h5_write
-          h5_write(sparse_grp, "data", t_loadings_csc@x, h5dtype_internal, 
-                   chunk_dims = chunk_len, compression = compression, 
-                   overwrite = TRUE) # nbit not supported
-          h5_write(sparse_grp, "indices", as.integer(t_loadings_csc@i), hdf5r::h5types$H5T_NATIVE_INT32, 
-                   chunk_dims = chunk_len, compression = compression, 
-                   overwrite = TRUE) # compression might be okay here
-          h5_write(sparse_grp, "indptr", as.integer(t_loadings_csc@p), hdf5r::h5types$H5T_NATIVE_INT32, 
-                   chunk_dims = NULL, compression = 0, 
-                   overwrite = TRUE) # No chunk/compress for indptr
-      }
-      message("[to_h5_latentvec] Basis Group DONE.")
-
-      # --- 5. Write Offset using h5_write --- 
-      message("[to_h5_latentvec] Writing Offset...")
-      offset_vec <- vec@offset
-      if (length(offset_vec) > 0) {
-          if (length(offset_vec) != nVox_basis) {
-              stop(paste0("Offset length (", length(offset_vec), ") does not match spatial basis nVox (", nVox_basis, ")"))
-          }
-          h5_write(h5obj, "/offset", offset_vec, 
-                   dtype = h5dtype_internal, 
-                   chunk_dims = NULL, compression = 0, 
-                   overwrite = TRUE) 
-      } else {
-          message("  Offset is empty, skipping write.") 
-      }
-     
-      # --- 6. Write Scans Group (Single Scan for now) using h5_write --- 
-      message("[to_h5_latentvec] Writing Scans Group...")
-      scans_grp <- h5obj$create_group("/scans")
-      
       scan_name <- vec@label %||% tools::file_path_sans_ext(basename(file_name))
-      scan_name <- gsub("[^a-zA-Z0-9_.-]", "_", scan_name)
-      if (!nzchar(scan_name)) scan_name <- "scan_1"
-
-      
-      # --- 6a. Write Scan Metadata using h5_write --- 
-      meta_path_base <- file.path("/scans", scan_name, "metadata")
-     
-      run_length <- nrow(vec@basis)
-      scanlabelgroup <- h5obj$create_group(file.path("/scans", scan_name))
-      metagroup <- h5obj$create_group(meta_path_base)
-      h5_write(h5obj, file.path(meta_path_base, "run_length"), as.integer(run_length), overwrite=TRUE)
-      if (TR > 0) h5_write(h5obj, file.path(meta_path_base, "TR"), as.double(TR), overwrite=TRUE)
-      h5_write(h5obj, file.path(meta_path_base, "subject_id"), "", dtype=hdf5r::H5T_STRING$new(size = Inf), overwrite=TRUE)
-      h5_write(h5obj, file.path(meta_path_base, "task"), "", dtype=hdf5r::H5T_STRING$new(size = Inf), overwrite=TRUE)
-      h5_write(h5obj, file.path(meta_path_base, "session"), "", dtype=hdf5r::H5T_STRING$new(size = Inf), overwrite=TRUE)
-      
-      # --- 6b. Write Embedding Dataset using h5_write --- 
-      message("  Writing embedding matrix...")
-      embedding_matrix <- as.matrix(vec@basis)
-      embed_dims_spec <- dim(embedding_matrix)
-      if (embed_dims_spec[1] != T_vec) {
-          warning(paste0("Embedding time points (", embed_dims_spec[1], ") does not match header time dim (", T_vec, "). Using embedding dim."))
-          # If allowing variable run lengths, header dim[4] might be max or first run length.
-      }
-      if (embed_dims_spec[2] != k) { 
-          stop(paste0("Embedding components (", embed_dims_spec[2], ") mismatch spatial basis components (", k, ")"))
-      }
-      
-      embed_chunk_dim <- c(min(128, embed_dims_spec[1]), k) # Chunk along time
-      # Use the h5_write helper function for consistency
-      h5_write(h5obj, file.path("/scans", scan_name, "embedding"), embedding_matrix, 
-               dtype = h5dtype_internal, 
-               chunk_dims = embed_chunk_dim, compression = compression, 
-               overwrite = TRUE) # nbit not supported by h5_write
-      
-      message("[to_h5_latentvec] Scans Group DONE.") 
+      .write_scans(h5obj, as.matrix(vec@basis), scan_name, TR,
+                   basis_info$k, T_vec, h5dtype_internal, compression)
 
       message("[to_h5_latentvec] HDF5 write SUCCESSFUL.")
       return(h5obj)
-      
+
   }, error = function(e) {
       warning(paste0("[to_h5_latentvec] ERROR during HDF5 write: ", e$message))
-      # h5obj closure is handled by its on.exit.
-      return(NULL) # Indicate failure
+      return(NULL)
   })
 }
 
+#' @keywords internal
+#' @noRd
+.write_header <- function(h5, hdr_fields, qfac) {
+  message("[to_h5_latentvec] Writing Header Group...")
+  for (nm in names(hdr_fields)) {
+    h5_write(h5, file.path("/header", nm), hdr_fields[[nm]],
+             dtype = guess_h5_type(hdr_fields[[nm]]), overwrite = TRUE)
+  }
+  h5_write(h5, "/header/qfac", qfac,
+           dtype = h5types$H5T_NATIVE_DOUBLE, overwrite = TRUE)
+  message("[to_h5_latentvec] Header Group DONE.")
+}
+
+#' @keywords internal
+#' @noRd
+.write_mask <- function(h5, mask_vol, compression) {
+  message("[to_h5_latentvec] Writing Mask Dataset...")
+  if (!inherits(mask_vol, "LogicalNeuroVol"))
+    stop("vec@mask is not a LogicalNeuroVol")
+  mask_arr <- array(as.integer(mask_vol@.Data), dim = dim(mask_vol))
+  dims <- dim(mask_vol)
+  mask_chunk_dim <- c(min(32, dims[1]), min(32, dims[2]), min(32, dims[3]))
+  h5_write(h5, "/mask", mask_arr,
+           dtype = hdf5r::h5types$H5T_NATIVE_UCHAR,
+           chunk_dims = mask_chunk_dim, compression = compression,
+           overwrite = TRUE)
+  nvox <- sum(mask_vol)
+
+  message("[to_h5_latentvec] Writing Voxel Coords...")
+  mask_indices <- which(mask_arr == 1L)
+  coords_to_write <- if (length(mask_indices) > 0) {
+    coords <- arrayInd(mask_indices, .dim = dim(mask_arr))
+    matrix(as.integer(coords - 1), nrow = length(mask_indices), ncol = 3)
+  } else {
+    matrix(integer(), nrow = 0, ncol = 3)
+  }
+  if (nrow(coords_to_write) != nvox)
+    stop("Internal dimension mismatch: voxel_coords rows != non-zero count in mask")
+  coord_chunk <- if (nrow(coords_to_write) > 0) c(min(1024, nrow(coords_to_write)), 3) else NULL
+  h5_write(h5, "/voxel_coords", coords_to_write,
+           dtype = hdf5r::h5types$H5T_NATIVE_INT32,
+           chunk_dims = coord_chunk, compression = compression,
+           overwrite = TRUE)
+  return(nvox)
+}
+
+#' @keywords internal
+#' @noRd
+.write_basis <- function(h5, loadings, h5dtype, compression, offset, nvox_mask) {
+  message("[to_h5_latentvec] Writing Basis Group (spatial components)...")
+  h5$create_group("/basis")
+  t_loadings <- Matrix::t(loadings)
+  k <- nrow(t_loadings)
+  nvox <- ncol(t_loadings)
+  if (nvox != nvox_mask)
+    stop(paste0("Internal dimension mismatch: spatial basis columns (", nvox,
+                ") != nVox in mask (", nvox_mask, ")"))
+  density <- Matrix::nnzero(t_loadings) / length(t_loadings)
+  write_sparse <- density < 0.30
+  message(paste0("  Spatial basis density: ", round(density*100, 2),
+                 "%. Writing as ", if(write_sparse) "SPARSE" else "DENSE", "."))
+  if (!write_sparse) {
+    dense_chunk <- c(k, min(1024, nvox))
+    h5_write(h5, "/basis/basis_matrix", as.matrix(t_loadings),
+             dtype = h5dtype,
+             chunk_dims = dense_chunk, compression = compression,
+             overwrite = TRUE)
+  } else {
+    sparse_grp <- h5$create_group("/basis/basis_matrix_sparse")
+    hdf5r::h5attr(sparse_grp, "storage") <- "csc"
+    hdf5r::h5attr(sparse_grp, "shape") <- dim(t_loadings)
+    if (!inherits(t_loadings, "dgCMatrix"))
+      t_loadings <- as(t_loadings, "CsparseMatrix")
+    nnz <- length(t_loadings@x)
+    target_min_chunk <- 128 * 1024
+    element_size <- h5dtype$get_size()
+    chunk_len <- max(1L, floor(target_min_chunk / element_size))
+    if (nnz > 0 && chunk_len > nnz) chunk_len <- nnz else if(nnz == 0) chunk_len <- NULL
+    h5_write(sparse_grp, "data", t_loadings@x, h5dtype,
+             chunk_dims = chunk_len, compression = compression,
+             overwrite = TRUE)
+    h5_write(sparse_grp, "indices", as.integer(t_loadings@i),
+             hdf5r::h5types$H5T_NATIVE_INT32,
+             chunk_dims = chunk_len, compression = compression,
+             overwrite = TRUE)
+    h5_write(sparse_grp, "indptr", as.integer(t_loadings@p),
+             hdf5r::h5types$H5T_NATIVE_INT32,
+             chunk_dims = NULL, compression = 0,
+             overwrite = TRUE)
+  }
+  message("[to_h5_latentvec] Basis Group DONE.")
+  message("[to_h5_latentvec] Writing Offset...")
+  if (length(offset) > 0) {
+    if (length(offset) != nvox)
+      stop(paste0("Offset length (", length(offset), ") does not match spatial basis nVox (", nvox, ")"))
+    h5_write(h5, "/offset", offset, dtype = h5dtype,
+             chunk_dims = NULL, compression = 0, overwrite = TRUE)
+  } else {
+    message("  Offset is empty, skipping write.")
+  }
+  invisible(list(k = k, nVox = nvox))
+}
+
+#' @keywords internal
+#' @noRd
+.write_scans <- function(h5, embedding_matrix, scan_name, TR, k, T_vec,
+                         h5dtype, compression) {
+  message("[to_h5_latentvec] Writing Scans Group...")
+  h5$create_group("/scans")
+  scan_name <- gsub("[^a-zA-Z0-9_.-]", "_", scan_name)
+  if (!nzchar(scan_name)) scan_name <- "scan_1"
+
+  meta_path <- file.path("/scans", scan_name, "metadata")
+  h5$create_group(file.path("/scans", scan_name))
+  h5$create_group(meta_path)
+  run_length <- nrow(embedding_matrix)
+  h5_write(h5, file.path(meta_path, "run_length"), as.integer(run_length), overwrite = TRUE)
+  if (TR > 0) h5_write(h5, file.path(meta_path, "TR"), as.double(TR), overwrite = TRUE)
+  h5_write(h5, file.path(meta_path, "subject_id"), "", dtype=hdf5r::H5T_STRING$new(size = Inf), overwrite = TRUE)
+  h5_write(h5, file.path(meta_path, "task"), "", dtype=hdf5r::H5T_STRING$new(size = Inf), overwrite = TRUE)
+  h5_write(h5, file.path(meta_path, "session"), "", dtype=hdf5r::H5T_STRING$new(size = Inf), overwrite = TRUE)
+
+  message("  Writing embedding matrix...")
+  embed_dims <- dim(embedding_matrix)
+  if (embed_dims[1] != T_vec)
+    warning(paste0("Embedding time points (", embed_dims[1], ") does not match header time dim (", T_vec, "). Using embedding dim."))
+  if (embed_dims[2] != k)
+    stop(paste0("Embedding components (", embed_dims[2], ") mismatch spatial basis components (", k, ")"))
+  embed_chunk <- c(min(128, embed_dims[1]), k)
+  h5_write(h5, file.path("/scans", scan_name, "embedding"), embedding_matrix,
+           dtype = h5dtype, chunk_dims = embed_chunk,
+           compression = compression, overwrite = TRUE)
+  message("[to_h5_latentvec] Scans Group DONE.")
+}
 #' Internal helper to write each field from a list into an HDF5 group
 #' @noRd
 .write_nifti_header_fields <- function(hdr_grp, fields_list) {
