@@ -90,7 +90,6 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
         row_indices_in_result <- index_groups[[cid_str]]
         mask_indices_this_cluster_req <- mask_indices[row_indices_in_result]
 
-        ds <- NULL
         # === Use .dataset_path generic ===
         dset_path <- tryCatch(.dataset_path(x, cid),
                               error = function(e) {
@@ -107,20 +106,11 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             }
             row_offsets_in_dataset <- as.integer(row_offsets_in_dataset)
 
-            # Accessing obj slot from H5ClusteredArray
-            if (!x@obj$exists(dset_path)){
-                stop(sprintf("Dataset for cluster %d not found at path: %s", cid, dset_path))
-            }
-            ds <- x@obj[[dset_path]]
-            # Simplified on.exit handling: rely on hdf5r GC or explicit closure later
-            # on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) ds$close(), add = TRUE, after = FALSE)
-
-            cluster_data_subset <- ds[row_offsets_in_dataset, time_indices, drop = FALSE]
-
-            # Close dataset handle immediately after reading
-            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-                 try(ds$close(), silent = TRUE)
-            }
+            cluster_data_subset <- h5_read_subset(
+                x@obj,
+                dset_path,
+                list(row_offsets_in_dataset, time_indices)
+            )
 
             expected_rows <- length(row_indices_in_result)
             if (!is.matrix(cluster_data_subset) ||
@@ -133,9 +123,6 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             result_mat[row_indices_in_result, ] <- cluster_data_subset
 
         }, error = function(e) {
-            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-                try(ds$close(), silent = TRUE)
-            }
             stop(sprintf("[.get_cluster_timeseries] Failed processing cluster %d at path '%s'. Original error: %s", cid, dset_path, e$message))
         })
     } # End loop over clusters

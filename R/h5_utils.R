@@ -157,7 +157,30 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
   })
 
   return(data)
-} 
+}
+
+#' Read a subset of an HDF5 dataset
+#'
+#' Convenience wrapper around `h5_read()` that passes index arguments
+#' for subsetting.
+#'
+#' @param h5 An open `H5File` object handle.
+#' @param path The dataset path within the HDF5 file.
+#' @param index_list A list of indices for each dimension to read.
+#' @param missing_ok Logical indicating whether a missing dataset should
+#'   return `NULL` instead of triggering an error.
+#'
+#' @return The subset of data read from the dataset.
+#' @keywords internal
+h5_read_subset <- function(h5, path, index_list, missing_ok = FALSE) {
+  if (!is.list(index_list)) {
+    stop("h5_read_subset: 'index_list' must be a list of indices")
+  }
+
+  h5_read(h5, path,
+          missing_ok = missing_ok,
+          read_args = list(args = index_list))
+}
 
 # -------------------------------------------------------------------------
 # Helpers
