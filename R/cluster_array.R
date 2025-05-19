@@ -90,7 +90,6 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
         row_indices_in_result <- index_groups[[cid_str]]
         mask_indices_this_cluster_req <- mask_indices[row_indices_in_result]
 
-        ds <- NULL
         # === Use .dataset_path generic ===
         dset_path <- tryCatch(.dataset_path(x, cid),
                               error = function(e) {
@@ -107,6 +106,11 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             }
             row_offsets_in_dataset <- as.integer(row_offsets_in_dataset)
 
+            cluster_data_subset <- h5_read_subset(
+                x@obj,
+                dset_path,
+                list(row_offsets_in_dataset, time_indices)
+            )
             # Accessing obj slot from H5ClusteredArray
             assert_h5_path(x@obj, dset_path,
                            sprintf("Dataset for cluster %d", cid))
