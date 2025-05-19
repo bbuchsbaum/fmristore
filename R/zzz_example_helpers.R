@@ -134,9 +134,11 @@ create_minimal_h5_for_H5NeuroVol <- function(dims = c(3L, 3L, 2L), file_path = N
     out_file <- file_path
   }
 
+  h5info <- NULL
   h5f <- NULL
   tryCatch({
-    h5f <- hdf5r::H5File$new(out_file, mode = "w")
+    h5info <- open_h5(out_file, mode = "w")
+    h5f <- h5info$h5
     
     hdf5r::h5attr(h5f, "rtype") <- "DenseNeuroVol"
     
@@ -159,10 +161,10 @@ create_minimal_h5_for_H5NeuroVol <- function(dims = c(3L, 3L, 2L), file_path = N
     
   }, error = function(e) {
     # Ensure file is closed if error occurs during creation, then rethrow
-    if (!is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     stop(sprintf("Error creating minimal HDF5 for H5NeuroVol at %s: %s", out_file, e$message))
   }, finally = {
-    if (!is.null(h5f) && h5f$is_valid) {
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) {
       try(h5f$close_all(), silent = TRUE)
     }
   })
@@ -202,9 +204,11 @@ create_minimal_h5_for_H5NeuroVec <- function(dims = c(3L, 3L, 2L, 5L), file_path
     out_file <- file_path
   }
 
+  h5info <- NULL
   h5f <- NULL
   tryCatch({
-    h5f <- hdf5r::H5File$new(out_file, mode = "w")
+    h5info <- open_h5(out_file, mode = "w")
+    h5f <- h5info$h5
     
     hdf5r::h5attr(h5f, "rtype") <- "DenseNeuroVec" # Assuming H5NeuroVec is a DenseNeuroVec
     
@@ -224,10 +228,10 @@ create_minimal_h5_for_H5NeuroVec <- function(dims = c(3L, 3L, 2L, 5L), file_path
                             dtype = hdf5r::h5types$H5T_NATIVE_FLOAT) 
     
   }, error = function(e) {
-    if (!is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     stop(sprintf("Error creating minimal HDF5 for H5NeuroVec at %s: %s", out_file, e$message))
   }, finally = {
-    if (!is.null(h5f) && h5f$is_valid) {
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) {
       try(h5f$close_all(), silent = TRUE)
     }
   })
@@ -369,9 +373,11 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
   # For true minimality for read_labeled_vec, num_vols_per_label = 1 is assumed per unique label.
   # The `labels` argument now directly defines the datasets to be created.
 
+  h5info <- NULL
   h5f <- NULL
   tryCatch({
-    h5f <- hdf5r::H5File$new(out_file, mode = "w")
+    h5info <- open_h5(out_file, mode = "w")
+    h5f <- h5info$h5
     
     # Root attributes (mimicking write_labeled_vec)
     hdf5r::h5attr(h5f, "class") <- "LabeledVolumeSet" # Or as expected by read_labeled_vec if different
@@ -449,10 +455,10 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
     header_grp$create_dataset("magic", robj = "n+1", dtype = hdf5r::H5T_STRING$new(type="c", size=4L))
 
   }, error = function(e) {
-    if (!is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     stop(sprintf("Error creating aligned HDF5 for LabeledVolumeSet at %s: %s", out_file, e$message))
   }, finally = {
-    if (!is.null(h5f) && h5f$is_valid) {
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) {
       try(h5f$close_all(), silent = TRUE)
     }
   })
@@ -766,10 +772,12 @@ create_minimal_h5_for_H5ClusterExperiment <- function(
     out_file <- file_path
   }
 
+  h5info <- NULL
   h5f <- NULL
   tryCatch({
     # 2. Create the HDF5 file
-    h5f <- hdf5r::H5File$new(out_file, mode = "w")
+    h5info <- open_h5(out_file, mode = "w")
+    h5f <- h5info$h5
 
     # 3. Write master mask to /mask
     h5f$create_dataset("mask", robj = master_mask_vol@.Data, 
@@ -841,10 +849,10 @@ create_minimal_h5_for_H5ClusterExperiment <- function(
     # hdf5r::h5attr(h5f, "fmristore_version") <- as.character(utils::packageVersion("fmristore"))
 
   }, error = function(e) {
-    if (!is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     stop(sprintf("Error creating minimal HDF5 for H5ClusterExperiment at %s: %s", out_file, e$message))
   }, finally = {
-    if (!is.null(h5f) && h5f$is_valid) {
+    if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) {
       try(h5f$close_all(), silent = TRUE)
     }
   })
