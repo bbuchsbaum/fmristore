@@ -45,7 +45,7 @@ test_that("Write and read a small LabeledVolumeSet", {
                     file=tmpfile, compression=4)
 
   # 7) Read it back as LabeledVolumeSet
-  lvs <- read_labeled_vec(tmpfile, memoise=FALSE)
+  lvs <- read_labeled_vec(tmpfile)
 
   # 8) Check class
   expect_s4_class(lvs, "LabeledVolumeSet")
@@ -160,7 +160,7 @@ test_that("LabeledVolumeSet array subsetting with [] works correctly", {
                     file=tmpfile, compression=0) # No compression for simplicity
 
   # 7) Read it back
-  lvs <- read_labeled_vec(tmpfile, memoise=FALSE)
+  lvs <- read_labeled_vec(tmpfile)
 
   # 8) Define Expected Data (Original data * Mask)
   #    The LVS stores 0 where the mask is FALSE.
@@ -236,7 +236,7 @@ test_that("Write and read with special characters in labels", {
                     file=tmpfile, compression=4)
                     
   # 7) Read it back
-  lvs <- read_labeled_vec(tmpfile, memoise=FALSE)
+  lvs <- read_labeled_vec(tmpfile)
   
   # 8) Check that original labels are preserved
   expect_equal(lvs@labels, labels)
@@ -340,7 +340,7 @@ test_that("write_labeled_vec → read_labeled_vec round-trip is loss-less", {
   
 
   # ---------- read ----------
-  lset <- read_labeled_vec(tmp, memoise = TRUE)
+  lset <- read_labeled_vec(tmp)
   expect_s4_class(lset, "LabeledVolumeSet")
   expect_identical(lset@labels, lbls)
 
