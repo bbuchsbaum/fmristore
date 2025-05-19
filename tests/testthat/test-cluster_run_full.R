@@ -312,4 +312,74 @@ test_that("make_run_full errors when cluster dataset has wrong dimensions", {
   )
 })
 
-# Add data access, dim, show tests later... 
+# ------------------------------------------------------------------------------
+# Data access tests
+
+test_that("series() retrieves correct voxel time series", {
+  setup_info <- setup_test_file_full()
+  on.exit(cleanup_test_file(setup_info))
+
+  run_full <- H5ClusteredRunFull(file = setup_info$filepath,
+                                 scan_name = setup_info$scan_name,
+                                 mask = setup_info$mask,
+                                 clusters = setup_info$clusters,
+                                 n_time = setup_info$n_time)
+
+  mask_idx1 <- 1L
+  coord1 <- setup_info$voxel_coords[mask_idx1, ]
+  expected_ts <- as.numeric(setup_info$expected_reconstruction[
+    coord1[1], coord1[2], coord1[3], ]
+  )
+
+  ts_mask <- as.numeric(series(run_full, mask_idx1))
+  expect_equal(ts_mask, expected_ts)
+
+  ts_coord <- as.numeric(series(run_full, coord1[1], coord1[2], coord1[3]))
+  expect_equal(ts_coord, expected_ts)
+
+  mask_indices <- 1:2
+  coords_mat <- setup_info$voxel_coords[mask_indices, ]
+  expected_mat <- vapply(mask_indices, function(ii) {
+    cidx <- setup_info$voxel_coords[ii, ]
+    setup_info$expected_reconstruction[cidx[1], cidx[2], cidx[3], ]
+  }, numeric(setup_info$n_time))
+
+  ts_multi <- series(run_full, coords_mat)
+  expect_equal(ts_multi, expected_mat)
+
+  h5file(run_full)$close_all()
+})
+
+test_that("linear_access reconstructs voxel values", {
+  setup_info <- setup_test_file_full()
+  on.exit(cleanup_test_file(setup_info))
+
+  run_full <- H5ClusteredRunFull(file = setup_info$filepath,
+                                 scan_name = setup_info$scan_name,
+                                 mask = setup_info$mask,
+                                 clusters = setup_info$clusters,
+                                 n_time = setup_info$n_time)
+
+  dims4 <- dim(run_full)
+  coord_in <- setup_info$voxel_coords[1, ]
+  t_in <- 1L
+  idx_in <- coord_in[1] + (coord_in[2] - 1) * dims4[1] +
+            (coord_in[3] - 1) * dims4[1] * dims4[2] +
+            (t_in - 1) * dims4[1] * dims4[2] * dims4[3]
+
+  val_in <- linear_access(run_full, idx_in)
+  expected_in <- setup_info$expected_reconstruction[
+    coord_in[1], coord_in[2], coord_in[3], t_in]
+  expect_equal(val_in, expected_in)
+
+  coord_out <- c(1L, 1L, 3L)
+  t_out <- 1L
+  idx_out <- coord_out[1] + (coord_out[2] - 1) * dims4[1] +
+             (coord_out[3] - 1) * dims4[1] * dims4[2] +
+             (t_out - 1) * dims4[1] * dims4[2] * dims4[3]
+
+  val_out <- linear_access(run_full, idx_out)
+  expect_equal(val_out, 0)
+
+  h5file(run_full)$close_all()
+})
