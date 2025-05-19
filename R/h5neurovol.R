@@ -237,7 +237,7 @@ setMethod(
         subvol <- dset[minx:maxx, miny:maxy, minz:maxz, drop=FALSE]
     }, finally = {
         if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-            try(dset$close(), silent = TRUE)
+            close_h5_safely(dset)
         }
     })
     if (is.null(subvol)) stop("Failed to read sub-volume data for linear_access.")
@@ -348,7 +348,7 @@ setMethod(
         subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, drop=FALSE]
     }, finally = {
         if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-            try(dset$close(), silent = TRUE)
+            close_h5_safely(dset)
         }
     })
     if (is.null(subvol)) stop("Failed to read sub-volume data.")
