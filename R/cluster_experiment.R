@@ -576,22 +576,21 @@ H5ClusteredExperiment <- function(file,
   # --- 6. Load Global Cluster Metadata ---
   if (is.null(cluster_metadata)) {
       clusters_group_path <- "/clusters"
-      cluster_meta_group_path <- file.path(clusters_group_path, "cluster_meta") # Path to the *group*
+      cluster_meta_group_path <- file.path(clusters_group_path, "cluster_meta")
       global_meta_df <- data.frame()
       if (tryCatch(h5obj$exists(cluster_meta_group_path), error=function(e) FALSE)) {
-          meta_grp <- NULL
+          meta_obj <- NULL
           tryCatch({
-              meta_grp <- h5obj[[cluster_meta_group_path]]; opened_groups[["global_cluster_meta"]] <- meta_grp
-              
-              # *** Check if the opened object is actually a group ***
-              if (is(meta_grp, "H5Group")) {
-                  meta_datasets <- list.datasets(meta_grp)
+              meta_obj <- h5obj[[cluster_meta_group_path]]; opened_groups[["global_cluster_meta"]] <- meta_obj
+
+              if (is(meta_obj, "H5Group")) {
+                  meta_datasets <- list.datasets(meta_obj)
                   if (length(meta_datasets) > 0) {
                       meta_list <- list()
                       for (dname in meta_datasets) {
                           dset <- NULL
                           tryCatch({
-                              dset <- meta_grp[[dname]]
+                              dset <- meta_obj[[dname]]
                               meta_list[[dname]] <- if(length(dset$dims) == 0 || is.null(dset$dims)) dset[1] else dset[]
                           }, error = function(e_read) {
                               warning(sprintf("Failed to read global cluster metadata dataset '%s': %s", dname, e_read$message))
@@ -599,32 +598,38 @@ H5ClusteredExperiment <- function(file,
                               if (!is.null(dset) && dset$is_valid) try(dset$close(), silent=TRUE)
                           })
                       }
-                      # Check lengths before converting to data.frame
                       lens <- vapply(meta_list, length, integer(1))
                       if (length(unique(lens)) == 1) {
                           global_meta_df <- as.data.frame(meta_list)
                       } else {
                           warning("Global cluster metadata datasets have inconsistent lengths. Returning as a list.")
-                          global_meta_df <- meta_list # Return list if lengths differ
+                          global_meta_df <- meta_list
                       }
                   }
+              } else if (is(meta_obj, "H5D")) {
+                  meta_data <- NULL
+                  tryCatch({
+                      meta_data <- meta_obj$read()
+                  }, error=function(e_read) {
+                      warning(sprintf("Failed to read global cluster metadata dataset '%s': %s", cluster_meta_group_path, e_read$message))
+                  })
+                  if (!is.null(meta_data)) {
+                      if (is.data.frame(meta_data)) global_meta_df <- meta_data else global_meta_df <- as.data.frame(meta_data)
+                  }
+                  if (!is.null(meta_obj) && meta_obj$is_valid) try(meta_obj$close(), silent=TRUE)
+                  opened_groups[["global_cluster_meta"]] <- NULL
               } else {
-                  # If it exists but is not a group (e.g., old compound dataset), warn and skip
-                  warning(sprintf("Expected '%s' to be an HDF5 group, but found object of class '%s'. Cannot load column-wise metadata.", 
-                                  cluster_meta_group_path, class(meta_grp)[1]))
-                  # Ensure handle is closed if it was a dataset we opened
-                  if (!is.null(meta_grp) && inherits(meta_grp, "H5RefClass") && meta_grp$is_valid) {
-                     try(meta_grp$close(), silent=TRUE)
-                     # Remove from cleanup list if it wasn't a group added earlier
-                     opened_groups[["global_cluster_meta"]] <- NULL 
+                  warning(sprintf("Object '%s' is neither an H5Group nor H5D (class '%s').", cluster_meta_group_path, class(meta_obj)[1]))
+                  if (!is.null(meta_obj) && inherits(meta_obj, "H5RefClass") && meta_obj$is_valid) {
+                     try(meta_obj$close(), silent=TRUE)
+                     opened_groups[["global_cluster_meta"]] <- NULL
                   }
               }
           }, error = function(e_grp) {
                warning(sprintf("Error reading global cluster metadata from '%s': %s", cluster_meta_group_path, e_grp$message))
           })
-          # Meta group should be closed via on.exit if it was a group
       }
-      cluster_metadata <- global_meta_df # Assign loaded data (or empty df)
+      cluster_metadata <- global_meta_df
   } else {
       if (!is.data.frame(cluster_metadata)) stop("[H5ClusteredExperiment] Provided 'cluster_metadata' must be a data.frame.")
       # User provided metadata overrides loaded
