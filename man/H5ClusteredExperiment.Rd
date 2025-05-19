@@ -11,7 +11,7 @@ H5ClusteredExperiment(
   clusters = NULL,
   scan_metadata = NULL,
   cluster_metadata = NULL,
-  summary_preference = "prefer",
+  summary_preference = NULL,
   keep_handle_open = TRUE
 )
 }
@@ -36,9 +36,12 @@ from the HDF5 file. If provided, its length should match the number of scans.}
 \item{cluster_metadata}{(Optional) A data.frame to override or supplement
 cluster metadata read from `/clusters/cluster_meta` in the HDF5 file.}
 
-\item{summary_preference}{(Optional) Character string: "require" (only load summary runs, error if missing),
-"prefer" (load summary if available, else full), "ignore" (load full runs only). Default is often "prefer".
-This influences whether `make_run_summary` or `make_run_full` is called.
+\item{summary_preference}{(Optional) Character string controlling which run type to load.
+If \code{NULL} (default), the constructor examines \code{/scans@summary_only} to choose a default:
+\code{"require"} if the attribute is \code{TRUE}, \code{"ignore"} if \code{FALSE},
+otherwise \code{"prefer"}. Explicit values can be \code{"require"} (only load summary runs, error if missing),
+\code{"prefer"} (load summary if available, else full), or \code{"ignore"} (load full runs only).
+This influences whether \code{make_run_summary} or \code{make_run_full} is called.
 *Note: This parameter requires careful implementation based on HDF5 content checks.*}
 
 \item{keep_handle_open}{(Logical) Only relevant if \code{file_source} is a path.

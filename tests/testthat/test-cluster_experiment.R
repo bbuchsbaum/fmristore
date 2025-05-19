@@ -219,4 +219,43 @@ test_that("reader validation works for provided mask and clusters", {
   clus_bad_len <- ClusteredNeuroVol(c(clus_orig@clusters, 99), space(mask_orig)) # Add extra element
   expect_error(H5ClusteredExperiment(tf, mask = mask_orig, clusters = clus_bad_len), ".*clusters vector length.*does not match.*number of TRUE voxels.*")
 
-}) 
+})
+
+test_that("summary_preference defaults based on /scans attribute", {
+  tf1 <- tempfile(fileext = ".h5")
+  tf2 <- tempfile(fileext = ".h5")
+  on.exit({unlink(tf1); unlink(tf2)}, add = TRUE)
+
+  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2,2,2))
+  clus <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 2)
+
+  runs_sum <- list(list(scan_name = "s1", type = "summary", data = matrix(1:4, 2, 2)))
+  write_clustered_experiment_h5(tf1, mask, clus, runs_sum, overwrite = TRUE, verbose = FALSE)
+
+  exp_sum <- H5ClusteredExperiment(tf1)
+  expect_s4_class(exp_sum@runs[[1]], "H5ClusteredRunSummary")
+
+  runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:4, 2, 2))))
+  write_clustered_experiment_h5(tf2, mask, clus, runs_full, overwrite = TRUE, verbose = FALSE)
+
+  exp_full <- H5ClusteredExperiment(tf2)
+  expect_s4_class(exp_full@runs[[1]], "H5ClusteredRunFull")
+})
+
+test_that("warning for mismatched summary_only attribute", {
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+
+  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2,2,2))
+  clus <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 2)
+
+  runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:4, 2, 2))))
+  write_clustered_experiment_h5(tf, mask, clus, runs_full, overwrite = TRUE, verbose = FALSE)
+
+  h5f <- hdf5r::H5File$new(tf, mode = "r+")
+  h5attr(h5f[["scans"]], "summary_only") <- TRUE
+  h5f$close_all()
+
+  expect_warning(exp_warn <- H5ClusteredExperiment(tf), "/scans@summary_only")
+  expect_s4_class(exp_warn@runs[[1]], "H5ClusteredRunFull")
+})
