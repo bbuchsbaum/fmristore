@@ -13,8 +13,8 @@ test_that("H5NeuroVol handles empty or single-slice subsetting", {
 
   # Write to HDF5
   tmpfile <- tempfile(fileext=".h5")
-  on.exit(unlink(tmpfile))
-  h5vol <- to_nih5_vol(vol, tmpfile, data_type="DOUBLE", chunk_dim=c(2,3,1))
+  #on.exit(unlink(tmpfile))
+  h5vol <- as_h5(vol, tmpfile, data_type="DOUBLE", chunk_dim=c(2,3,1))
 
   # Single slice
   slice1 <- h5vol[1,,]
@@ -43,7 +43,7 @@ test_that("H5NeuroVol error handling for out-of-range indices", {
 
   tmp <- tempfile(fileext=".h5")
   on.exit(unlink(tmp))
-  h5vol <- to_nih5_vol(vol, tmp, data_type="FLOAT")
+  h5vol <- as_h5(vol, tmp, data_type="FLOAT")
 
   # Out-of-range
   expect_error(h5vol[5,1,1], regexp="Subscript")
@@ -63,7 +63,7 @@ test_that("H5NeuroVec partial dimension subsetting and zero-size slices", {
   vec <- NeuroVec(arr, spc)
 
   tmp <- tempfile(fileext=".h5")
-  on.exit(unlink(tmp))
+  #on.exit(unlink(tmp))
 
   # Force no chunking to test unchunked usage
   h5vec <- to_nih5_vec(vec, file_name=tmp, chunk_dim=c(3,3,2,3), compression=0)
@@ -74,7 +74,7 @@ test_that("H5NeuroVec partial dimension subsetting and zero-size slices", {
   expect_equal(dim(esub), c(3,3,2,0))
 
   # Single time slice
-  sub1 <- h5vec[1:2, , 1, 1]
+  sub1 <- h5vec[1:2, , 1, 1,drop=FALSE]
   expect_equal(dim(sub1), c(2,3,1,1))
   expect_equal(sub1, arr[1:2, , 1, 1,drop=FALSE], tolerance=1e-6)
 
@@ -235,142 +235,4 @@ test_that("LabeledVolumeSet partial usage + memoise=TRUE", {
   expect_s4_class(vC, "DenseNeuroVol")
   # verify it matches arr[,,,3]*mask
   expect_equal(as.array(vC@.Data), arr[,,,3]*mask_arr, tolerance=1e-7)
-})
-
-test_that("Clustered dataset read/write with summary_only=TRUE", {
-  # Create a simple 3D mask
-  dims_3d <- c(4, 4, 4)
-  mask_arr <- array(FALSE, dims_3d)
-  set.seed(123)
-  mask_arr[sample(length(mask_arr), length(mask_arr)/5)] <- TRUE
-  mvol <- LogicalNeuroVol(mask_arr, NeuroSpace(dims_3d))
-
-  # Create a cluster map:
-  # Let's say we intended to sample from 1:10, but only the active voxels count.
-  cluster_ids <- 1:10
-  cl_map <- integer(sum(mask_arr))
-  for (j in seq_along(cl_map)) {
-    cl_map[j] <- sample(cluster_ids, 1)
-  }
-  cVol <- ClusteredNeuroVol(mvol, cl_map)
-
-  # Print cVol to see how many clusters are active (e.g., 7)
-  print(cVol)
-
-  # For summary data: each scan is a [nTime, nClusters_actual] matrix.
-  nTime <- 5
-  actual_clusters <- sort(unique(cVol@clusters))
-  nClusters <- length(actual_clusters)  # This is the number of active clusters
-
-  # Now build two summary matrices with nClusters columns (not 10)
-  sc1 <- matrix(rnorm(nTime * nClusters), nrow = nTime, ncol = nClusters)
-  sc2 <- matrix(rnorm(nTime * nClusters), nrow = nTime, ncol = nClusters)
-  scans_list <- list(sc1, sc2)
-
-  # Metadata
-  sc_md <- list(
-    list(TR = 2.0, subject = "subjA"),
-    list(TR = 2.0, subject = "subjA")
-  )
-  cl_md <- data.frame(cluster_id = actual_clusters,
-                      description = paste("Cluster", actual_clusters))
-
-  # Write the clustered dataset
-  tmpf <- tempfile(fileext = ".h5")
-  on.exit(unlink(tmpf))
-
-  wobj <- write_clustered_dataset(
-    file             = tmpf,
-    vecs            = scans_list,
-    scan_names      = c("runA", "runB"),
-    mask            = mvol,
-    clusters        = cVol,
-    scan_metadata   = sc_md,
-    cluster_metadata = cl_md,
-    summary_only    = TRUE,  # store only cluster-level summary
-    compression     = 4,
-    chunk_size      = 1024
-  )
-  expect_s4_class(wobj, "H5ReducedClusteredVecSeq")
-
-  # read
-  rseq <- read_clustered_dataset(tmpf)
-  expect_s4_class(rseq, "H5ReducedClusteredVecSeq")
-
-  # check as.matrix => list or bind
-  df_list <- as.matrix(rseq, bind_scans=FALSE)
-  expect_length(df_list, 2)
-  expect_equal(df_list[[1]], sc1, tolerance=1e-7)
-  expect_equal(df_list[[2]], sc2, tolerance=1e-7)
-})
-
-test_that("Clustered dataset full-voxel read/write", {
-  # make a small 3D mask, cluster_map
-  dims_3d <- c(3,3,2)
-  mask_arr <- array(TRUE, dims_3d)
-  mask <- LogicalNeuroVol(mask_arr, NeuroSpace(dims_3d))
-
-  # define clusters => each voxel belongs to 1..4
-  cMap <- integer(prod(dims_3d))
-  cMap[] <- sample(1:4, length(cMap), replace=TRUE)
-  cVol <- ClusteredNeuroVol(mask, cMap)
-
-  # build e.g. 2 scans => each is NeuroVec
-  # say each has 2 timepoints
-  arrA <- array(rnorm(prod(dims_3d)*2), dim=c(dims_3d,2))
-  arrB <- array(rnorm(prod(dims_3d)*2), dim=c(dims_3d,2))
-  spA  <- NeuroSpace(c(dims_3d,2))
-  spB  <- NeuroSpace(c(dims_3d,2))
-
-  vecA <- NeuroVec(arrA, spA)
-  vecB <- NeuroVec(arrB, spB)
-  scans_list <- list(vecA, vecB)
-  scan_names <- c("scanX","scanY")
-  # metadata
-  smd_list <- list(
-    list(TR=1.5, subject="Bob"),
-    list(TR=2.0, subject="Sue")
-  )
-
-  tmpf <- tempfile(fileext=".h5")
-  on.exit(unlink(tmpf))
-
-  wobj <- write_clustered_dataset(
-    file=file.path(tmpf),
-    vecs=scans_list,
-    scan_names=scan_names,
-    mask=mask,
-    clusters=cVol,
-    scan_metadata=smd_list,
-    summary_only=FALSE
-  )
-  expect_s4_class(wobj, "H5ClusteredVecSeq")
-
-  # read back => prefer_reduced=FALSE
-  rseq <- read_clustered_dataset(tmpf, prefer_reduced=FALSE)
-  expect_s4_class(rseq, "H5ClusteredVecSeq")
-
-  # check times
-  # for each scan => dimension => [ #vox in cluster, #time ] => or partial reading
-  # We'll do linear_access or [i=..]
-
-  # check single scan => rseq[[1]] => H5ClusteredVec
-  hv1 <- rseq[[1]]
-  expect_s4_class(hv1, "H5ClusteredVec")
-  # partial sub => i=1:3, j=2:3, k=2, l=1 => compare arrA
-  sub_mem <- arrA[1:3,2:3,2,1, drop=FALSE]
-  sub_h5  <- hv1[1:3, 2:3, 2, 1]
-  # sub_h5 => shape c(3,2,1,1) if drop=FALSE, or c(3,2) if drop=TRUE
-  # depending on how you wrote your subset method.
-  dim_check <- c(3,2)
-  expect_equal(dim(sub_h5), dim_check)
-  sub_mem2d <- drop(sub_mem)  # => c(3,2)
-  expect_equal(sub_h5, sub_mem2d, tolerance=1e-7)
-
-  # linear access => pick random
-  totA <- prod(dims_3d)*2
-  idx_samp <- c(1,2,9,10, totA)
-  hvvals   <- hv1[idx_samp]
-  memvalsA <- arrA[idx_samp]
-  expect_equal(hvvals, memvalsA, tolerance=1e-7)
 })

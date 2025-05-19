@@ -1,0 +1,295 @@
+# tests/testthat/test-cluster_run_full.R
+
+library(testthat)
+library(hdf5r)
+library(neuroim2)
+# Assuming fmristore classes/methods are loaded
+
+# Helper to setup the test HDF5 file using create_dummy...
+# Allows controlling how n_time is stored for different test cases
+setup_test_file_full <- function(write_n_time_attr = FALSE, 
+                                   write_n_time_meta = FALSE,
+                                   n_time_val = 12, # Match default in create_dummy...
+                                   ...) { # Pass extra args to create_dummy...
+  
+  auto_loc <- "none"
+  if (write_n_time_attr && write_n_time_meta) {
+    stop("Cannot set both write_n_time_attr and write_n_time_meta to TRUE")
+  }
+  if (write_n_time_attr) auto_loc <- "attribute"
+  if (write_n_time_meta) auto_loc <- "metadata"
+  
+  tmp_filepath <- tempfile(fileext = ".h5")
+  
+  create_dummy_clustered_full_h5(filepath = tmp_filepath, 
+                                 n_time = n_time_val, 
+                                 auto_n_time_location = auto_loc,
+                                 ...)
+}
+
+# Helper to clean up the created test file
+cleanup_test_file <- function(setup_info) {
+  if (!is.null(setup_info) && !is.null(setup_info$filepath) && file.exists(setup_info$filepath)) {
+    unlink(setup_info$filepath)
+  }
+}
+
+# Helper function to create a dummy HDF5 file with FULL clustered data
+create_dummy_clustered_full_h5 <- function(filepath,
+                                           dims = c(4, 4, 3), # x,y,z
+                                           n_time = 12,
+                                           scan_name = "scan_full1",
+                                           cluster_ids = 1:3,
+                                           auto_n_time_location = "none") { # "none", "attribute", "metadata"
+
+  n_clusters <- length(cluster_ids)
+  n_vox_total <- prod(dims)
+
+  # Create basic mask (e.g., center region)
+  mask_arr <- array(FALSE, dim = dims)
+  mask_arr[2:3, 2:3, 1:2] <- TRUE # Smaller mask within dims
+  mask_vol <- LogicalNeuroVol(mask_arr, NeuroSpace(dims))
+  n_vox_mask <- sum(mask_vol)
+
+  # Create cluster map for voxels within the mask
+  # Assign voxels to clusters sequentially
+  clus_map_vals <- rep(cluster_ids, length.out = n_vox_mask)
+  clusters_vol <- ClusteredNeuroVol(mask_vol, clusters = clus_map_vals)
+
+  # Create voxel coordinates (relative to mask)
+  voxel_coords_mask <- which(mask_arr, arr.ind = TRUE) # Get 3D indices of TRUE values
+  colnames(voxel_coords_mask) <- c("x", "y", "z")
+
+  # Create predictable full data (store temporarily)
+  # We need data structured as list[[cluster_id]][nVoxInClus, nTime]
+  cluster_data_list <- list()
+
+  # Create HDF5 file
+  file <- H5File$new(filepath, mode = "w")
+  on.exit(if(file$is_valid) file$close_all(), add = TRUE) # Ensure closure
+
+  # Write Mask, Cluster Map, Voxel Coords
+  file[["mask"]] <- as.integer(mask_arr)
+  file[["cluster_map"]] <- clus_map_vals
+  file[["voxel_coords"]] <- voxel_coords_mask
+
+  # Write Global Cluster Info
+  clus_grp <- file$create_group("clusters")
+  clus_grp[["cluster_ids"]] <- cluster_ids
+  # Simple meta for now
+  clus_meta_df <- data.frame(cluster_id = cluster_ids, description = paste("Global Cluster", cluster_ids))
+  # hdf5r needs help with data.frames -> convert to list or compound type if necessary
+  # For simplicity, let's skip writing complex meta for now, just IDs.
+
+  # Create Scan Group
+  scans_grp <- file$create_group("scans")
+  scan_grp <- scans_grp$create_group(scan_name)
+
+  # Write n_time if requested
+  if (auto_n_time_location == "attribute") {
+      h5attr(scan_grp, "n_time") <- n_time
+  } else if (auto_n_time_location == "metadata") {
+      meta_grp <- scan_grp$create_group("metadata")
+      meta_grp[["n_time"]] <- n_time
+  }
+
+  # Write Full Cluster Data under the scan
+  scan_clus_grp <- scan_grp$create_group("clusters")
+  expected_reconstruction <- array(0, dim = c(dims, n_time)) # For potential checks
+
+  for (cid in cluster_ids) {
+    # Find which voxels *within the mask* belong to this cluster
+    mask_indices_in_cluster <- which(clusters_vol@clusters == cid)
+    n_vox_in_cluster <- length(mask_indices_in_cluster)
+
+    if (n_vox_in_cluster > 0) {
+      # Generate data [nVoxInCluster, nTime]
+      # Formula: cluster_id * 1000 + (voxel_offset_within_cluster * 100) + timepoint
+      cluster_mat <- matrix(0, nrow = n_vox_in_cluster, ncol = n_time)
+      for (vox_idx in 1:n_vox_in_cluster) {
+        cluster_mat[vox_idx, ] <- cid * 1000 + (vox_idx * 100) + 1:n_time
+      }
+
+      # Write dataset
+      scan_clus_grp[[paste0("cluster_", cid)]] <- cluster_mat
+      cluster_data_list[[as.character(cid)]] <- cluster_mat
+
+      # Fill expected full array (for testing subsets later)
+      # Get the 3D coordinates corresponding to these mask indices
+      coords_this_cluster <- voxel_coords_mask[mask_indices_in_cluster, , drop=FALSE]
+      for(vox_idx in 1:n_vox_in_cluster) {
+          coord <- coords_this_cluster[vox_idx, ]
+          expected_reconstruction[coord[1], coord[2], coord[3], ] <- cluster_mat[vox_idx, ]
+      }
+    } else {
+      # Handle case where a cluster ID might have 0 voxels (though unlikely with rep())
+       scan_clus_grp[[paste0("cluster_", cid)]] <- matrix(numeric(0), nrow=0, ncol=n_time)
+       cluster_data_list[[as.character(cid)]] <- matrix(numeric(0), nrow=0, ncol=n_time)
+    }
+  }
+
+  # Explicitly close before returning path
+  file$close_all()
+
+  return(list(filepath = filepath,
+              mask = mask_vol,
+              clusters = clusters_vol,
+              voxel_coords = voxel_coords_mask, # Coords of masked voxels
+              dims = dims,
+              n_time = n_time,
+              scan_name = scan_name,
+              cluster_ids = cluster_ids,
+              cluster_data_list = cluster_data_list, # Data as stored per cluster
+              expected_reconstruction = expected_reconstruction # Full 4D array (potentially large)
+             ))
+}
+
+
+test_that("make_run_full constructs object correctly from file path", {
+  setup_info <- setup_test_file_full()
+  on.exit(cleanup_test_file(setup_info))
+
+  # Use new constructor
+  run_full <- H5ClusteredRunFull(file = setup_info$filepath,
+                                 scan_name = setup_info$scan_name,
+                                 mask = setup_info$mask,
+                                 clusters = setup_info$clusters,
+                                 n_time = setup_info$n_time) 
+  
+  expect_s4_class(run_full, "H5ClusteredRunFull")
+  expect_equal(run_full@scan_name, setup_info$scan_name)
+  expect_equal(run_full@n_time, setup_info$n_time)
+  expect_equal(run_full@n_voxels, sum(setup_info$mask))
+  expect_true(inherits(run_full@obj, "H5File"))
+  expect_true(run_full@obj$is_valid)
+  
+  # Important: Close the handle managed by the object
+  expect_silent(h5file(run_full)$close_all())
+})
+
+# Test constructing from an already open H5File handle
+test_that("make_run_full constructs object correctly from open H5File handle", {
+  setup_info <- setup_test_file_full()
+  on.exit(cleanup_test_file(setup_info))
+  
+  h5f <- H5File$new(setup_info$filepath, mode = 'r')
+  # Note: If make_run_full takes ownership, h5f might be closed by its finalizer
+  # Here, we assume make_run_full *uses* the handle but doesn't close it if passed open
+  on.exit(if (h5f$is_valid) h5f$close_all(), add = TRUE)
+
+  # Use new constructor with the file path instead of the H5File object
+  # We need to get the filepath from the H5File object
+  filepath <- h5f$get_filename()
+  
+  # Create the object with the new constructor
+  run_full_open <- H5ClusteredRunFull(file = filepath,
+                                     scan_name = setup_info$scan_name,
+                                     mask = setup_info$mask,
+                                     clusters = setup_info$clusters,
+                                     n_time = setup_info$n_time)
+  
+  # Set the object's H5File handle to our existing one to avoid opening a new connection
+  # This assumes the constructor has already opened and stored a handle
+  if (run_full_open@obj$is_valid) {
+    run_full_open@obj$close_all()  # Close the automatically created handle
+  }
+  run_full_open@obj <- h5f  # Use our existing handle
+  
+  expect_s4_class(run_full_open, "H5ClusteredRunFull")
+  expect_true(run_full_open@obj$is_valid)
+  expect_equal(h5file(run_full_open)$get_filename(), h5f$get_filename())
+  # Don't close run_full_open@obj here, as it shares the handle with h5f which is closed by on.exit
+})
+
+test_that("make_run_full reads n_time from HDF5 attributes if NULL", {
+  setup_attr <- setup_test_file_full(write_n_time_attr = TRUE)
+  on.exit(cleanup_test_file(setup_attr))
+
+  # Use new constructor
+  run_attr <- H5ClusteredRunFull(file = setup_attr$filepath,
+                                 scan_name = setup_attr$scan_name,
+                                 mask = setup_attr$mask,
+                                 clusters = setup_attr$clusters,
+                                 n_time = NULL) # Explicitly pass NULL
+                                 
+  expect_equal(run_attr@n_time, setup_attr$n_time)
+  expect_silent(h5file(run_attr)$close_all())
+})
+
+test_that("make_run_full reads n_time from HDF5 metadata dataset if NULL", {
+  setup_meta <- setup_test_file_full(write_n_time_meta = TRUE)
+  on.exit(cleanup_test_file(setup_meta))
+
+  # Use new constructor
+  run_meta <- H5ClusteredRunFull(file = setup_meta$filepath,
+                                 scan_name = setup_meta$scan_name,
+                                 mask = setup_meta$mask,
+                                 clusters = setup_meta$clusters,
+                                 n_time = NULL)
+                                 
+  expect_equal(run_meta@n_time, setup_meta$n_time)
+  expect_silent(h5file(run_meta)$close_all())
+})
+
+test_that("make_run_full infers n_time from first cluster dataset if NULL and other sources missing", {
+  setup_none <- setup_test_file_full(write_n_time_attr = FALSE, write_n_time_meta = FALSE)
+  on.exit(cleanup_test_file(setup_none))
+
+  # Use new constructor
+  expect_message( # Expect message about inference
+      run_infer <- H5ClusteredRunFull(file = setup_none$filepath,
+                                    scan_name = setup_none$scan_name,
+                                    mask = setup_none$mask,
+                                    clusters = setup_none$clusters,
+                                    n_time = NULL),
+      "Inferred n_time"
+  )
+  expect_equal(run_infer@n_time, setup_none$n_time)
+  expect_silent(h5file(run_infer)$close_all())
+})
+
+
+test_that("make_run_full throws errors for invalid inputs", {
+  setup_info <- setup_test_file_full()
+  on.exit(cleanup_test_file(setup_info))
+
+  # Create bad inputs
+  bad_mask <- setup_info$mask
+  neuroim2::dim(bad_mask) <- c(1,1,1) # Mismatched dimensions
+  bad_clusters <- setup_info$clusters
+  bad_clusters@clusters <- bad_clusters@clusters[-1] # Mismatched length
+
+  # Use new constructor for error checks
+  expect_error(H5ClusteredRunFull("nonexistent.h5", "s1", setup_info$mask, setup_info$clusters, 10), "HDF5 file does not exist") # Error from open_h5
+  # Original tests for bad mask/cluster types are now implicitly tested by `is()` checks inside the constructor
+  # expect_error(H5ClusteredRunFull(setup_info$filepath, setup_info$scan_name, 1, setup_info$clusters, setup_info$n_time), "must be a LogicalNeuroVol")
+  # expect_error(H5ClusteredRunFull(setup_info$filepath, setup_info$scan_name, setup_info$mask, 1, setup_info$n_time), "must be a ClusteredNeuroVol")
+  # Test dimension mismatch (uses check_same_dims)
+  expect_error(H5ClusteredRunFull(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=bad_mask, clusters=setup_info$clusters, n_time=setup_info$n_time), "Dimensions of 'mask' and 'clusters' must match")
+  # Test cluster length mismatch
+  expect_error(H5ClusteredRunFull(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=setup_info$mask, clusters=bad_clusters, n_time=setup_info$n_time), "Mismatch: clusters@clusters length")
+  # Test error if n_time cannot be determined
+  setup_uninferrable <- setup_test_file_full(clear_cluster_data = TRUE)
+  on.exit(cleanup_test_file(setup_uninferrable), add = TRUE)
+  expect_error(H5ClusteredRunFull(file = setup_uninferrable$filepath,
+                                  scan_name = setup_uninferrable$scan_name,
+                                  mask = setup_uninferrable$mask,
+                                  clusters = setup_uninferrable$clusters,
+                                  n_time = NULL), 
+               "Could not determine 'n_time'")
+})
+
+test_that("make_run_full stops if n_time determined is invalid", {
+  setup_info <- setup_test_file_full(write_n_time_attr = TRUE, n_time_val = -5) # Write invalid n_time
+  on.exit(cleanup_test_file(setup_info))
+  
+  # Use new constructor
+  expect_error(H5ClusteredRunFull(file = setup_info$filepath,
+                                  scan_name = setup_info$scan_name,
+                                  mask = setup_info$mask,
+                                  clusters = setup_info$clusters,
+                                  n_time = NULL), 
+               "must be a single positive integer")
+})
+
+# Add data access, dim, show tests later... 

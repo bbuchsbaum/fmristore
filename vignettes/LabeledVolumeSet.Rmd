@@ -1,0 +1,272 @@
+---
+title: "Managing Labeled Collections of Volumes with LabeledVolumeSet"
+author: "fmristore Package"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{LabeledVolumeSet}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  echo = TRUE
+)
+# Ensure necessary packages are loaded for the vignette's code to run
+library(fmristore)
+library(neuroim2) # For NeuroVol, NeuroVec, NeuroSpace, LogicalNeuroVol
+library(hdf5r)    # For H5File (though often abstracted by fmristore)
+```
+
+## Introduction
+
+The `LabeledVolumeSet` class in `fmristore` is designed to manage a collection of 3D neuroimaging volumes where each volume is associated with a distinct label. This is particularly useful for datasets where you might have different experimental conditions, subjects, or statistical maps that share a common 3D spatial domain (defined by a mask) but represent different entities.
+
+Key features of `LabeledVolumeSet`:
+
+1.  **HDF5 Backend**: The actual voxel data for each labeled volume is stored efficiently in an HDF5 file.
+2.  **Shared Mask**: All volumes in the set share a common 3D `LogicalNeuroVol` mask. Data is typically stored only for voxels within this mask.
+3.  **Labeled Access**: Volumes can be accessed by their string labels or numeric indices.
+4.  **`neuroim2` Compatibility**: It inherits from `NeuroVec`, making it behave like a 4D object where the 4th dimension corresponds to the labels.
+
+**Important Note on File Handles:**
+A `LabeledVolumeSet` object, when created by reading from an HDF5 file using `read_labeled_vec()`, maintains an **open HDF5 file handle**. It is crucial to explicitly close this handle using `close(your_lvs_object)` when you are finished to release system resources and ensure data integrity.
+
+## Creating and Reading a `LabeledVolumeSet` File
+
+The primary way to work with `LabeledVolumeSet` objects is to first create an HDF5 file with the appropriate structure using `write_labeled_vec()`, and then read it back using `read_labeled_vec()`.
+
+First, let's prepare the necessary in-memory data: a 4D `NeuroVec`, a 3D mask, and labels.
+```{r lvs_prepare_data_for_writing, tidy=FALSE}
+# 1. Dummy 4D NeuroVec data
+dims_4d <- c(5L, 4L, 3L, 2L) # X, Y, Z, Number of labels
+space_4d <- NeuroSpace(dims_4d)
+data_4d <- array(rnorm(prod(dims_4d)), dim = dims_4d)
+vec_4d_source <- DenseNeuroVec(data_4d, space_4d)
+
+# 2. 3D mask
+mask_3d_array <- array(sample(c(TRUE, FALSE), prod(dims_4d[1:3]), replace = TRUE, prob = c(0.7, 0.3)),
+                       dim = dims_4d[1:3])
+mask_3d_vol <- LogicalNeuroVol(mask_3d_array, drop_dim(space_4d))
+
+# 3. Labels
+original_labels <- c("AlphaCondition", "BetaCondition")
+
+temp_h5_path_lvs <- tempfile(fileext = "_lvs_demo.h5")
+```
+The temporary HDF5 file for `LabeledVolumeSet` will be at: `r I(temp_h5_path_lvs)`.
+
+Now, write this data to the HDF5 file using `write_labeled_vec()`. This function creates the file and returns an open HDF5 file object.
+```{r lvs_write_file, tidy=FALSE}
+h5_file_written_handle <- write_labeled_vec(
+  vec = vec_4d_source, 
+  mask = mask_3d_vol, 
+  labels = original_labels, 
+  file = temp_h5_path_lvs,
+  compression = 0 # No compression for simplicity in example
+)
+
+# It's good practice to close the handle returned by write_labeled_vec 
+# if you are done with direct operations on it, especially before reopening by path.
+if (!is.null(h5_file_written_handle) && h5_file_written_handle$is_valid) {
+  h5_file_written_handle$close_all()
+}
+```
+
+The file `r I(temp_h5_path_lvs)` now exists. We can load it into a `LabeledVolumeSet` object.
+```{r lvs_read_file, tidy=FALSE}
+lvs <- read_labeled_vec(file_path = temp_h5_path_lvs)
+print(lvs) # Displays a summary of the LabeledVolumeSet
+```
+
+Let's verify some properties and access data:
+```{r lvs_verify_read_data, tidy=FALSE}
+print(paste("Dimensions of LabeledVolumeSet:", paste(dim(lvs), collapse="x")))
+print("Labels in the set:")
+print(labels(lvs))
+cat("Retrieved labels are identical to original:", identical(labels(lvs), original_labels), "\n")
+
+# Access a specific volume by label
+vol_alpha <- lvs[["AlphaCondition"]]
+print(paste("Class of extracted volume 'AlphaCondition':", class(vol_alpha)))
+print(paste("Dimensions of extracted volume 'AlphaCondition':", paste(dim(vol_alpha), collapse="x")))
+
+# Verify data content (compare with original masked data for the first label)
+original_masked_alpha_data <- data_4d[,,,1] * mask_3d_array
+cat("AlphaCondition data consistent with original (masked):", 
+    isTRUE(all.equal(as.array(vol_alpha), original_masked_alpha_data, tolerance = 1e-7)), "\n")
+
+# Access a subset using 4D indexing
+subset_data_lvs <- lvs[1:2, 1, 1, 1] # x=1:2, y=1, z=1, label_index=1 ('AlphaCondition')
+cat("\nSubset [1:2, 1, 1, 1]:\n")
+print(subset_data_lvs)
+expected_subset_data <- original_masked_alpha_data[1:2, 1, 1]
+cat("Subset data consistent with original:", 
+    isTRUE(all.equal(subset_data_lvs, expected_subset_data, tolerance = 1e-7)), "\n")
+```
+
+Finally, close the `LabeledVolumeSet` object's file handle and remove the temporary file.
+```{r lvs_read_cleanup, tidy=FALSE}
+close(lvs)
+unlink(temp_h5_path_lvs)
+```
+
+## How `LabeledVolumeSet` HDF5 Files are Structured
+
+The HDF5 files that `read_labeled_vec` consumes are created by `write_labeled_vec`. This function takes a 4D `NeuroVec` (representing multiple volumes), a 3D `LogicalNeuroVol` mask, and a vector of labels.
+
+Here's a conceptual overview of what `write_labeled_vec` does:
+
+1.  **Header Information**: Writes NIfTI-like header information (dimensions, spacing, orientation quaternions) into a `/header` group.
+2.  **Mask**: Stores the 3D `LogicalNeuroVol` mask as a dataset (e.g., `/mask`).
+3.  **Labels**: Stores the provided character vector of labels (e.g., `/labels`).
+4.  **Data per Label**: For each label and corresponding volume in the input 4D `NeuroVec`:
+    *   It applies the mask to the 3D volume.
+    *   The resulting 1D vector of *in-mask* voxel values is stored as a dataset under `/data/<sanitized_label_name>`. Label names are sanitized to be valid HDF5 dataset names.
+
+## Data Access Methods
+
+`LabeledVolumeSet` objects offer several ways to access the underlying data:
+
+### Accessing Individual Volumes (by Label or Index)
+You can extract a single 3D volume using the `[[` operator, either with a character label or a numeric index. This typically returns a `DenseNeuroVol` object.
+
+```{r lvs_access_double_bracket, tidy=FALSE}
+# Re-create and load LVS object for this example section
+temp_h5_path_lvs_access <- tempfile(fileext = "_lvs_access.h5")
+original_labels_access <- c("TaskA", "TaskB")
+vec_4d_source_access <- DenseNeuroVec(array(1:(4*4*2*2), c(4,4,2,2)), NeuroSpace(c(4,4,2,2)))
+mask_3d_vol_access <- LogicalNeuroVol(array(TRUE, c(4,4,2)), NeuroSpace(c(4,4,2)))
+h5_written_access_handle <- NULL
+
+lvs_access <- NULL # Handle for read_labeled_vec output
+tryCatch({
+  h5_written_access_handle <- write_labeled_vec(
+    vec = vec_4d_source_access, 
+    mask = mask_3d_vol_access, 
+    labels = original_labels_access, 
+    file = temp_h5_path_lvs_access
+  )
+  
+  lvs_access <- read_labeled_vec(temp_h5_path_lvs_access)
+  
+  cat("\nAccessing volume by label 'TaskA':\n")
+  vol_task_a <- lvs_access[["TaskA"]]
+  print(paste("Dimensions of 'TaskA' volume:", paste(dim(vol_task_a), collapse="x")))
+  
+  cat("\nAccessing volume by numeric index 2 (should be 'TaskB'):\n")
+  vol_task_b <- lvs_access[[2]]
+  print(paste("Dimensions of volume at index 2 ('TaskB'):", paste(dim(vol_task_b), collapse="x")))
+  
+  # Verify 'TaskB' data
+  original_masked_b_data <- (vec_4d_source_access@.Data[,,,2] * mask_3d_vol_access@.Data)
+  cat("'TaskB' data (accessed by index) consistent with original:", 
+      isTRUE(all.equal(as.array(vol_task_b), original_masked_b_data)), "\n")
+
+}, error = function(e) {
+  message("Error in LVS [[ access example: ", e$message)
+}, finally = {
+  if (!is.null(lvs_access)) close(lvs_access) 
+  if (!is.null(h5_written_access_handle) && h5_written_access_handle$is_valid) h5_written_access_handle$close_all()
+  if (file.exists(temp_h5_path_lvs_access)) unlink(temp_h5_path_lvs_access)
+})
+```
+
+### 4D Array-like Subsetting
+Since `LabeledVolumeSet` inherits from `NeuroVec`, it supports 4D array-like subsetting `lvs[i, j, k, l]`, where `l` refers to the label index.
+
+```{r lvs_access_single_bracket, tidy=FALSE}
+temp_h5_path_lvs_subset <- tempfile(fileext = "_lvs_subset.h5")
+original_labels_subset <- c("SetX", "SetY")
+vec_4d_source_subset <- DenseNeuroVec(array(runif(3*3*2*2), c(3,3,2,2)), NeuroSpace(c(3,3,2,2)))
+mask_3d_vol_subset <- LogicalNeuroVol(array(c(TRUE,FALSE,TRUE, TRUE,TRUE,FALSE), c(3,3,2)), NeuroSpace(c(3,3,2)))
+h5_written_subset_handle <- NULL
+lvs_subset <- NULL
+
+tryCatch({
+  h5_written_subset_handle <- write_labeled_vec(
+    vec = vec_4d_source_subset, 
+    mask = mask_3d_vol_subset, 
+    labels = original_labels_subset, 
+    file = temp_h5_path_lvs_subset
+  )
+  lvs_subset <- read_labeled_vec(temp_h5_path_lvs_subset)
+  
+  # Extract a sub-block: e.g., x=1:2, y=1, z=1 for the first label ('SetX')
+  cat("\nExtracting sub-block [1:2, 1, 1, 1]:\n")
+  sub_block <- lvs_subset[1:2, 1, 1, 1] 
+  print(sub_block)
+  print(paste("Dimensions of sub_block:", paste(dim(sub_block), collapse="x")))
+  
+  # Extract data for all labels at a specific voxel
+  cat("\nData for voxel [1,1,1] across all labels:\n")
+  voxel_series <- lvs_subset[1, 1, 1, ]
+  print(voxel_series)
+  
+}, error = function(e) {
+  message("Error in LVS [] subsetting example: ", e$message)
+}, finally = {
+  if (!is.null(lvs_subset)) close(lvs_subset)
+  if (!is.null(h5_written_subset_handle) && h5_written_subset_handle$is_valid) h5_written_subset_handle$close_all()
+  if (file.exists(temp_h5_path_lvs_subset)) unlink(temp_h5_path_lvs_subset)
+})
+```
+
+### Linear Access
+The `linear_access(lvs, indices)` method allows accessing data using a single numeric index that spans the conceptual 4D array (X, Y, Z, Label).
+
+```{r lvs_access_linear, tidy=FALSE}
+temp_h5_path_lvs_linear <- tempfile(fileext = "_lvs_linear.h5")
+original_labels_linear <- c("V1", "V2")
+dims_linear <- c(2L,1L,1L,2L) # X, Y, Z, nLabels
+data_linear_arr <- array(1:prod(dims_linear), dim=dims_linear)
+vec_4d_source_linear <- DenseNeuroVec(data_linear_arr, NeuroSpace(dims_linear))
+mask_3d_vol_linear <- LogicalNeuroVol(array(TRUE, dims_linear[1:3]), NeuroSpace(dims_linear[1:3]))
+h5_written_linear_handle <- NULL
+lvs_linear <- NULL
+
+tryCatch({
+  h5_written_linear_handle <- write_labeled_vec(
+    vec = vec_4d_source_linear, 
+    mask = mask_3d_vol_linear, 
+    labels = original_labels_linear, 
+    file = temp_h5_path_lvs_linear
+  )
+  lvs_linear <- read_labeled_vec(temp_h5_path_lvs_linear)
+  
+  # Total elements = 2*1*1*2 = 4
+  # Expected data if fully unrolled (column-major through 3D, then by 4th dim):
+  # Voxel (1,1,1), Label "V1" (Index 1 in 4D) -> data_linear_arr[1,1,1,1] = 1
+  # Voxel (2,1,1), Label "V1" (Index 2 in 4D) -> data_linear_arr[2,1,1,1] = 2
+  # Voxel (1,1,1), Label "V2" (Index 3 in 4D) -> data_linear_arr[1,1,1,2] = 3
+  # Voxel (2,1,1), Label "V2" (Index 4 in 4D) -> data_linear_arr[2,1,1,2] = 4
+  
+  cat("\nLinear access for indices 1 through 4:\n")
+  vals_linear <- linear_access(lvs_linear, 1:4)
+  print(vals_linear)
+  
+  expected_vals <- c(data_linear_arr[1,1,1,1], data_linear_arr[2,1,1,1], 
+                     data_linear_arr[1,1,1,2], data_linear_arr[2,1,1,2])
+  cat("Are linearly accessed values consistent?", all.equal(vals_linear, expected_vals), "\n")
+  
+}, error = function(e) {
+  message("Error in LVS linear_access example: ", e$message)
+}, finally = {
+  if (!is.null(lvs_linear)) close(lvs_linear)
+  if (!is.null(h5_written_linear_handle) && h5_written_linear_handle$is_valid) h5_written_linear_handle$close_all()
+  if (file.exists(temp_h5_path_lvs_linear)) unlink(temp_h5_path_lvs_linear)
+})
+```
+
+## Best Practices
+
+*   **Always `close()`**: As with other HDF5-backed objects in `fmristore`, remember to call `close(your_lvs_object)` when you're done to release the HDF5 file handle.
+*   **Label Management**: Ensure labels are unique and descriptive. `write_labeled_vec` will sanitize labels for HDF5 dataset names, but the original labels are preserved and used for access.
+*   **Memory Considerations**: While `LabeledVolumeSet` is HDF5-backed, accessing many individual volumes or large subsets can still involve significant I/O.
+
+## Summary
+
+`LabeledVolumeSet` provides a convenient and efficient way to manage and access collections of labeled 3D neuroimaging volumes that share a common spatial mask, leveraging HDF5 for on-disk storage. Its integration with the `neuroim2`

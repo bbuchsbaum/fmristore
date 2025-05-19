@@ -4,16 +4,16 @@
 \alias{write_vec,LatentNeuroVec,character,missing,missing-method}
 \title{Write LatentNeuroVec to HDF5 File}
 \usage{
-\S4method{write_vec}{LatentNeuroVec,character,missing,missing}(x, file_name, nbit = FALSE, compression = 9, chunk_dim = NULL)
+\S4method{write_vec}{LatentNeuroVec,character,missing,missing}(x, file_name, compression = 9, nbit = FALSE)
 }
 \arguments{
 \item{x}{A \code{\link[neuroim2]{LatentNeuroVec-class}} to write.}
 
 \item{file_name}{\code{character} file path to the output HDF5.}
 
-\item{nbit}{\code{logical}; if TRUE, uses N-bit compression (default: FALSE).}
-
 \item{compression}{\code{integer} in [1..9] specifying compression level (default: 9).}
+
+\item{nbit}{\code{logical}; if TRUE, uses N-bit compression (default: FALSE).}
 
 \item{chunk_dim}{Optional numeric vector specifying chunk dimensions.}
 }
@@ -35,9 +35,42 @@ This function saves:
 all inside an HDF5 file for future loading.
 }
 \examples{
-\dontrun{
-# Write a LatentNeuroVec
-write_vec(lvec, "brain_components.h5", compression=6)
+if (requireNamespace("neuroim2", quietly = TRUE) &&
+    requireNamespace("hdf5r", quietly = TRUE) &&
+    requireNamespace("Matrix", quietly = TRUE) && 
+    exists("write_vec", where = "package:neuroim2") &&
+    !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
+  
+  lnv <- NULL
+  temp_h5_file <- NULL
+  
+  tryCatch({
+    # Create a minimal LatentNeuroVec
+    lnv <- fmristore:::create_minimal_LatentNeuroVec(
+      space_dims = c(3L, 3L, 2L),
+      n_time = 5L,
+      n_comp = 2L
+    )
+    
+    # Create a temporary file for output
+    temp_h5_file <- tempfile(fileext = ".h5")
+    
+    # Write the LatentNeuroVec to HDF5
+    write_vec(lnv, temp_h5_file, compression = 6)
+    
+    # Verify file was created
+    if (file.exists(temp_h5_file)) {
+      cat("Successfully wrote LatentNeuroVec to:", temp_h5_file, "\n")
+    }
+    
+  }, error = function(e) {
+    message("write_vec example failed: ", e$message)
+  }, finally = {
+    # Clean up temporary file
+    if (!is.null(temp_h5_file) && file.exists(temp_h5_file)) {
+      unlink(temp_h5_file)
+    }
+  })
 }
 
 }

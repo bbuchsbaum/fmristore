@@ -1,4 +1,4 @@
-context("HDF5 NeuroVol and NeuroVec classes")
+
 library(neuroim2)
 
 test_that("H5NeuroVol construction and subsetting works", {
@@ -13,7 +13,7 @@ test_that("H5NeuroVol construction and subsetting works", {
   on.exit(unlink(tmp))
 
   # Convert to H5NeuroVol
-  h5vol <- to_nih5_vol(vol, tmp)
+  h5vol <- as_h5(vol, tmp)
 
   # Test basic properties
   expect_true(inherits(h5vol, "H5NeuroVol"))
@@ -40,13 +40,14 @@ test_that("H5NeuroVec construction and series extraction works", {
   on.exit(unlink(tmp))
 
   # Convert to H5NeuroVec
-  h5vec <- to_nih5_vec(vec, tmp)
+  h5vec <- as_h5(vec, tmp)
 
   # Test basic properties
   expect_true(inherits(h5vec, "H5NeuroVec"))
   expect_equal(dim(h5vec), c(dims, nvols))
   expect_equal(spacing(space(h5vec)), spacing(space(vec)))
   expect_equal(origin(space(h5vec)), origin(space(vec)))
+  expect_equal(trans(space(h5vec)), trans(space(vec)))
 
   # Test series extraction
   series1 <- series(h5vec, 5, 5, 5)
@@ -79,8 +80,7 @@ test_that("LatentNeuroVec single timepoint reconstruction", {
 
   # Create a NeuroSpace with dims (10,10,10,100)
   space <- NeuroSpace(c(10,10,10,n_timepoints), spacing=c(2,2,2), origin=c(1,1,1))
-  mask_vol <- LogicalNeuroVol(array(TRUE, dim=c(10,10,10)),
-                              NeuroSpace(c(10,10,10)))
+  mask_vol <- LogicalNeuroVol(array(TRUE, dim=c(10,10,10)), drop_dim(space))
 
   latent_vec <- LatentNeuroVec(
     basis    = basis,      # (100 x 5)
@@ -121,7 +121,7 @@ test_that("H5NeuroVol indexing matches in-memory NeuroVol", {
 
   # 2) Convert it to H5NeuroVol on the fly
   tmpfile <- tempfile(fileext = ".h5")
-  h5vol   <- to_nih5_vol(mem_vol, file_name=tmpfile, data_type="FLOAT")
+  h5vol   <- as_h5(mem_vol, file=tmpfile, data_type="FLOAT")
 
   # 3) Check basic dimension
   expect_equal(dim(h5vol), c(10,10,10))
@@ -176,9 +176,9 @@ test_that("H5NeuroVec indexing matches in-memory DenseNeuroVec", {
 
   ## 2) Convert it to an H5NeuroVec file
   tmpfile <- tempfile(fileext=".h5")
-  h5_vec <- to_nih5_vec(mem_vec, file_name=tmpfile, data_type="FLOAT",
+  h5_vec <- as_h5(mem_vec, file=tmpfile, data_type="FLOAT",
                         chunk_dim=c(4,4,4,8),
-                        nbit=FALSE, compression=6)
+                        compression=6)
 
   ## Basic checks
   expect_s4_class(h5_vec, "H5NeuroVec")

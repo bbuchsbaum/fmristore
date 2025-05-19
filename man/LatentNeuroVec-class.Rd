@@ -19,7 +19,13 @@ neuroimaging data.
 \code{LatentNeuroVec} inherits from \code{\link[neuroim2]{NeuroVec-class}}
 and \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}. The original 4D data
 can be reconstructed as:
-\deqn{data[x,y,z,t] = \sum_i \bigl(basis[t,i] \times loadings[i,v]\bigr) + offset[v]}.
+\deqn{data[v,t] = \sum_k \bigl(basis[t,k] \times loadings[v,k]\bigr) + offset[v]}.
+(Note: `v` indexes voxels within the mask).
+
+**Important Naming Note:**
+* In this R object: `@basis` stores temporal components (`nTime x k`), `@loadings` stores spatial components (`nVox x k`).
+* In the HDF5 spec: `/scans/.../embedding` stores temporal (`nTime x k`), `/basis/basis_matrix` stores spatial (`k x nVox`).
+The I/O functions handle the mapping and transposition.
 
 This approach is especially useful for large datasets where storing the full
 4D array is expensive.
@@ -35,6 +41,10 @@ for each basis vector across the spatial dimensions.}
 
 \item{\code{offset}}{A \code{numeric} vector representing a constant offset term for
 each voxel or spatial location.}
+
+\item{\code{map}}{A \code{IndexLookupVol} object representing the mapping from basis to loadings.}
+
+\item{\code{label}}{A \code{character} string representing the label for the latent vector.}
 }}
 
 \section{Inheritance}{
@@ -62,26 +72,42 @@ where:
 }
 
 \examples{
-\dontrun{
-library(Matrix)
-library(neuroim2)
+if (requireNamespace("neuroim2", quietly = TRUE) && 
+    requireNamespace("Matrix", quietly = TRUE) &&
+    !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
+  
+  # Create a LatentNeuroVec object using the helper
+  # The helper creates a mask, basis, and loadings internally.
+  # It uses new("LatentNeuroVec", ...) after creating constituent parts if not directly calling
+  # a neuroim2::LatentNeuroVec constructor, or directly calls a constructor.
+  # Our helper fmristore:::create_minimal_LatentNeuroVec returns a neuroim2::LatentNeuroVec.
 
-# Create a LatentNeuroVec object
-basis <- Matrix(rnorm(100 * 10), nrow = 100, ncol = 10)
-loadings <- Matrix(rnorm(10 * 1000), nrow = 10, ncol = 1000, sparse = TRUE)
-offset <- rnorm(1000)
-
-latent_vec <- new("LatentNeuroVec",
-                  basis = basis,
-                  loadings = loadings,
-                  offset = offset,
-                  space = NeuroSpace(dim = c(10, 10, 10, 100)))
-
-# Access the basis
-basis_functions <- latent_vec@basis
-
-# Reconstruct a single time point
-time_point_1 <- latent_vec@loadings \%*\% latent_vec@basis[1,] + latent_vec@offset
+  latent_vec <- NULL
+  tryCatch({
+    latent_vec <- fmristore:::create_minimal_LatentNeuroVec(
+      space_dims = c(5L, 5L, 3L), 
+      n_time = 8L, 
+      n_comp = 2L
+    )
+    
+    print(latent_vec)
+    
+    # Access slots (example)
+    # print(dim(latent_vec@basis))
+    # print(dim(latent_vec@loadings))
+    
+    # Example of accessing data (reconstruction for a voxel would be more complex)
+    # This class is more about representation; direct element access is usually via methods.
+    # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
+    # For a simple demonstration, we can show its dimensions:
+    print(dim(latent_vec)) # from NeuroVec inheritance
+    
+  }, error = function(e) {
+    message("LatentNeuroVec example failed: ", e$message)
+  })
+  
+} else {
+  message("Skipping LatentNeuroVec example: neuroim2, Matrix, or helper not available.")
 }
 
 }

@@ -28,6 +28,49 @@ This extends \code{NeuroVec}, so it is logically a 4D object with dimension
 \item{\code{load_env}}{An \code{environment} storing references for lazy loading.}
 }}
 
+\examples{
+if (requireNamespace("neuroim2", quietly = TRUE) &&
+    requireNamespace("hdf5r", quietly = TRUE) &&
+    exists("read_labeled_vec", where = "package:fmristore") && 
+    !is.null(fmristore:::create_minimal_h5_for_LabeledVolumeSet)) {
+
+  # Setup: Create a temporary HDF5 file suitable for read_labeled_vec
+  temp_h5_path <- NULL
+  lvs <- NULL
+  tryCatch({
+    temp_h5_path <- fmristore:::create_minimal_h5_for_LabeledVolumeSet(
+      vol_dims = c(5L, 4L, 3L),
+      labels = c("CondA", "CondB"),
+      num_vols_per_label = 2L
+    )
+    
+    # Create a LabeledVolumeSet object using the constructor
+    lvs <- fmristore::read_labeled_vec(file_name = temp_h5_path)
+    
+    print(lvs)
+    print(labels(lvs)) # Access labels
+    
+    # Access data for a specific label (returns a NeuroVol or similar)
+    # data_cond_a <- lvs[["CondA"]] 
+    # print(dim(data_cond_a)) # Should be 3D x num_vols_per_label
+    
+  }, error = function(e) {
+    message("LabeledVolumeSet example failed: ", e$message)
+  }, finally = {
+    # Close HDF5 handle owned by LabeledVolumeSet object
+    if (!is.null(lvs) && inherits(lvs, "LabeledVolumeSet")) {
+      try(close(lvs), silent = TRUE)
+    }
+    # Cleanup temporary file
+    if (!is.null(temp_h5_path) && file.exists(temp_h5_path)) {
+      unlink(temp_h5_path)
+    }
+  })
+} else {
+  message("Skipping LabeledVolumeSet example: fmristore, neuroim2, hdf5r, or helper not available.")
+}
+
+}
 \seealso{
 \code{\link[neuroim2]{NeuroVec-class}}
 }

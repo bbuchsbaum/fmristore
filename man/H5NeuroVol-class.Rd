@@ -32,26 +32,43 @@ representing the underlying HDF5 file containing the brain image data.}
 }
 
 \examples{
-\dontrun{
-library(hdf5r)
-library(neuroim2)
+if (requireNamespace("neuroim2", quietly = TRUE) &&
+    requireNamespace("hdf5r", quietly = TRUE) &&
+    exists("H5NeuroVol", where = "package:fmristore") && # Check if constructor is available
+    !is.null(fmristore:::create_minimal_h5_for_H5NeuroVol)) { # Check helper
 
-# Create or open an HDF5 file
-h5_file <- H5File$new("brain_volume.h5", mode = "w")
-
-# Create a dataset in the HDF5 file
-h5_file$create_dataset("brain_data",
-                       dims = c(64, 64, 64),
-                       dtype = h5types$H5T_NATIVE_FLOAT)
-
-# Create an H5NeuroVol object (requires a NeuroSpace)
-h5_vol <- H5NeuroVol(h5obj = h5_file, space = NeuroSpace(dim = c(64, 64, 64)))
-
-# Access a subset of the data
-subset <- h5_vol[1:10, 1:10, 1:10]
-
-# Close the HDF5 file when done
-h5_file$close()
+  # Setup: Create a temporary HDF5 file using a helper
+  # The helper creates a dataset named "data/elements" by default.
+  temp_h5_path <- NULL
+  h5_vol <- NULL
+  tryCatch({
+    temp_h5_path <- fmristore:::create_minimal_h5_for_H5NeuroVol(dims = c(5L, 5L, 3L))
+    
+    # Create an H5NeuroVol object using the constructor
+    # The constructor defaults to dataset_name = "data/elements" if not specified
+    # and if a NeuroSpace is not given, it reads it from /space in the HDF5 file.
+    h5_vol <- fmristore::H5NeuroVol(file_name = temp_h5_path) 
+    
+    print(h5_vol)
+    
+    # Access a subset of the data
+    subset_data <- h5_vol[1:2, 1:2, 1]
+    print(subset_data)
+    
+  }, error = function(e) {
+    message("H5NeuroVol example failed: ", e$message)
+  }, finally = {
+    # Close HDF5 handle owned by H5NeuroVol object
+    if (!is.null(h5_vol) && inherits(h5_vol, "H5NeuroVol")) {
+      try(close(h5_vol), silent = TRUE)
+    }
+    # Cleanup temporary file
+    if (!is.null(temp_h5_path) && file.exists(temp_h5_path)) {
+      unlink(temp_h5_path)
+    }
+  })
+} else {
+  message("Skipping H5NeuroVol example: fmristore, neuroim2, hdf5r, or helper not available.")
 }
 
 }

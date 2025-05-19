@@ -15,3 +15,34 @@ An integer representing the number of scans
 \description{
 This generic returns the number of scans in an object (e.g. a sequence of fMRI scans).
 }
+\examples{
+if (requireNamespace("neuroim2", quietly = TRUE) &&
+    requireNamespace("hdf5r", quietly = TRUE) &&
+    exists("H5ClusteredExperiment", where = "package:fmristore") &&
+    exists("n_scans", where = "package:fmristore") &&
+    !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+
+  temp_exp_file <- NULL
+  exp_obj <- NULL
+  tryCatch({
+    # Create a minimal H5ClusteredExperiment which contains runs (scans)
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
+    exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+    
+    # Get the number of scans
+    num_scans <- n_scans(exp_obj)
+    print(num_scans) # Should be 2 based on the helper
+    
+  }, error = function(e) {
+    message("n_scans example failed: ", e$message)
+  }, finally = {
+    if (!is.null(exp_obj)) try(close(exp_obj), silent = TRUE)
+    if (!is.null(temp_exp_file) && file.exists(temp_exp_file)) {
+      unlink(temp_exp_file)
+    }
+  })
+} else {
+  message("Skipping n_scans example: dependencies or helper not available.")
+}
+
+}

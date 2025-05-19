@@ -16,14 +16,14 @@ root:
     db_name: str[18]              # Unused
     extents: int32                # Unused
     session_error: int16          # Unused
-    regular: char                 # Unused
+    regular: char                 # Unused ('r' in NIfTI), ensure non-integer
     dim_info: uint8               # MRI slice ordering
     dim:                          # Data array dimensions
       - int16                     # dim[0]: Number of dimensions; should be 4
       - int16                     # dim[1]: Size along x-axis
       - int16                     # dim[2]: Size along y-axis
       - int16                     # dim[3]: Size along z-axis
-      - int16                     # dim[4]: Number of time points per scan
+      - int16                     # dim[4]: Number of time points per scan (may vary across scans)
       - int16                     # dim[5]: Unused
       - int16                     # dim[6]: Unused
       - int16                     # dim[7]: Unused
@@ -31,34 +31,34 @@ root:
     intent_p2: float32            # Second intent parameter
     intent_p3: float32            # Third intent parameter
     intent_code: int16            # NIFTI_INTENT_* code
-    datatype: int16               # Data type code
-    bitpix: int16                 # Number of bits per voxel
-    slice_start: int16            # First slice index
+    datatype: int16               # NIFTI data type code (e.g., 16 for float32)
+    bitpix: int16                 # Number of bits per voxel (e.g., 32 for float32)
+    slice_start: int16            # First slice index (0-based)
     pixdim:                       # Grid spacings (voxel dimensions)
-      - float32                   # pixdim[0]: Unused
-      - float32                   # pixdim[1]: Voxel width
-      - float32                   # pixdim[2]: Voxel height
-      - float32                   # pixdim[3]: Voxel depth
-      - float32                   # pixdim[4]: TR (time between scans)
+      - float32                   # pixdim[0]: Unused (qfac field determines handedness)
+      - float32                   # pixdim[1]: Voxel width (x)
+      - float32                   # pixdim[2]: Voxel height (y)
+      - float32                   # pixdim[3]: Voxel depth (z)
+      - float32                   # pixdim[4]: TR (time repetition, seconds)
       - float32                   # pixdim[5]: Unused
       - float32                   # pixdim[6]: Unused
       - float32                   # pixdim[7]: Unused
-    vox_offset: float32           # Offset into .nii file (unused here)
-    scl_slope: float32            # Data scaling: slope
-    scl_inter: float32            # Data scaling: intercept
-    slice_end: int16              # Last slice index
-    slice_code: uint8             # Slice timing order
-    xyzt_units: uint8             # Units of pixdim[1..4]
-    cal_max: float32              # Max display intensity
-    cal_min: float32              # Min display intensity
-    slice_duration: float32       # Time for one slice
-    toffset: float32              # Time axis shift
+    vox_offset: float32           # Offset into .nii file (set to 0.0 here)
+    scl_slope: float32            # Data scaling: slope (usually 1.0)
+    scl_inter: float32            # Data scaling: intercept (usually 0.0)
+    slice_end: int16              # Last slice index (0-based, e.g., dim[3]-1)
+    slice_code: uint8             # Slice timing order (NIFTI_SLICE_* code)
+    xyzt_units: uint8             # Units of pixdim[1..4] (NIFTI_UNITS_* code, e.g., 10 for mm+sec)
+    cal_max: float32              # Max display intensity (usually 0.0)
+    cal_min: float32              # Min display intensity (usually 0.0)
+    slice_duration: float32       # Time for one slice (usually 0.0 if slice_code is unknown)
+    toffset: float32              # Time axis shift (usually 0.0)
     glmax: int32                  # Unused
     glmin: int32                  # Unused
-    descrip: str[80]              # Any text description
-    aux_file: str[24]             # Auxiliary filename
-    qform_code: int16             # NIFTI_XFORM_* code
-    sform_code: int16             # NIFTI_XFORM_* code
+    descrip: str[80]              # Any text description (e.g., dataset origin)
+    aux_file: str[24]             # Auxiliary filename (usually empty)
+    qform_code: int16             # NIFTI_XFORM_* code (e.g., 1 for Scanner Anat)
+    sform_code: int16             # NIFTI_XFORM_* code (e.g., 2 for Aligned Anat)
     quatern_b: float32            # Quaternion b parameter
     quatern_c: float32            # Quaternion c parameter
     quatern_d: float32            # Quaternion d parameter
@@ -66,22 +66,22 @@ root:
     qoffset_y: float32            # Quaternion y shift
     qoffset_z: float32            # Quaternion z shift
     srow_x:
-      - float32
+      - float32                   # 1st row of sform matrix
       - float32
       - float32
       - float32
     srow_y:
-      - float32
+      - float32                   # 2nd row of sform matrix
       - float32
       - float32
       - float32
     srow_z:
+      - float32                   # 3rd row of sform matrix
       - float32
       - float32
       - float32
-      - float32
-    intent_name: str[16]          # Name or meaning of data
-    magic: str[4]                 # Must be "ni1\0" or "n+1\0"
+    intent_name: str[16]          # Name or meaning of data (e.g., "PCA components")
+    magic: str[4]                 # Must be "n+1\0" (includes null terminator)
     notes:
       - "The 'header' group contains datasets corresponding to each field in the NIfTI-1 header."
       - "Data types and field names match those specified in the NIfTI-1 standard."
@@ -91,65 +91,94 @@ root:
     path: "/mask"                 # HDF5 dataset path
     datatype: uint8               # Data type: unsigned 8-bit integer (0 or 1)
     dimensions:
-      - dim[1]                    # Size along x-axis
-      - dim[2]                    # Size along y-axis
-      - dim[3]                    # Size along z-axis
+      - dim[1]                    # Size along x-axis from header/dim[1]
+      - dim[2]                    # Size along y-axis from header/dim[2]
+      - dim[3]                    # Size along z-axis from header/dim[3]
     description: "Binary mask volume indicating non-zero data voxels."
     notes:
-      - "The 'mask' dataset is a 3D binary volume stored in standard NIfTI voxel ordering."
+      - "The 'mask' dataset is a 3D binary volume stored in standard NIfTI voxel ordering (row-major in C/Python, column-major in Fortran/R internal arrays)."
       - "It defines which voxels are of interest (non-zero) for the latent representation."
 
   # Voxel coordinates of non-zero mask elements
   voxel_coords:
     path: "/voxel_coords"         # HDF5 dataset path
-    datatype: int32               # Data type: 32-bit integers
+    datatype: int32               # Data type: 32-bit integers (use int64 if #voxels > 2^31)
     dimensions:
-      - number_of_nonzero_voxels
+      - number_of_nonzero_voxels  # Number of 1s in /mask
       - 3                         # For x, y, z coordinates
-    description: "Voxel coordinates (x, y, z) of non-zero voxels in the mask."
+    description: "Voxel coordinates (x, y, z) of non-zero voxels in the mask, 0-based."
     notes:
       - "Provides spatial mapping to reconstruct data back to their 3D locations."
-      - "Coordinates are stored as integer triplets corresponding to voxel indices."
-      - "The order of voxels in 'voxel_coords' matches the order in 'basis' and 'loadings'."
+      - "Coordinates are stored as integer triplets corresponding to 0-based voxel indices."
+      - "The order of voxels (rows) in 'voxel_coords' MUST be consistent with the columns in '/basis/basis_matrix' (or its sparse equivalent) and elements in '/offset'."
+      - "This order is typically established by a standard column-major traversal (e.g., R's `which()`) or row-major traversal (e.g., Python's `numpy.where()`) of the '/mask' dataset. The file should ideally indicate the order used (e.g., via a root attribute like `voxel_order`). Readers must respect this order."
 
-  # Basis set group or dataset
+  # Basis set group containing the spatial dictionary/weights
   basis:
-    path: "/basis"                # HDF5 group path or dataset path
+    path: "/basis"                        # HDF5 group that owns the spatial representation
     notes:
-      - "Defines the basis vectors used to reconstruct the data from the embeddings."
-      - "Can be stored directly as a dataset ('stored_basis') or referenced by an identifier ('basis_reference')."
+      - "Contains the spatial dictionary (component maps/weights)."
+      - "Exactly **one** of the two alternatives ('dense_matrix' or 'sparse_matrix') MUST be present."
+      - "Whichever alternative is used, the logical shape of the spatial basis is [k, number_of_nonzero_voxels]."
+      - "The order of the second dimension (voxels) MUST be consistent with '/voxel_coords'."
 
-    # Option 1: Directly stored basis matrix
-    stored_basis:
-      dataset_name: "/basis/basis_matrix"
-      datatype: float32
-      dimensions:
-        - k                       # Number of components (basis vectors)
-        - number_of_nonzero_voxels  # Number of voxels (non-zero voxels in mask)
-      description: "Basis matrix stored directly, dimensions [k, number_of_nonzero_voxels]."
-      notes:
-        - "The basis matrix is stored as a 2D dataset."
-        - "Rows correspond to basis components."
-        - "Columns correspond to voxels (non-zero voxels in mask)."
-        - "The order of voxels matches the order in 'voxel_coords' and 'loadings'."
+    # ── Alternative A · Dense Matrix ───────────────────────────────────────────
+    dense_matrix:
+      dataset_name: "/basis/basis_matrix" # 2-D dataset, row-major (R order)
+      datatype   : float32
+      dimensions : [k, number_of_nonzero_voxels]
+      chunking   : [k, 1024]              # Recommended chunking along voxels; writer may choose
+      compression: gzip                   # Optional
+      description: >
+        Dense spatial basis matrix. Row i represents component i; column j corresponds
+        to the j-th voxel defined by '/voxel_coords'.
+        Appropriate when density is relatively high (e.g., >= 30%).
 
-    # Option 2: Referencing the basis by an identifier
-    basis_reference:
-      basis_id: string            # Identifier for the basis set
-      basis_type: string          # Type or method to generate the basis (e.g., 'DCT', 'Spline')
-      basis_parameters:           # Optional parameters required to generate the basis
-        param1: value
-        param2: value
-      description: "Reference to a basis set identified by 'basis_id' and 'basis_type'."
-      notes:
-        - "When the basis is referenced, 'basis_id' provides a unique identifier."
-        - "The 'basis_type' indicates how to generate or retrieve the basis."
-        - "Additional parameters can be included in 'basis_parameters' as needed."
-        - "The application reading the file must be able to generate or retrieve the basis using this information."
+    # ── Alternative B · Sparse CSC / CSR Matrix ────────────────────────────────
+    sparse_matrix:
+      group_name: "/basis/basis_matrix_sparse"
+      attributes:
+        storage : {enum: ["csc", "csr"], default: "csc"} # Storage format (Compressed Sparse Column/Row)
+        shape   : [k, number_of_nonzero_voxels]         # Full logical shape [rows, columns]
+      datasets:
+        data:          # Non-zero values
+          path        : "/basis/basis_matrix_sparse/data"
+          datatype    : float32
+          dimensions  : [nnz]             # Number of non-zero elements
+          chunk_bytes : 262144            # Recommended chunk size (e.g., ~256 kB)
+          compression : gzip              # Recommended
+          description : "Non-zero values of the sparse matrix."
+        indices:       # Inner dimension indices
+          path        : "/basis/basis_matrix_sparse/indices"
+          datatype    : int32             # Use 64-bit if nnz or dimensions exceed 2^31
+          dimensions  : [nnz]
+          chunk_bytes : 262144            # Recommended chunk size
+          compression : gzip              # Recommended
+          description : >
+            0-based indices for the inner dimension.
+            If storage='csc', these are row indices.
+            If storage='csr', these are column indices.
+        indptr:        # Index pointers for the outer dimension
+          path        : "/basis/basis_matrix_sparse/indptr"
+          datatype    : int32             # Use 64-bit if outer dimension exceeds 2^31
+          dimensions  :                   # Length depends on storage format
+                      # If storage='csc': [number_of_nonzero_voxels + 1] (pointers for columns)
+                      # If storage='csr': [k + 1] (pointers for rows)
+          compression : none              # Usually small, compression often unnecessary
+          description : >
+            0-based index pointers into the 'data' and 'indices' arrays.
+            Length is outer_dimension + 1.
+      description: |
+        Compressed Sparse Column (CSC) or Row (CSR) triplet representation,
+        compatible with formats like SciPy's csc_matrix/csr_matrix.
+        Allows efficient storage and potentially faster access for sparse data.
+        Appropriate when density is low (e.g., < 30%).
 
-    # Only one of 'stored_basis' or 'basis_reference' should be used.
-    # If 'stored_basis' is present, the basis is stored directly.
-    # If 'basis_reference' is present, the basis is referenced.
+    # ── Notes on Dense vs Sparse ───────────────────────────────────────────────
+    notes:
+      - "Writers SHOULD choose the sparse representation when density < 30%, but may choose based on other factors."
+      - "Chunk size recommendations are advisory; writers should aim for chunk sizes roughly between 0.5–2 MB for balanced performance."
+      - "Readers MUST detect which alternative is present by checking for the existence of dataset '/basis/basis_matrix' (dense) or group '/basis/basis_matrix_sparse' (sparse)."
 
   # Offset vector (optional)
   offset:
@@ -161,7 +190,7 @@ root:
     notes:
       - "The offset vector is of length equal to the number of non-zero voxels."
       - "If not present, it is assumed to be zero."
-      - "The order of elements in 'offset' matches the order in 'voxel_coords'."
+      - "The order of elements in 'offset' MUST match the order established by '/voxel_coords'."
 
   # Scans group containing embedding vectors for each scan
   scans:
@@ -169,31 +198,31 @@ root:
     groups:
       - name: "<scan_name>"       # Placeholder for actual scan name (e.g., "run1")
         metadata:                 # Scan metadata (extensible)
-          subject_id: string
-          task: string
-          run_length: int32       # Number of time points
-          TR: float32
-          session: string
-          # Additional metadata fields as needed
+          subject_id: string      # Optional: Subject identifier
+          task: string            # Optional: Task name
+          run_length: int32       # Number of time points in this specific scan
+          TR: float32             # Repetition time for this scan (if constant)
+          session: string         # Optional: Session identifier
+          # Additional metadata fields as needed (e.g., acquisition time, parameters)
         embedding:
-          path: "/scans/<scan_name>/embedding"
+          path: "/scans/<scan_name>/embedding" # Temporal components (time x k)
           datatype: float32
           dimensions:
-            - run_length          # Number of time points in this scan
-            - k                   # Number of components (size of embedding vector)
-          compression: optional   # Compression can be applied (e.g., gzip)
-          description: "Embedding vectors (coefficients) for scan '<scan_name>'."
+            - run_length          # Number of time points (from metadata/run_length)
+            - k                   # Number of components (must match basis dimension k)
+          chunking   : [128, k]   # Recommended chunking along time; writer may choose
+          compression: gzip       # Optional
+          description: "Temporal embedding vectors (coefficients) for scan '<scan_name>'."
           notes:
             - "Each scan is represented by embedding vectors of size [run_length, k]."
-            - "Rows correspond to time points; columns correspond to basis components."
-            - "The basis components are shared across all scans."
+            - "Rows correspond to time points; columns correspond to basis components (matching the first dimension 'k' of the spatial basis)."
             - "Data is stored in the order of time points."
 
         notes:
           - "Each scan is stored as a separate subgroup under '/scans'."
           - "Scan metadata includes essential information such as subject ID, task, run length, TR, and session."
           - "The embeddings represent the scan data in the latent space."
-          - "To reconstruct the scan data, multiply the embeddings with the basis matrix and add the offset vector."
+          - "To reconstruct the scan data, multiply the embeddings with the spatial basis matrix and add the offset vector."
 
       # Repeat the above 'groups' block for each scan in the dataset
 
@@ -208,15 +237,13 @@ root:
     - "Stored in standard NIfTI voxel ordering for compatibility."
     - ""
     - "**Voxel Coordinates Dataset (`/voxel_coords`):**"
-    - "Provides the (x, y, z) coordinates of each non-zero voxel in `/mask`."
+    - "Provides the (x, y, z) 0-based coordinates of each non-zero voxel in `/mask`."
     - "Allows mapping reconstructed data back to their spatial locations in the volume."
-    - "The order of voxels in `/voxel_coords` matches the order in `basis` and `loadings`."
+    - "The order of voxels (rows) in `/voxel_coords` is CRITICAL as it establishes the required order for columns in `/basis/basis_matrix` (or its sparse equivalent) and elements in `/offset`. Implementations must ensure this consistency, typically by using a standard row-major traversal of the `/mask` when generating coordinates."
     - ""
     - "**Basis Set (`/basis`):**"
-    - "Defines the basis vectors used to reconstruct the data from the embeddings."
-    - "Can be stored directly as a dataset ('stored_basis') or referenced by an identifier ('basis_reference')."
-    - "When stored directly, the basis matrix dimensions are [k, number_of_nonzero_voxels]."
-    - "When referenced, the application must be able to generate or retrieve the basis using the provided information."
+    - "Contains the spatial dictionary (component maps/weights), stored as either a dense matrix or a sparse triplet."
+    - "Logical shape is [k, number_of_nonzero_voxels]."
     - ""
     - "**Offset Vector (`/offset`):**"
     - "An optional vector added during reconstruction to center or scale the data."
@@ -224,117 +251,68 @@ root:
     - ""
     - "**Scans Group (`/scans`):**"
     - "Contains subgroups for each scan, named by their identifiers (e.g., 'run1')."
-    - "Each scan subgroup includes metadata and embedding vectors."
+    - "Each scan subgroup includes metadata and temporal embedding vectors."
     - ""
     - "**Embeddings (`/scans/<scan_name>/embedding`):**"
-    - "Each scan is represented by embedding vectors of dimensions [run_length, k]."
+    - "Each scan is represented by temporal embedding vectors of dimensions [run_length, k]."
     - "Rows correspond to time points; columns correspond to basis components."
-    - "The embeddings are used to reconstruct the scan data using the basis and offset."
     - ""
     - "**Data Reconstruction:**"
-    - "To reconstruct the data for a scan:"
-    - "1. For each time point t:"
-    - "   a. Extract the embedding vector e_t (size k) from the scan's 'embedding' dataset."
-    - "   b. Compute the data vector x_t = e_t × basis + offset."
-    - "   c. Map x_t back to the spatial volume using 'voxel_coords' and 'mask'."
-    - "2. Repeat for all time points."
+    - "To reconstruct the data for a scan at time t for voxel v (where v is the index into the masked voxels):"
+    - "  `value(v, t) = sum_over_k( embedding[t, k] * spatial_basis[k, v] ) + offset[v]`"
+    - "Where `spatial_basis` refers to the data loaded from `/basis` (dense or sparse) and `embedding` is from `/scans/<scan>/embedding`."
+    - "Use `/voxel_coords` to map the index `v` back to its (x, y, z) location."
     - ""
     - "**Data Access Workflow:**"
-    - "1. Load the 'mask', 'voxel_coords', and 'offset' datasets to understand the spatial mapping."
-    - "2. Load the 'basis' matrix, either directly from 'stored_basis' or generate it using 'basis_reference'."
-    - "3. For each scan:"
-    - "   a. Load the scan's 'embedding' dataset."
-    - "   b. Use the embeddings and basis to reconstruct the data as described above."
+    - "1. Load `/mask`, `/voxel_coords`, and optionally `/offset`."
+    - "2. Check for `/basis/basis_matrix` or `/basis/basis_matrix_sparse` to determine spatial basis storage."
+    - "3. Load the spatial basis data (dense or sparse triplet)."
+    - "4. For each desired scan (e.g., 'run1'):"
+    - "   a. Load `/scans/run1/embedding`."
+    - "   b. Reconstruct data using the formula above."
     - ""
     - "**Extensibility and Flexibility:**"
-    - "The format supports storing multiple scans in a single file, each with its own metadata."
-    - "Only one basis set is allowed per file, shared among all scans."
-    - "Basis can be stored directly or referenced, allowing for efficient storage and flexibility."
-    - "Metadata fields within scans are extensible, allowing for additional information to be added without altering the core structure."
+    - "The format supports storing multiple scans in a single file, each with its own metadata and run length."
+    - "Only one spatial basis set (dense or sparse) is allowed per file, shared among all scans."
+    - "Metadata fields within scans are extensible."
     - ""
     - "**Compression and Storage Efficiency:**"
-    - "HDF5's built-in compression options can be applied to individual datasets to optimize storage."
-    - "Compressing the 'embedding' datasets can significantly reduce file size, especially with large numbers of scans or components."
+    - "HDF5's built-in compression options can be applied to individual datasets."
+    - "Using the sparse representation for the spatial basis can significantly reduce file size for low-density data."
+    - ""
+    - "**Naming Convention Note:**"
+    - "Some implementations (e.g., the `fmristore` R package) may store the temporal coefficients in memory under the name `basis`"
+    - "and the spatial dictionary (transposed) under the name `loadings`. When writing to this HDF5 format, these implementations map"
+    - "their in-memory `basis` to `/scans/<scan>/embedding` and their in-memory `loadings` (transposed) to `/basis/basis_matrix` (or sparse equivalent)."
+    - "This specification uses `embedding` for the temporal aspect and `basis` for the spatial aspect consistently."
 
-# Example:
-
-# For a dataset with dimensions 64 x 64 x 64, a mask with non-zero voxels, a basis with 10 components, and three scans ("run1", "run2", "run3"):
+# Example (Illustrative - showing sparse basis option):
 
 example:
   root:
-    header:
-      sizeof_hdr: 348
-      dim: [4, 64, 64, 64, 200, 1, 1, 1]  # 200 time points per scan
-      datatype: 16                        # NIfTI code for float32
-      bitpix: 32
-      pixdim: [0.0, 2.0, 2.0, 2.0, 2.0, 0.0, 0.0, 0.0]
-      # ... other header fields as required
-    mask:
-      path: "/mask"
-      datatype: uint8
-      dimensions: [64, 64, 64]
-    voxel_coords:
-      path: "/voxel_coords"
-      datatype: int32
-      dimensions: [number_of_nonzero_voxels, 3]
-      data:
-        - [x1, y1, z1]
-        - [x2, y2, z2]
-        - ...
-        - [xn, yn, zn]
+    header: { ... NIfTI fields ... }
+    mask: { path: "/mask", datatype: uint8, dimensions: [64, 64, 64], ... }
+    voxel_coords: { path: "/voxel_coords", datatype: int32, dimensions: [15000, 3], ... } # Example: 15k voxels
     basis:
-      # Option 1: Stored basis matrix
-      stored_basis:
-        dataset_name: "/basis/basis_matrix"
-        datatype: float32
-        dimensions: [10, number_of_nonzero_voxels]
-        # ... data for the basis matrix
-    offset:
-      path: "/offset"
-      datatype: float32
-      dimensions: [number_of_nonzero_voxels]
-      # ... data for the offset vector
+      # Using sparse representation
+      sparse_matrix:
+        group_name: "/basis/basis_matrix_sparse"
+        attributes:
+          storage : "csc"
+          shape   : [10, 15000]  # k=10 components
+        datasets:
+          data:    { path: ".../data",    datatype: float32, dimensions: [75000], ... } # Example: 5% density -> 75k non-zeros
+          indices: { path: ".../indices", datatype: int32,   dimensions: [75000], ... } # Row indices
+          indptr:  { path: ".../indptr",  datatype: int32,   dimensions: [15001], ... } # Pointers for 15k columns + 1
+    offset: { path: "/offset", datatype: float32, dimensions: [15000], ... }
     scans:
       path: "/scans"
       groups:
         - name: "run1"
-          metadata:
-            subject_id: "subj01"
-            task: "rest"
-            run_length: 200
-            TR: 2.0
-            session: "sess1"
-          embedding:
-            path: "/scans/run1/embedding"
-            datatype: float32
-            dimensions: [200, 10]
-            compression: gzip
-            # ... data for the embeddings
+          metadata: { run_length: 200, TR: 2.0, ... }
+          embedding: { path: "/scans/run1/embedding", datatype: float32, dimensions: [200, 10], ... }
         - name: "run2"
-          metadata:
-            subject_id: "subj01"
-            task: "rest"
-            run_length: 200
-            TR: 2.0
-            session: "sess1"
-          embedding:
-            path: "/scans/run2/embedding"
-            datatype: float32
-            dimensions: [200, 10]
-            compression: gzip
-            # ... data for the embeddings
-        - name: "run3"
-          metadata:
-            subject_id: "subj01"
-            task: "rest"
-            run_length: 200
-            TR: 2.0
-            session: "sess1"
-          embedding:
-            path: "/scans/run3/embedding"
-            datatype: float32
-            dimensions: [200, 10]
-            compression: gzip
-            # ... data for the embeddings
+          metadata: { run_length: 180, TR: 2.0, ... }
+          embedding: { path: "/scans/run2/embedding", datatype: float32, dimensions: [180, 10], ... }
 
 # End of Specification
