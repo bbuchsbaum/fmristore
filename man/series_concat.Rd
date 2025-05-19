@@ -2,15 +2,15 @@
 % Please edit documentation in R/all_generic.R, R/cluster_experiment.R
 \name{series_concat}
 \alias{series_concat}
-\alias{series_concat,H5ClusteredExperiment,numeric-method}
+\alias{series_concat,H5ClusterExperiment,numeric-method}
 \title{Concatenate Voxel Time Series Across Runs (Generic)}
 \usage{
 series_concat(experiment, mask_idx, run_indices = NULL, ...)
 
-\S4method{series_concat}{H5ClusteredExperiment,numeric}(experiment, mask_idx, run_indices = NULL)
+\S4method{series_concat}{H5ClusterExperiment,numeric}(experiment, mask_idx, run_indices = NULL)
 }
 \arguments{
-\item{experiment}{The experiment object (typically \code{\link{H5ClusteredExperiment-class}}).}
+\item{experiment}{The experiment object (typically \code{\link{H5ClusterExperiment-class}}).}
 
 \item{mask_idx}{Indices of voxels within the mask of the experiment.}
 
@@ -26,19 +26,19 @@ Concatenate Voxel Time Series Across Runs (Generic)
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{series_concat(experiment = H5ClusteredExperiment, mask_idx = numeric)}: Concatenate voxel time series for H5ClusteredExperiment
+\item \code{series_concat(experiment = H5ClusterExperiment, mask_idx = numeric)}: Concatenate voxel time series for H5ClusterExperiment
 
 }}
 \examples{
-if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment(
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
       master_mask_dims = c(4L,4L,2L), # Smaller mask for example
       n_time_run1 = 5L # Shorter time series for Run1_Full
     )
-    exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+    exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
     
     # Get some valid voxel indices from the mask
     # The master mask is created by the helper.
@@ -48,11 +48,11 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
     # If mask has at least 2 voxels: 
     # selected_vox_indices <- valid_mask_indices[1:min(2, length(valid_mask_indices))]
     # A more robust way for an example without directly loading mask here:
-    # The H5ClusteredExperiment has a mask, and its linear indices are 1:sum(mask_data)
+    # The H5ClusterExperiment has a mask, and its linear indices are 1:sum(mask_data)
     # For a 4x4x2 mask, if 50\% are true, there are 16 true voxels. Indices are 1 to 16.
     # Let's pick first 2 voxels in the mask's internal indexing (1-based).
     
-    # Note: series_concat typically works on runs with full data (H5ClusteredRunFull)
+    # Note: series_concat typically works on runs with full data (H5ClusterRun)
     # The helper creates "Run1_Full".
     # concatenated_series <- series_concat(exp_obj, mask_idx = c(1, 2), run_indices = "Run1_Full")
     # print(dim(concatenated_series)) # Should be n_time_run1 x 2
@@ -60,7 +60,7 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
     
     # For a fully runnable example, need to ensure mask_idx is valid for the created object.
     # Since the helper creates a mask, we can try to use mask_idx = 1 (first voxel in mask).
-    # The `series_concat` method for H5ClusteredExperiment handles this.
+    # The `series_concat` method for H5ClusterExperiment handles this.
     if (n_voxels(exp_obj) > 0) { # n_voxels from H5ClusteredArray slot
        conc_series <- series_concat(exp_obj, mask_idx = 1, run_indices = "Run1_Full")
        print(paste("Dimensions of concatenated series for voxel 1 from Run1_Full:", 
@@ -84,16 +84,16 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
 }
 \seealso{
 Other H5Clustered: 
-\code{\link{$,H5ClusteredExperiment-method}},
+\code{\link{$,H5ClusterExperiment-method}},
 \code{\link{H5ClusteredArray-class}},
-\code{\link{H5ClusteredExperiment}},
-\code{\link{H5ClusteredExperiment-class}},
-\code{\link{H5ClusteredRunFull-class}},
-\code{\link{H5ClusteredRunSummary-class}},
-\code{\link{[,H5ClusteredRunFull,ANY,ANY,ANY-method}},
+\code{\link{H5ClusterExperiment}},
+\code{\link{H5ClusterExperiment-class}},
+\code{\link{H5ClusterRun-class}},
+\code{\link{H5ClusterRunSummary-class}},
+\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{cluster_metadata,H5ClusteredExperiment-method}},
+\code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
 \code{\link{h5file,H5ClusteredArray-method}},
@@ -102,10 +102,10 @@ Other H5Clustered:
 \code{\link{make_run_summary}()},
 \code{\link{mask}()},
 \code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusteredExperiment-method}},
-\code{\link{scan_metadata,H5ClusteredExperiment-method}},
-\code{\link{scan_names,H5ClusteredExperiment-method}},
+\code{\link{n_scans,H5ClusterExperiment-method}},
+\code{\link{scan_metadata,H5ClusterExperiment-method}},
+\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
-\code{\link{show,H5ClusteredRunFull-method}}
+\code{\link{show,H5ClusterRun-method}}
 }
 \concept{H5Clustered}

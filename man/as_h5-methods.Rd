@@ -108,7 +108,7 @@ providing a standardized interface for serialization to HDF5.
       \item{\code{compression}}{Integer [0..9], default 4}
       \item{\code{chunk_size}}{Chunk dimension for 2D writes, default 1024}
     }
-    Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusteredExperiment).
+    Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusterExperiment).
   }
 }
 }

@@ -23,24 +23,24 @@ This class is not intended to be instantiated directly.
 
 \examples{
 # H5ClusteredArray is a virtual class and cannot be directly instantiated.
-# See its subclasses H5ClusteredRunFull and H5ClusteredRunSummary for examples.
+# See its subclasses H5ClusterRun and H5ClusterRunSummary for examples.
 
 # You can check if an object inherits from it:
-# run_object <- H5ClusteredRunFull(...) # Assuming run_object is created
+# run_object <- H5ClusterRun(...) # Assuming run_object is created
 # inherits(run_object, "H5ClusteredArray") # Should return TRUE
 
 }
 \seealso{
 Other H5Clustered: 
-\code{\link{$,H5ClusteredExperiment-method}},
-\code{\link{H5ClusteredExperiment}},
-\code{\link{H5ClusteredExperiment-class}},
-\code{\link{H5ClusteredRunFull-class}},
-\code{\link{H5ClusteredRunSummary-class}},
-\code{\link{[,H5ClusteredRunFull,ANY,ANY,ANY-method}},
+\code{\link{$,H5ClusterExperiment-method}},
+\code{\link{H5ClusterExperiment}},
+\code{\link{H5ClusterExperiment-class}},
+\code{\link{H5ClusterRun-class}},
+\code{\link{H5ClusterRunSummary-class}},
+\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{cluster_metadata,H5ClusteredExperiment-method}},
+\code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
 \code{\link{h5file,H5ClusteredArray-method}},
@@ -49,12 +49,12 @@ Other H5Clustered:
 \code{\link{make_run_summary}()},
 \code{\link{mask}()},
 \code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusteredExperiment-method}},
-\code{\link{scan_metadata,H5ClusteredExperiment-method}},
-\code{\link{scan_names,H5ClusteredExperiment-method}},
+\code{\link{n_scans,H5ClusterExperiment-method}},
+\code{\link{scan_metadata,H5ClusterExperiment-method}},
+\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
 \code{\link{series_concat}()},
-\code{\link{show,H5ClusteredRunFull-method}}
+\code{\link{show,H5ClusterRun-method}}
 }
 \concept{H5Clustered}
 \keyword{internal}

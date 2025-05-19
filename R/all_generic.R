@@ -8,16 +8,16 @@
 #' @examples
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5ClusteredExperiment", where = "package:fmristore") &&
+#'     exists("H5ClusterExperiment", where = "package:fmristore") &&
 #'     exists("n_scans", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     # Create a minimal H5ClusteredExperiment which contains runs (scans)
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     # Create a minimal H5ClusterExperiment which contains runs (scans)
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # Get the number of scans
 #'     num_scans <- n_scans(exp_obj)
@@ -48,16 +48,16 @@ setGeneric("n_scans", function(x) standardGeneric("n_scans"))
 #' @examples
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5ClusteredExperiment", where = "package:fmristore") &&
+#'     exists("H5ClusterExperiment", where = "package:fmristore") &&
 #'     exists("scan_names", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     # Create a minimal H5ClusteredExperiment
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     # Create a minimal H5ClusterExperiment
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # Get the scan names
 #'     s_names <- scan_names(exp_obj)
@@ -88,16 +88,16 @@ setGeneric("scan_names", function(x) standardGeneric("scan_names"))
 #' @examples
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5ClusteredExperiment", where = "package:fmristore") &&
+#'     exists("H5ClusterExperiment", where = "package:fmristore") &&
 #'     exists("scan_metadata", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     # Create a minimal H5ClusteredExperiment
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     # Create a minimal H5ClusterExperiment
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # Get the scan metadata
 #'     s_meta <- scan_metadata(exp_obj)
@@ -131,16 +131,16 @@ setGeneric("scan_metadata", function(x) standardGeneric("scan_metadata"))
 #' @examples
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5ClusteredExperiment", where = "package:fmristore") &&
+#'     exists("H5ClusterExperiment", where = "package:fmristore") &&
 #'     exists("cluster_metadata", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     # Create a minimal H5ClusteredExperiment
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     # Create a minimal H5ClusterExperiment
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # Get the cluster metadata
 #'     c_meta <- cluster_metadata(exp_obj)
@@ -171,12 +171,12 @@ setGeneric("cluster_metadata", function(x) standardGeneric("cluster_metadata"))
 #' @return The HDF5 file object (from package hdf5r)
 #'
 #' @examples
-#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # Get the H5File object
 #'     h5f <- h5file(exp_obj)
@@ -304,7 +304,7 @@ setGeneric("loadings", function(x, ...) standardGeneric("loadings"))
 setGeneric("offset", function(x, ...) standardGeneric("offset"))
 
 #' Get the mask volume
-#' @param x An object with a mask, like LatentNeuroVec or H5ClusteredExperiment
+#' @param x An object with a mask, like LatentNeuroVec or H5ClusterExperiment
 #' @param ... Additional arguments
 #' @return The mask object (e.g., a LogicalNeuroVol)
 #' 
@@ -324,17 +324,17 @@ setGeneric("offset", function(x, ...) standardGeneric("offset"))
 #'   message("Skipping mask example for LatentNeuroVec: helper not available.")
 #' }
 #' 
-#' # For H5ClusteredExperiment:
-#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#' # For H5ClusterExperiment:
+#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     mask_vol_exp <- mask(exp_obj)
 #'     print(mask_vol_exp)
 #'   }, error = function(e) {
-#'     message("mask example for H5ClusteredExperiment failed: ", e$message)
+#'     message("mask example for H5ClusterExperiment failed: ", e$message)
 #'   }, finally = {
 #'     if (!is.null(exp_obj)) try(close(exp_obj), silent = TRUE)
 #'     if (!is.null(temp_exp_file) && file.exists(temp_exp_file)) {
@@ -342,7 +342,7 @@ setGeneric("offset", function(x, ...) standardGeneric("offset"))
 #'     }
 #'   })
 #' } else {
-#'   message("Skipping mask example for H5ClusteredExperiment: helper not available.")
+#'   message("Skipping mask example for H5ClusterExperiment: helper not available.")
 #' }
 #' 
 #' @export
@@ -375,21 +375,21 @@ setGeneric("mask", function(x, ...) standardGeneric("mask"))
 setGeneric("map", function(x, ...) standardGeneric("map"))
 
 #' Get the cluster map object
-#' @param x An object with cluster assignments (e.g., H5ClusteredExperiment)
+#' @param x An object with cluster assignments (e.g., H5ClusterExperiment)
 #' @param ... Additional arguments
 #' @return The clusters object (e.g., a ClusteredNeuroVol)
 #' 
 #' @examples
-#' # For H5ClusteredExperiment:
-#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#' # For H5ClusterExperiment:
+#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment(
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
 #'       master_mask_dims = c(4L,4L,3L), 
 #'       num_master_clusters = 2L
 #'     )
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # Get the master cluster map from the experiment
 #'     cluster_vol <- clusters(exp_obj)
@@ -398,11 +398,11 @@ setGeneric("map", function(x, ...) standardGeneric("map"))
 #'     
 #'     # Individual runs also have cluster information, potentially accessible via their own methods
 #'     # run1 <- runs(exp_obj)[["Run1_Full"]]
-#'     # run1_clusters <- clusters(run1) # Assuming a method for H5ClusteredRunFull
+#'     # run1_clusters <- clusters(run1) # Assuming a method for H5ClusterRun
 #'     # print(run1_clusters)
 #'     
 #'   }, error = function(e) {
-#'     message("clusters example for H5ClusteredExperiment failed: ", e$message)
+#'     message("clusters example for H5ClusterExperiment failed: ", e$message)
 #'   }, finally = {
 #'     if (!is.null(exp_obj)) try(close(exp_obj), silent = TRUE)
 #'     if (!is.null(temp_exp_file) && file.exists(temp_exp_file)) {
@@ -410,7 +410,7 @@ setGeneric("map", function(x, ...) standardGeneric("map"))
 #'     }
 #'   })
 #' } else {
-#'   message("Skipping clusters example for H5ClusteredExperiment: helper not available.")
+#'   message("Skipping clusters example for H5ClusterExperiment: helper not available.")
 #' }
 #' 
 #' @export
@@ -418,26 +418,26 @@ setGeneric("map", function(x, ...) standardGeneric("map"))
 setGeneric("clusters", function(x, ...) standardGeneric("clusters"))
 
 
-# --- Generics for H5ClusteredExperiment Helpers --- 
+# --- Generics for H5ClusterExperiment Helpers --- 
 
 #' Concatenate Voxel Time Series Across Runs (Generic)
 #' 
-#' @param experiment The experiment object (typically \code{\link{H5ClusteredExperiment-class}}).
+#' @param experiment The experiment object (typically \code{\link{H5ClusterExperiment-class}}).
 #' @param mask_idx Indices of voxels within the mask of the experiment.
 #' @param run_indices Optional: A numeric or character vector specifying which runs to include.
 #' @param ... Additional arguments for methods.
 #' @return A concatenated matrix (typically time x voxels).
 #' 
 #' @examples
-#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment(
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
 #'       master_mask_dims = c(4L,4L,2L), # Smaller mask for example
 #'       n_time_run1 = 5L # Shorter time series for Run1_Full
 #'     )
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
 #'     # Get some valid voxel indices from the mask
 #'     # The master mask is created by the helper.
@@ -447,11 +447,11 @@ setGeneric("clusters", function(x, ...) standardGeneric("clusters"))
 #'     # If mask has at least 2 voxels: 
 #'     # selected_vox_indices <- valid_mask_indices[1:min(2, length(valid_mask_indices))]
 #'     # A more robust way for an example without directly loading mask here:
-#'     # The H5ClusteredExperiment has a mask, and its linear indices are 1:sum(mask_data)
+#'     # The H5ClusterExperiment has a mask, and its linear indices are 1:sum(mask_data)
 #'     # For a 4x4x2 mask, if 50% are true, there are 16 true voxels. Indices are 1 to 16.
 #'     # Let's pick first 2 voxels in the mask's internal indexing (1-based).
 #'     
-#'     # Note: series_concat typically works on runs with full data (H5ClusteredRunFull)
+#'     # Note: series_concat typically works on runs with full data (H5ClusterRun)
 #'     # The helper creates "Run1_Full".
 #'     # concatenated_series <- series_concat(exp_obj, mask_idx = c(1, 2), run_indices = "Run1_Full")
 #'     # print(dim(concatenated_series)) # Should be n_time_run1 x 2
@@ -459,7 +459,7 @@ setGeneric("clusters", function(x, ...) standardGeneric("clusters"))
 #'     
 #'     # For a fully runnable example, need to ensure mask_idx is valid for the created object.
 #'     # Since the helper creates a mask, we can try to use mask_idx = 1 (first voxel in mask).
-#'     # The `series_concat` method for H5ClusteredExperiment handles this.
+#'     # The `series_concat` method for H5ClusterExperiment handles this.
 #'     if (n_voxels(exp_obj) > 0) { # n_voxels from H5ClusteredArray slot
 #'        conc_series <- series_concat(exp_obj, mask_idx = 1, run_indices = "Run1_Full")
 #'        print(paste("Dimensions of concatenated series for voxel 1 from Run1_Full:", 
@@ -486,23 +486,23 @@ setGeneric("series_concat",
 
 #' Concatenate Cluster Summary Matrices Across Runs (Generic)
 #' 
-#' @param experiment The experiment object (typically \code{\link{H5ClusteredExperiment-class}}).
+#' @param experiment The experiment object (typically \code{\link{H5ClusterExperiment-class}}).
 #' @param run_indices Optional: A numeric or character vector specifying which runs to include.
 #'   If NULL, uses all runs that are of summary type or can produce a summary matrix.
 #' @param ... Additional arguments for methods.
 #' @return A concatenated matrix (typically time x clusters).
 #' 
 #' @examples
-#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+#' if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   tryCatch({
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment(
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
 #'       n_time_run2 = 6L # Shorter time series for Run2_Summary
 #'     )
-#'     exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
 #'     
-#'     # Note: matrix_concat typically works on runs with summary data (H5ClusteredRunSummary)
+#'     # Note: matrix_concat typically works on runs with summary data (H5ClusterRunSummary)
 #'     # The helper creates "Run2_Summary".
 #'     # concatenated_matrix <- matrix_concat(exp_obj, run_indices = "Run2_Summary")
 #'     # print(dim(concatenated_matrix)) 
@@ -542,7 +542,7 @@ setGeneric("matrix_concat",
 #' @description
 #' An internal generic function used to determine the HDF5 path to the dataset
 #' corresponding to a specific cluster ID within a given run object.
-#' Concrete subclasses (like `H5ClusteredRunFull`) must implement a method for this generic.
+#' Concrete subclasses (like `H5ClusterRun`) must implement a method for this generic.
 #'
 #' @param x An object inheriting from `H5ClusteredArray`.
 #' @param cid The cluster ID (integer).
@@ -611,7 +611,7 @@ setGeneric(".dataset_path",
 #'       \item{\code{compression}}{Integer [0..9], default 4}
 #'       \item{\code{chunk_size}}{Chunk dimension for 2D writes, default 1024}
 #'     }
-#'     Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusteredExperiment).
+#'     Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusterExperiment).
 #'   }
 #' }
 #'
@@ -737,11 +737,11 @@ setGeneric("as_h5", function(object, file, ...) {
 #'   method and arguments.
 #'
 #' @seealso Methods for this generic are available for classes like
-#'   \code{\link{H5ClusteredRunFull}}.
+#'   \code{\link{H5ClusterRun}}.
 #'
 #' @examples
 #' # This is a generic function; examples are provided with its specific methods.
-#' # For example, see help("series,H5ClusteredRunFull-method")
+#' # For example, see help("series,H5ClusterRun-method")
 #'
 #' @export
 #' @rdname series-methods 
@@ -760,7 +760,7 @@ series <- neuroim2::series
 #' Refer to the documentation for \code{linear_access} in the \code{neuroim2} package
 #' for general details about the generic concept.
 #'
-#' @param x An object for which a `linear_access` method is defined (e.g., `H5ClusteredRunFull`).
+#' @param x An object for which a `linear_access` method is defined (e.g., `H5ClusterRun`).
 #' @param i A numeric vector of 4D linear indices.
 #' @param ... Additional arguments, not typically used by `fmristore` methods for `linear_access`
 #'   but may be relevant for other methods of this generic.
@@ -769,7 +769,7 @@ series <- neuroim2::series
 #'   The order of values in the returned vector matches the order of indices in `i`.
 #'
 #' @seealso \code{neuroim2::\link[neuroim2]{linear_access}}, specific methods like
-#'   \code{\link{linear_access,H5ClusteredRunFull-method}}.
+#'   \code{\link{linear_access,H5ClusterRun-method}}.
 #'
 #' @name linear_access-methods
 #' @aliases linear_access
@@ -794,7 +794,7 @@ linear_access <- neuroim2::linear_access
 #'   vector depend on the specific class of `x`.
 #'
 #' @seealso \code{base::\link[base]{dim}}, specific methods like
-#'   \code{dim,H5ClusteredRunFull-method} (if defined and exported).
+#'   \code{dim,H5ClusterRun-method} (if defined and exported).
 #'
 #' @rdname dim-methods
 #' @name dim

@@ -2,12 +2,12 @@
 % Please edit documentation in R/all_generic.R, R/cluster_array.R
 \name{as.matrix}
 \alias{as.matrix}
-\alias{as.matrix,H5ClusteredRunSummary-method}
+\alias{as.matrix,H5ClusterRunSummary-method}
 \title{Convert to Matrix}
 \usage{
 as.matrix(x, ...)
 
-\S4method{as.matrix}{H5ClusteredRunSummary}(x)
+\S4method{as.matrix}{H5ClusterRunSummary}(x)
 }
 \arguments{
 \item{x}{An object for which a `as.matrix` method is defined.}
@@ -18,15 +18,15 @@ implementing the S4 generic function \code{\link[base]{as.matrix}} from the `bas
 }
 \seealso{
 Other H5Clustered: 
-\code{\link{$,H5ClusteredExperiment-method}},
+\code{\link{$,H5ClusterExperiment-method}},
 \code{\link{H5ClusteredArray-class}},
-\code{\link{H5ClusteredExperiment}},
-\code{\link{H5ClusteredExperiment-class}},
-\code{\link{H5ClusteredRunFull-class}},
-\code{\link{H5ClusteredRunSummary-class}},
-\code{\link{[,H5ClusteredRunFull,ANY,ANY,ANY-method}},
+\code{\link{H5ClusterExperiment}},
+\code{\link{H5ClusterExperiment-class}},
+\code{\link{H5ClusterRun-class}},
+\code{\link{H5ClusterRunSummary-class}},
+\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
-\code{\link{cluster_metadata,H5ClusteredExperiment-method}},
+\code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
 \code{\link{h5file,H5ClusteredArray-method}},
@@ -35,11 +35,11 @@ Other H5Clustered:
 \code{\link{make_run_summary}()},
 \code{\link{mask}()},
 \code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusteredExperiment-method}},
-\code{\link{scan_metadata,H5ClusteredExperiment-method}},
-\code{\link{scan_names,H5ClusteredExperiment-method}},
+\code{\link{n_scans,H5ClusterExperiment-method}},
+\code{\link{scan_metadata,H5ClusterExperiment-method}},
+\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
 \code{\link{series_concat}()},
-\code{\link{show,H5ClusteredRunFull-method}}
+\code{\link{show,H5ClusterRun-method}}
 }
 \concept{H5Clustered}

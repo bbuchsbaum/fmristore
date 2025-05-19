@@ -63,16 +63,16 @@ test_that("writer + reader round-trip", {
 
   # --- Test Reading --- 
   # Can we open it?
-  exp <- H5ClusteredExperiment(tf, keep_handle_open = TRUE)
+  exp <- H5ClusterExperiment(tf, keep_handle_open = TRUE)
   on.exit(try(exp$h5file$close_all(), silent=TRUE), add = TRUE) # Ensure cleanup
   
-  expect_s4_class(exp, "H5ClusteredExperiment")
+  expect_s4_class(exp, "H5ClusterExperiment")
   expect_equal(n_scans(exp), 2)
   expect_equal(scan_names(exp), c("run1", "run2"))
   
   # Check run types
-  expect_s4_class(exp@runs[[1]], "H5ClusteredRunFull")
-  expect_s4_class(exp@runs[[2]], "H5ClusteredRunSummary")
+  expect_s4_class(exp@runs[[1]], "H5ClusterRun")
+  expect_s4_class(exp@runs[[2]], "H5ClusterRunSummary")
   
   # Check loaded scan metadata
   expect_equal(exp@scan_metadata$run1$TR, 2.0)
@@ -145,11 +145,11 @@ test_that("writer + reader round-trip", {
   expect_equivalent(concatenated_summary, summ_mat,  tolerance = 1e-5)
   
   # Test trying to concat wrong types
-  expect_error(series_concat(exp, vox_indices, run_indices = 2), ".*not an H5ClusteredRunFull object.*")
-  expect_error(matrix_concat(exp, run_indices = 1), ".*not an H5ClusteredRunSummary object.*")
+  expect_error(series_concat(exp, vox_indices, run_indices = 2), ".*not an H5ClusterRun object.*")
+  expect_error(matrix_concat(exp, run_indices = 1), ".*not an H5ClusterRunSummary object.*")
 })
 
-context("H5ClusteredExperiment Constructor Validation")
+context("H5ClusterExperiment Constructor Validation")
 
 test_that("writer errors if mask or clusters are NULL", {
   # Create minimal valid mask/clusters
@@ -172,8 +172,8 @@ test_that("reader default path (mask=NULL, clusters=NULL) works", {
   write_clustered_experiment_h5(tf, mask, clus, runs, overwrite = TRUE, verbose = FALSE)
   
   # Should load successfully with mask=NULL, clusters=NULL
-  exp <- H5ClusteredExperiment(tf)
-  expect_s4_class(exp, "H5ClusteredExperiment")
+  exp <- H5ClusterExperiment(tf)
+  expect_s4_class(exp, "H5ClusterExperiment")
   expect_s4_class(mask(exp), "LogicalNeuroVol")
   expect_s4_class(clusters(exp), "ClusteredNeuroVol")
   expect_equal(sum(mask(exp)), sum(mask)) # Check if loaded mask is correct
@@ -192,32 +192,32 @@ test_that("reader validation works for provided mask and clusters", {
   write_clustered_experiment_h5(tf, mask_orig, clus_orig, runs, cluster_metadata=clus_meta_df, overwrite = TRUE, verbose = FALSE)
 
   # 1. Provide valid mask and clusters - should succeed
-  expect_message(exp_valid <- H5ClusteredExperiment(tf, mask = mask_orig, clusters = clus_orig), ".*validation successful.*", all=TRUE)
-  expect_s4_class(exp_valid, "H5ClusteredExperiment")
+  expect_message(exp_valid <- H5ClusterExperiment(tf, mask = mask_orig, clusters = clus_orig), ".*validation successful.*", all=TRUE)
+  expect_s4_class(exp_valid, "H5ClusterExperiment")
   expect_true(identical(mask(exp_valid), mask_orig)) # Checks space and data
   expect_true(identical(clusters(exp_valid), clus_orig)) # Checks space and data
 
   # 2. Provide mask with different space - should fail
   mask_bad_space <- LogicalNeuroVol(mask_orig@.Data, NeuroSpace(dim=c(2,2,2), spacing=c(2,2,2)))
-  expect_error(H5ClusteredExperiment(tf, mask = mask_bad_space), ".*NeuroSpace does not match.*")
+  expect_error(H5ClusterExperiment(tf, mask = mask_bad_space), ".*NeuroSpace does not match.*")
 
   # 3. Provide mask with different voxel pattern - should fail
   mask_bad_pattern <- mask_orig
   mask_bad_pattern[1,1,1] <- TRUE # Original was FALSE
-  expect_error(H5ClusteredExperiment(tf, mask = mask_bad_pattern), ".*pattern of TRUE voxels does not match.*")
+  expect_error(H5ClusterExperiment(tf, mask = mask_bad_pattern), ".*pattern of TRUE voxels does not match.*")
   
   # 4. Provide mask with wrong sum (caught by length check against cluster_map)
   mask_bad_sum <- LogicalNeuroVol(array(TRUE, dim=c(2,2,2))) # sum=8, but cluster_map length=4
-  expect_error(H5ClusteredExperiment(tf, mask = mask_bad_sum), ".*TRUE voxel count.*does not match length.*cluster_map.*") 
+  expect_error(H5ClusterExperiment(tf, mask = mask_bad_sum), ".*TRUE voxel count.*does not match length.*cluster_map.*") 
   
   # 5. Provide clusters with different space - should fail
   clus_bad_space <- ClusteredNeuroVol(clus_orig@clusters, space(mask_bad_space)) # Use mask with wrong space
   # Need to pass the original mask here, error happens when comparing clusters space to mask space
-  expect_error(H5ClusteredExperiment(tf, mask = mask_orig, clusters = clus_bad_space), ".*clusters object.*NeuroSpace does not match the mask.*")
+  expect_error(H5ClusterExperiment(tf, mask = mask_orig, clusters = clus_bad_space), ".*clusters object.*NeuroSpace does not match the mask.*")
   
   # 6. Provide clusters with wrong length - should fail
   clus_bad_len <- ClusteredNeuroVol(c(clus_orig@clusters, 99), space(mask_orig)) # Add extra element
-  expect_error(H5ClusteredExperiment(tf, mask = mask_orig, clusters = clus_bad_len), ".*clusters vector length.*does not match.*number of TRUE voxels.*")
+  expect_error(H5ClusterExperiment(tf, mask = mask_orig, clusters = clus_bad_len), ".*clusters vector length.*does not match.*number of TRUE voxels.*")
 
 })
 
@@ -232,14 +232,14 @@ test_that("summary_preference defaults based on /scans attribute", {
   runs_sum <- list(list(scan_name = "s1", type = "summary", data = matrix(1:4, 2, 2)))
   write_clustered_experiment_h5(tf1, mask, clus, runs_sum, overwrite = TRUE, verbose = FALSE)
 
-  exp_sum <- H5ClusteredExperiment(tf1)
-  expect_s4_class(exp_sum@runs[[1]], "H5ClusteredRunSummary")
+  exp_sum <- H5ClusterExperiment(tf1)
+  expect_s4_class(exp_sum@runs[[1]], "H5ClusterRunSummary")
 
   runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:4, 2, 2))))
   write_clustered_experiment_h5(tf2, mask, clus, runs_full, overwrite = TRUE, verbose = FALSE)
 
-  exp_full <- H5ClusteredExperiment(tf2)
-  expect_s4_class(exp_full@runs[[1]], "H5ClusteredRunFull")
+  exp_full <- H5ClusterExperiment(tf2)
+  expect_s4_class(exp_full@runs[[1]], "H5ClusterRun")
 })
 
 test_that("warning for mismatched summary_only attribute", {
@@ -256,8 +256,8 @@ test_that("warning for mismatched summary_only attribute", {
   h5attr(h5f[["scans"]], "summary_only") <- TRUE
   h5f$close_all()
 
-  expect_warning(exp_warn <- H5ClusteredExperiment(tf), "/scans@summary_only")
-  expect_s4_class(exp_warn@runs[[1]], "H5ClusteredRunFull")
+  expect_warning(exp_warn <- H5ClusterExperiment(tf), "/scans@summary_only")
+  expect_s4_class(exp_warn@runs[[1]], "H5ClusterRun")
 })
 
 })
@@ -290,7 +290,7 @@ test_that("dataset cluster_meta is read as data.frame", {
   h5f$create_dataset("/clusters/cluster_meta", df)
   h5f$close_all()
 
-  exp <- H5ClusteredExperiment(tf)
+  exp <- H5ClusterExperiment(tf)
   expect_s3_class(exp@cluster_metadata, "data.frame")
   expect_setequal(names(exp@cluster_metadata), names(meta_df))
   expect_equal(nrow(exp@cluster_metadata), nrow(meta_df))

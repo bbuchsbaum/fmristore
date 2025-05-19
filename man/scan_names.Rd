@@ -18,16 +18,16 @@ This generic returns a character vector of scan names or labels.
 \examples{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5ClusteredExperiment", where = "package:fmristore") &&
+    exists("H5ClusterExperiment", where = "package:fmristore") &&
     exists("scan_names", where = "package:fmristore") &&
-    !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+    !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
-    # Create a minimal H5ClusteredExperiment
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-    exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+    # Create a minimal H5ClusterExperiment
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+    exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
     
     # Get the scan names
     s_names <- scan_names(exp_obj)

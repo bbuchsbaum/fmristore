@@ -18,16 +18,16 @@ This generic returns the number of scans in an object (e.g. a sequence of fMRI s
 \examples{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5ClusteredExperiment", where = "package:fmristore") &&
+    exists("H5ClusterExperiment", where = "package:fmristore") &&
     exists("n_scans", where = "package:fmristore") &&
-    !is.null(fmristore:::create_minimal_h5_for_H5ClusteredExperiment)) {
+    !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
-    # Create a minimal H5ClusteredExperiment which contains runs (scans)
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusteredExperiment()
-    exp_obj <- fmristore::H5ClusteredExperiment(file_path = temp_exp_file)
+    # Create a minimal H5ClusterExperiment which contains runs (scans)
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
+    exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
     
     # Get the number of scans
     num_scans <- n_scans(exp_obj)
