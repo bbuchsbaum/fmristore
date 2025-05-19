@@ -400,6 +400,7 @@ test_that("local_tempfile path is respected", {
   skip_if_not_installed("hdf5r")
 
   # Create a DenseNeuroVec and an empty mask
+  spc <- NeuroSpace(dim = c(2,2,1,2))
   vec <- DenseNeuroVec(array(1:8, dim=c(2,2,1,2)), space=spc)
   mask_arr <- array(FALSE, dim=c(2,2,1))
   mask <- LogicalNeuroVol(mask_arr, drop_dim(spc))
