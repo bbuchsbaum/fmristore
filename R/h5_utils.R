@@ -169,7 +169,8 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
     if (obj_info$type != "H5L_TYPE_HARD") {
          # Could be a group or something else; h5[[path]] might work for groups but read() will fail.
          # Treat non-datasets as an error unless specifically handled.
-         stop(sprintf("Object at path '%s' is not a dataset (type: %s)."), path, obj_info$type)
+         stop(sprintf("Object at path '%s' is not a dataset (type: %s).",
+                      path, obj_info$type))
     }
     
     dset <- h5[[path]] # Open the dataset
