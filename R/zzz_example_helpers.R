@@ -452,7 +452,9 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
     header_grp$create_dataset("qform_code", robj = as.integer(1), dtype = hdf5r::h5types$H5T_NATIVE_INT)
     header_grp$create_dataset("sform_code", robj = as.integer(1), dtype = hdf5r::h5types$H5T_NATIVE_INT)
     header_grp$create_dataset("sizeof_hdr", robj = as.integer(348), dtype = hdf5r::h5types$H5T_NATIVE_INT)
-    header_grp$create_dataset("magic", robj = "n+1", dtype = hdf5r::H5T_STRING$new(type="c", size=4L))
+    magic_type <- hdf5r::H5T_STRING$new(type = "c", size = 4L)
+    on.exit(magic_type$close(), add = TRUE)
+    header_grp$create_dataset("magic", robj = "n+1", dtype = magic_type)
 
   }, error = function(e) {
     if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
