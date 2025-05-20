@@ -21,6 +21,11 @@ create_minimal_LogicalNeuroVol <- function(dims = c(3L, 3L, 2L), true_voxels = N
   if (!requireNamespace("neuroim2", quietly = TRUE)) {
     stop("Package 'neuroim2' is needed for this helper function.")
   }
+  if (!(is.numeric(dims) && length(dims) == 3 && all(dims > 0) &&
+        all(dims == as.integer(dims)))) {
+    stop("'dims' must be a length-3 positive integer vector.")
+  }
+  dims <- as.integer(dims)
   space <- neuroim2::NeuroSpace(dims)
   arr <- array(FALSE, dim = dims)
   if (is.null(true_voxels)) {
@@ -54,8 +59,13 @@ create_minimal_DenseNeuroVec <- function(dims = c(3L, 3L, 2L, 4L)) {
   if (!requireNamespace("neuroim2", quietly = TRUE)) {
     stop("Package 'neuroim2' is needed for this helper function.")
   }
+  if (!(is.numeric(dims) && length(dims) == 4 && all(dims > 0) &&
+        all(dims == as.integer(dims)))) {
+    stop("'dims' must be a length-4 positive integer vector.")
+  }
+  dims <- as.integer(dims)
   space <- neuroim2::NeuroSpace(dims)
-  arr <- array(seq_len(prod(dims)), dim = dims) 
+  arr <- array(seq_len(prod(dims)), dim = dims)
   return(neuroim2::DenseNeuroVec(arr, space))
 }
 
@@ -126,8 +136,13 @@ create_minimal_ClusteredNeuroVol <- function(mask_vol = NULL, num_clusters = 2L)
 #' }
 create_minimal_h5_for_H5NeuroVol <- function(dims = c(3L, 3L, 2L), file_path = NULL) {
   if (!requireNamespace("neuroim2", quietly = TRUE) || !requireNamespace("hdf5r", quietly = TRUE)) {
-    stop("Packages \'neuroim2\' and \'hdf5r\' are needed for this helper function.")
+    stop("Packages 'neuroim2' and 'hdf5r' are needed for this helper function.")
   }
+  if (!(is.numeric(dims) && length(dims) == 3 && all(dims > 0) &&
+        all(dims == as.integer(dims)))) {
+    stop("'dims' must be a length-3 positive integer vector.")
+  }
+  dims <- as.integer(dims)
   if (is.null(file_path)) {
     out_file <- tempfile(fileext = ".h5vol_example.h5")
   } else {
@@ -252,13 +267,18 @@ create_minimal_h5_for_H5NeuroVec <- function(dims = c(3L, 3L, 2L, 5L), file_path
 #'   lnv <- fmristore:::create_minimal_LatentNeuroVec()
 #'   print(lnv)
 #' }
-create_minimal_LatentNeuroVec <- function(space_dims = c(6L, 6L, 3L), 
-                                          n_time = 10L, 
-                                          n_comp = 3L, 
+create_minimal_LatentNeuroVec <- function(space_dims = c(6L, 6L, 3L),
+                                          n_time = 10L,
+                                          n_comp = 3L,
                                           n_mask_voxels = NULL) {
   if (!requireNamespace("neuroim2", quietly = TRUE)) {
     stop("Package 'neuroim2' is needed for this helper function.")
   }
+  if (!(is.numeric(space_dims) && length(space_dims) == 3 &&
+        all(space_dims > 0) && all(space_dims == as.integer(space_dims)))) {
+    stop("'space_dims' must be a length-3 positive integer vector.")
+  }
+  space_dims <- as.integer(space_dims)
 
   # Create a mask
   if (is.null(n_mask_voxels)) {
