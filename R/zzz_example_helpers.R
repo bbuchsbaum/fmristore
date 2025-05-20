@@ -535,8 +535,10 @@ populate_H5ClusterRun_in_h5file <- function(h5obj,
 
     # Write mask for this run (can be different from experiment master mask in general)
     # For simplicity, using the mask_vol@.Data which is a 3D array
-    run_grp$create_dataset("mask", robj = mask_vol@.Data, dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
-                               chunk_dims = "auto", compress_level = if(compress) 4L else 0L)
+    run_grp$create_dataset("mask", robj = mask_vol@.Data,
+                               dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
+                               chunk_dims = as.integer(pmin(dim(mask_vol@.Data), 128L)),
+                               compress_level = if(compress) 4L else 0L)
 
     # Extract cluster information from ClusteredNeuroVol
     # cluster_map is a vector of cluster IDs for voxels *within the mask_vol*
@@ -603,11 +605,13 @@ populate_H5ClusterRun_in_h5file <- function(h5obj,
           # If constructor expects n_vox x n_time, then this needs to be transposed before constructor is called, or disk format adjusted.
           # The H5ClusterRun constructor: data for each cluster is loaded as: dset[,]
           # Let's use n_time x n_vox_in_cluster on disk.
-          cluster_ts_data <- matrix(stats::rnorm(n_time * n_vox_in_this_cluster), 
+          cluster_ts_data <- matrix(stats::rnorm(n_time * n_vox_in_this_cluster),
                                    nrow = n_time, ncol = n_vox_in_this_cluster)
-          clusters_data_grp$create_dataset(paste("cluster_", id, sep=""), robj = cluster_ts_data, 
+          clusters_data_grp$create_dataset(paste("cluster_", id, sep=""),
+                                   robj = cluster_ts_data,
                                    dtype = hdf5r::h5types$H5T_NATIVE_FLOAT,
-                                   chunk_dims = "auto", compress_level = if(compress) 4L else 0L)
+                                   chunk_dims = as.integer(pmin(dim(cluster_ts_data), 128L)),
+                                   compress_level = if(compress) 4L else 0L)
         } else {
            # Should not happen if id is from unique_cluster_ids > 0 and cluster_assignments_in_mask is not all 0
            warning(sprintf("Scan '%s', Cluster '%s': No voxels found. Skipping data dataset.", scan_name, id))
@@ -672,8 +676,10 @@ populate_H5ClusterRunSummary_in_h5file <- function(h5obj,
     hdf5r::h5attr(run_grp, "n_time") <- as.integer(n_time)
 
     # Write mask, cluster_map, cluster_ids, cluster_names (same as H5ClusterRun part)
-    run_grp$create_dataset("mask", robj = mask_vol@.Data, dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
-                               chunk_dims = "auto", compress_level = if(compress) 4L else 0L)
+    run_grp$create_dataset("mask", robj = mask_vol@.Data,
+                               dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
+                               chunk_dims = as.integer(pmin(dim(mask_vol@.Data), 128L)),
+                               compress_level = if(compress) 4L else 0L)
 
     cluster_assignments_in_mask <- cluster_map_vol@.Data[mask_vol@.Data]
     unique_cluster_ids <- sort(unique(cluster_assignments_in_mask[cluster_assignments_in_mask > 0]))
@@ -717,9 +723,11 @@ populate_H5ClusterRunSummary_in_h5file <- function(h5obj,
         for (id in unique_cluster_ids) {
           # Summary data: n_time x 1 (e.g., mean time series for the cluster)
           summary_ts_data <- matrix(stats::rnorm(n_time * 1), nrow = n_time, ncol = 1)
-          stat_spec_grp$create_dataset(paste("cluster_", id, sep=""), robj = summary_ts_data, 
+          stat_spec_grp$create_dataset(paste("cluster_", id, sep=""),
+                                 robj = summary_ts_data,
                                  dtype = hdf5r::h5types$H5T_NATIVE_FLOAT,
-                                 chunk_dims = "auto", compress_level = if(compress) 4L else 0L)
+                                 chunk_dims = as.integer(pmin(dim(summary_ts_data), 128L)),
+                                 compress_level = if(compress) 4L else 0L)
         }
       }
     }
