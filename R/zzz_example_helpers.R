@@ -410,9 +410,8 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
       label_vol_data_1d <- stats::rnorm(n_vox_in_mask)
       safe_lab_name <- sanitize_label_func(lab_name)
       
-      # Path like /data/Label1, /data/Label2
-      dataset_path <- file.path("data", safe_lab_name)
-      data_grp$create_dataset(safe_lab_name, robj = label_vol_data_1d, 
+      # Dataset will be stored under /data/<label>
+      data_grp$create_dataset(safe_lab_name, robj = label_vol_data_1d,
                               dtype = hdf5r::h5types$H5T_NATIVE_FLOAT, # Consistent with write_labeled_vec default
                               chunk_dims = if(n_vox_in_mask > 0) min(1024L, n_vox_in_mask) else NULL,
                               compress_level = 0L # Minimal example, no compression needed
