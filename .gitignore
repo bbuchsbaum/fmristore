@@ -3,4 +3,5 @@
 .RData
 .Ruserdata
 inst/doc
-repomix.*
+repomix-output.xml
+
