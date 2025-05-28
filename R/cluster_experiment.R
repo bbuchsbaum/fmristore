@@ -858,4 +858,3 @@ setMethod("show", "H5ClusterExperiment", function(object) {
   }
 })
 
-# TODO: Add show method for H5ClusterExperiment 
