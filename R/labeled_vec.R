@@ -329,11 +329,8 @@ read_labeled_vec <- function(file_path) {
   # CRITICAL: Remove on.exit/defer call for h5obj. 
   # Closing is now the responsibility of the user via the close() method 
   # if fh$owns is TRUE.
-  # Example removed call: 
+  # Example removed call:
   # if (fh$owns) on.exit(safe_h5_close(h5obj), add = TRUE)
-
-  hdr_grp <- NULL # Initialize for finally block
-  hdr_values <- list()
 
   # Helper to read dataset from header group if present
   .rd_hdr <- function(nm) {
