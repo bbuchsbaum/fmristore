@@ -228,7 +228,6 @@ H5ClusterRunSummary <- function(file, scan_name,
   final_cluster_ids <- cluster_ids
 
   dataset_dims <- NULL
-  dataset_attrs <- NULL
 
   info_res <- tryCatch({
     with_h5_dataset(h5obj, dset_path, function(ds) {
