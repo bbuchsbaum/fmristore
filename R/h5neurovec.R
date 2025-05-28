@@ -142,8 +142,10 @@ setMethod(
   signature = signature(x="H5NeuroVec", i="matrix"),
   definition = function(x, i) {
     assertthat::assert_that(ncol(i) == 3)
-    assertthat::assert_that(max(i) <= prod(dim(x)[1:3]))
-    assertthat::assert_that(min(i) >= 1)
+    dims <- dim(x)
+    assertthat::assert_that(all(i[,1] >= 1 & i[,1] <= dims[1]))
+    assertthat::assert_that(all(i[,2] >= 1 & i[,2] <= dims[2]))
+    assertthat::assert_that(all(i[,3] >= 1 & i[,3] <= dims[3]))
     x@obj[["data/elements"]][i]
   }
 )
@@ -194,7 +196,10 @@ setMethod(
   signature = signature(x="H5NeuroVec", i="matrix"),
   definition = function(x, i) {
     assertthat::assert_that(ncol(i) == 3)
-    d4 <- dim(x)[4]
+    dims <- dim(x)
+    assertthat::assert_that(all(i[,1] >= 1 & i[,1] <= dims[1]))
+    assertthat::assert_that(all(i[,2] >= 1 & i[,2] <= dims[2]))
+    assertthat::assert_that(all(i[,3] >= 1 & i[,3] <= dims[3]))
 
     # Build bounding box for i
     ir <- lapply(seq_len(ncol(i)), function(j) seq(min(i[,j]), max(i[,j])))
