@@ -292,6 +292,10 @@ write_labeled_vec <- function(vec,
 #' object is no longer needed to release system resources. This can be done by calling
 #' \code{close(your_labeled_volume_set_object)}.
 #'
+#' A finalizer is registered on the HDF5 handle as a backup so the handle will
+#' be closed if the object is garbage collected. Explicitly calling
+#' \code{close()} remains best practice.
+#'
 #' Failure to close the handle may lead to issues such as reaching file handle
 #' limits or problems with subsequent access to the file.
 #'
@@ -318,8 +322,10 @@ write_labeled_vec <- function(vec,
 read_labeled_vec <- function(file_path) {
   # --- 1. Handle File Source ---
   # Call simplified open_h5 (no auto_close)
-  fh <- open_h5(file_path, mode = "r") 
+  fh <- open_h5(file_path, mode = "r")
   h5obj <- fh$h5
+  # Attach a finalizer so the handle is closed if the object is garbage collected
+  reg.finalizer(h5obj, function(x) safe_h5_close(x), onexit = TRUE)
   # CRITICAL: Remove on.exit/defer call for h5obj. 
   # Closing is now the responsibility of the user via the close() method 
   # if fh$owns is TRUE.
