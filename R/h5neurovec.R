@@ -31,7 +31,8 @@ read_vec <- function(file_name) {
 #'
 #' @description
 #' Constructs an \code{\link{H5NeuroVec}} object, which represents a 4D brain image
-#' stored in an HDF5 file. The HDF5 file is opened in read-only mode.
+#' stored in an HDF5 file. The HDF5 file is opened explicitly in read-only
+#' mode using \code{hdf5r::H5File$new(file_name, mode = "r")}. 
 #'
 #' @details
 #' This constructor is used for reading existing HDF5 files that conform
@@ -69,7 +70,8 @@ H5NeuroVec <- function(file_name) {
   assert_that(is.character(file_name))
   assert_that(file.exists(file_name))
 
-  h5obj <- hdf5r::H5File$new(file_name)
+  h5obj <- hdf5r::H5File$new(file_name, mode = "r")
+  on.exit(safe_h5_close(h5obj), add = TRUE)
 
   # Check the 'rtype' attribute
   rtype <- try(hdf5r::h5attr(h5obj, which="rtype"), silent=TRUE)
@@ -92,6 +94,7 @@ H5NeuroVec <- function(file_name) {
     trans  = h5obj[["space/trans"]][,]
   )
 
+  on.exit(NULL, add = FALSE)
   new("H5NeuroVec", space=sp, obj=h5obj)
 }
 
