@@ -140,10 +140,7 @@ setMethod(
         sp_dims <- dim(sp)
         if (length(sp_dims) != 3) stop("Input NeuroVol must be 3-dimensional.")
         
-        # --- Debug: Print trans matrix before writing ---
         current_trans <- trans(sp)
-        #message("DEBUG: trans matrix BEFORE writing:")
-        print(current_trans)
         
         h5_write(h5_write_obj, "/space/dim", as.integer(sp_dims), overwrite = TRUE)
         h5_write(h5_write_obj, "/space/origin", as.double(origin(sp)), overwrite = TRUE)
@@ -189,7 +186,6 @@ setMethod(
         # Read space info for the new object
         trans_data <- h5_read_obj[["/space/trans"]]$read()
        
-        spacing <- diag(trans_data)[1:3]
         sp_read <- NeuroSpace(
             dim    = h5_read_obj[["/space/dim"]]$read(),
             spacing= h5_read_obj[["/space/spacing"]]$read(),   
