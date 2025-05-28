@@ -853,6 +853,7 @@ setMethod("show", "H5ClusterExperiment", function(object) {
   }
 })
 
+
 # TODO: Add show method for H5ClusterExperiment
 
 #' Close an H5ClusterExperiment
@@ -881,3 +882,4 @@ setMethod("close", "H5ClusterExperiment", function(con, invalidate = FALSE, ...)
   }
   invisible(NULL)
 })
+

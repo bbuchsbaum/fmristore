@@ -1095,8 +1095,13 @@ make_run_summary <- function(file_source, scan_name,
   return(run_obj)
 }
 
-#' Show Method for H5ClusterRunSummary
-#' @param object An H5ClusterRunSummary object
+#' Show Methods for H5Cluster Objects
+#'
+#' Display concise summaries for objects in the H5Cluster family,
+#' including \code{H5ClusterRun}, \code{H5ClusterRunSummary},
+#' \code{H5ClusterExperiment}, and \code{LatentNeuroVec}.
+#'
+#' @param object An object from the H5Cluster family
 #' @importFrom cli cli_h1 cli_h2 cli_li col_blue col_green col_yellow col_silver col_red col_magenta symbol cli_text cli_alert_info
 #' @importFrom utils head
 #' @importFrom methods show
