@@ -44,6 +44,10 @@ read_vec <- function(file_name) {
 #' object is no longer needed to release system resources. This can be done by calling
 #' \code{close(your_h5neurovec_object)}.
 #'
+#' A finalizer is attached to the underlying HDF5 handle so it will be closed if
+#' the object is garbage collected. You should still explicitly call
+#' \code{close()} when done.
+#'
 #' Failure to close the handle may lead to issues such as reaching file handle
 #' limits or problems with subsequent access to the file.
 #'
@@ -70,6 +74,8 @@ H5NeuroVec <- function(file_name) {
   assert_that(file.exists(file_name))
 
   h5obj <- hdf5r::H5File$new(file_name)
+  # Attach a finalizer so the handle is closed if the object is garbage collected
+  reg.finalizer(h5obj, function(x) safe_h5_close(x), onexit = TRUE)
 
   # Check the 'rtype' attribute
   rtype <- try(hdf5r::h5attr(h5obj, which="rtype"), silent=TRUE)
