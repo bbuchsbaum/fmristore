@@ -326,6 +326,7 @@ read_labeled_vec <- function(file_path) {
   h5obj <- fh$h5
 
 
+
   # If we opened the file from a path, register a closing handler
   # in case an error occurs before the LabeledVolumeSet object is
   # successfully returned. The handler is cleared on success.
@@ -334,8 +335,6 @@ read_labeled_vec <- function(file_path) {
   }
 
 
-  hdr_grp <- NULL # Initialize for finally block
-  hdr_values <- list()
 
   # Helper to read dataset from header group if present
   .rd_hdr <- function(nm) {
