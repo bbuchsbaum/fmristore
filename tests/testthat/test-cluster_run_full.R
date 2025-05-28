@@ -274,6 +274,24 @@ test_that("make_run_full throws errors for invalid inputs", {
   expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=bad_mask, clusters=setup_info$clusters, n_time=setup_info$n_time), "Dimensions of 'mask' and 'clusters' must match")
   # Test cluster length mismatch
   expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=setup_info$mask, clusters=bad_clusters, n_time=setup_info$n_time), "Mismatch: clusters@clusters length")
+
+  # Test invalid compress inputs
+  expect_error(
+    H5ClusterRun(file = setup_info$filepath,
+                 scan_name = setup_info$scan_name,
+                 mask = setup_info$mask,
+                 clusters = setup_info$clusters,
+                 n_time = setup_info$n_time,
+                 compress = c(TRUE, FALSE)),
+    "'compress' must be a single logical value")
+  expect_error(
+    H5ClusterRun(file = setup_info$filepath,
+                 scan_name = setup_info$scan_name,
+                 mask = setup_info$mask,
+                 clusters = setup_info$clusters,
+                 n_time = setup_info$n_time,
+                 compress = "yes"),
+    "'compress' must be a single logical value")
   # Test error if n_time cannot be determined
   setup_uninferrable <- setup_test_file_full(clear_cluster_data = TRUE)
   on.exit(cleanup_test_file(setup_uninferrable), add = TRUE)
