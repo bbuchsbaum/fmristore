@@ -46,7 +46,11 @@ H5NeuroVol <- function(file_name) {
   assert_that(is.character(file_name))
   assert_that(file.exists(file_name))
 
-  h5obj <- hdf5r::H5File$new(file_name)
+  # open file read-only
+  h5obj <- hdf5r::H5File$new(file_name, mode = "r")
+
+  # make sure handle is closed on failure
+  on.exit(safe_h5_close(h5obj))
 
   # Check the "rtype" attribute
   rtype <- try(hdf5r::h5attr(h5obj, which="rtype"), silent=TRUE)
@@ -69,6 +73,7 @@ H5NeuroVol <- function(file_name) {
     trans  = h5obj[["space/trans"]][,]
   )
 
+  on.exit(NULL)
   new("H5NeuroVol", space=sp, h5obj=h5obj)
 }
 
