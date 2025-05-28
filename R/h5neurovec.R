@@ -581,7 +581,7 @@ setMethod(
     cat("║ ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin,2), collapse=" × "), "\n", sep="")
 
     # If axes are known, show them; else fallback
-    if (length(sp@axes@ndim) >= 3) {
+    if (sp@axes@ndim >= 3) {
       cat("║ ", crayon::yellow("Orientation"), "   : ",
           paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
     } else {
