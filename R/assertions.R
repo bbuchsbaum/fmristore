@@ -28,6 +28,14 @@ assert_non_empty_numeric <- function(x, arg, fn) {
 check_same_dims <- function(a, b, dims_to_compare = NULL, msg = NULL) {
   dim_a <- dim(a)
   dim_b <- dim(b)
+
+  # Treat numeric vectors as dimension vectors when dim() is NULL
+  if (is.null(dim_a) && is.numeric(a)) {
+    dim_a <- as.integer(a)
+  }
+  if (is.null(dim_b) && is.numeric(b)) {
+    dim_b <- as.integer(b)
+  }
   
   # Select dimensions to compare
   dims_a_sub <- if (is.null(dims_to_compare)) dim_a else dim_a[dims_to_compare]
