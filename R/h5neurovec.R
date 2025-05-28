@@ -123,7 +123,7 @@ setMethod(
   definition = function(x, i) {
     assertthat::assert_that(max(i) <= dim(x)[4])
     assertthat::assert_that(min(i) >= 1)
-    x@obj[["data"]][,,, i, drop=FALSE]
+    x@obj[["data/elements"]][,,, i, drop=FALSE]
   }
 )
 
@@ -144,7 +144,7 @@ setMethod(
     assertthat::assert_that(ncol(i) == 3)
     assertthat::assert_that(max(i) <= prod(dim(x)[1:3]))
     assertthat::assert_that(min(i) >= 1)
-    x@obj[["data"]][i]
+    x@obj[["data/elements"]][i]
   }
 )
 
