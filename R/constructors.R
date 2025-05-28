@@ -6,6 +6,11 @@
 #' 
 #' This function handles file opening/closing and reads necessary metadata like
 #' \code{n_time} from the HDF5 file if not provided explicitly.
+#'
+#' @details
+#' Diagnostic messages (such as when \code{n_time} is inferred from a dataset)
+#' are printed only when the option \code{fmristore.verbose} is set to
+#' \code{TRUE} via \code{options(fmristore.verbose = TRUE)}.
 #' 
 #' @param file Character string path to the HDF5 file.
 #' @param scan_name The character string name of the scan (e.g., "run1").
@@ -49,6 +54,10 @@ H5ClusterRun <- function(file, scan_name,
     ))
   }
 
+  if (!is.logical(compress) || length(compress) != 1) {
+    stop("[H5ClusterRun] 'compress' must be a single logical value.")
+  }
+
   # --- 2. Open HDF5 file --- 
   # Use open_h5 with mode 'r' by default. It handles file existence check.
   # Note: open_h5 now returns a list(h5=handle, owns=TRUE/FALSE)
@@ -63,7 +72,6 @@ H5ClusterRun <- function(file, scan_name,
   if (is.null(determined_n_time)) {
     scan_group_path <- paste0("/scans/", scan_name)
     scan_group <- NULL
-    ds <- NULL
     
     scan_group_exists <- tryCatch(h5obj$exists(scan_group_path), error = function(e) FALSE)
     
@@ -93,7 +101,9 @@ H5ClusterRun <- function(file, scan_name,
                     dims <- dset_cid1$dims
                     if (length(dims) == 2) {
                         determined_n_time <- dims[2]
-                        message(sprintf("[H5ClusterRun] Inferred n_time = %d from dataset '%s'.", determined_n_time, dset_path_cid1))
+                        if (isTRUE(getOption("fmristore.verbose"))) {
+                          message(sprintf("[H5ClusterRun] Inferred n_time = %d from dataset '%s'.", determined_n_time, dset_path_cid1))
+                        }
                     }
                }, finally = {
                     if(!is.null(dset_cid1) && dset_cid1$is_valid) try(dset_cid1$close())
@@ -229,7 +239,6 @@ H5ClusterRunSummary <- function(file, scan_name,
   final_cluster_ids <- cluster_ids
 
   dataset_dims <- NULL
-  dataset_attrs <- NULL
 
   info_res <- tryCatch({
     with_h5_dataset(h5obj, dset_path, function(ds) {

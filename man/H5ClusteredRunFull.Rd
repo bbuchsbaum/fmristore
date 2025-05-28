@@ -37,3 +37,8 @@ voxel-level clustered data from an HDF5 file.
 This function handles file opening/closing and reads necessary metadata like
 \code{n_time} from the HDF5 file if not provided explicitly.
 }
+\details{
+Diagnostic messages (such as when \code{n_time} is inferred from a dataset) are
+printed only when the option \code{fmristore.verbose} is set to \code{TRUE} via
+\code{options(fmristore.verbose = TRUE)}.
+}

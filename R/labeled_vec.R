@@ -292,6 +292,10 @@ write_labeled_vec <- function(vec,
 #' object is no longer needed to release system resources. This can be done by calling
 #' \code{close(your_labeled_volume_set_object)}.
 #'
+#' A finalizer is registered on the HDF5 handle as a backup so the handle will
+#' be closed if the object is garbage collected. Explicitly calling
+#' \code{close()} remains best practice.
+#'
 #' Failure to close the handle may lead to issues such as reaching file handle
 #' limits or problems with subsequent access to the file.
 #'
@@ -321,12 +325,14 @@ read_labeled_vec <- function(file_path) {
   fh <- open_h5(file_path, mode = "r")
   h5obj <- fh$h5
 
+
   # If we opened the file from a path, register a closing handler
   # in case an error occurs before the LabeledVolumeSet object is
   # successfully returned. The handler is cleared on success.
   if (fh$owns) {
     on.exit(safe_h5_close(h5obj), add = TRUE)
   }
+
 
   hdr_grp <- NULL # Initialize for finally block
   hdr_values <- list()
@@ -730,7 +736,7 @@ setMethod(
     cat("║ ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" × "), "\n", sep="")
     cat("║ ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse=" × "), "\n", sep="")
 
-    if (length(sp@axes@ndim) == 1 && sp@axes@ndim >= 3) {
+    if (sp@axes@ndim >= 3) {
       cat("║ ", crayon::yellow("Orientation"), "   : ",
           paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
     } else {

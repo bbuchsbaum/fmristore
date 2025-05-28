@@ -31,7 +31,8 @@ read_vec <- function(file_name) {
 #'
 #' @description
 #' Constructs an \code{\link{H5NeuroVec}} object, which represents a 4D brain image
-#' stored in an HDF5 file. The HDF5 file is opened in read-only mode.
+#' stored in an HDF5 file. The HDF5 file is opened explicitly in read-only
+#' mode using \code{hdf5r::H5File$new(file_name, mode = "r")}. 
 #'
 #' @details
 #' This constructor is used for reading existing HDF5 files that conform
@@ -43,6 +44,10 @@ read_vec <- function(file_name) {
 #' **It is the user's responsibility to explicitly close this handle** when the
 #' object is no longer needed to release system resources. This can be done by calling
 #' \code{close(your_h5neurovec_object)}.
+#'
+#' A finalizer is attached to the underlying HDF5 handle so it will be closed if
+#' the object is garbage collected. You should still explicitly call
+#' \code{close()} when done.
 #'
 #' Failure to close the handle may lead to issues such as reaching file handle
 #' limits or problems with subsequent access to the file.
@@ -69,7 +74,11 @@ H5NeuroVec <- function(file_name) {
   assert_that(is.character(file_name))
   assert_that(file.exists(file_name))
 
+
   h5obj <- hdf5r::H5File$new(file_name)
+  # Attach a finalizer so the handle is closed if the object is garbage collected
+  reg.finalizer(h5obj, function(x) safe_h5_close(x), onexit = TRUE)
+
 
   # Check the 'rtype' attribute
   rtype <- try(hdf5r::h5attr(h5obj, which="rtype"), silent=TRUE)
@@ -92,6 +101,7 @@ H5NeuroVec <- function(file_name) {
     trans  = h5obj[["space/trans"]][,]
   )
 
+  on.exit(NULL, add = FALSE)
   new("H5NeuroVec", space=sp, obj=h5obj)
 }
 
@@ -120,7 +130,7 @@ setMethod(
   definition = function(x, i) {
     assertthat::assert_that(max(i) <= dim(x)[4])
     assertthat::assert_that(min(i) >= 1)
-    x@obj[["data"]][,,, i, drop=FALSE]
+    x@obj[["data/elements"]][,,, i, drop=FALSE]
   }
 )
 
@@ -139,9 +149,11 @@ setMethod(
   signature = signature(x="H5NeuroVec", i="matrix"),
   definition = function(x, i) {
     assertthat::assert_that(ncol(i) == 3)
-    assertthat::assert_that(max(i) <= prod(dim(x)[1:3]))
-    assertthat::assert_that(min(i) >= 1)
-    x@obj[["data"]][i]
+    dims <- dim(x)
+    assertthat::assert_that(all(i[,1] >= 1 & i[,1] <= dims[1]))
+    assertthat::assert_that(all(i[,2] >= 1 & i[,2] <= dims[2]))
+    assertthat::assert_that(all(i[,3] >= 1 & i[,3] <= dims[3]))
+    x@obj[["data/elements"]][i]
   }
 )
 
@@ -162,7 +174,9 @@ setMethod(
         length(i)==1 && length(j)==1 && length(k)==1,
         msg="Expecting single-voxel indices for i,j,k"
       )
-      ret <- x@obj[["data/elements"]][i,j,k,]
+      ret <- with_h5_dataset(x@obj, "data/elements", function(ds) {
+        ds[i, j, k, ]
+      })
       if (drop) drop(ret) else ret
     }
   }
@@ -189,18 +203,23 @@ setMethod(
   signature = signature(x="H5NeuroVec", i="matrix"),
   definition = function(x, i) {
     assertthat::assert_that(ncol(i) == 3)
-    d4 <- dim(x)[4]
+    dims <- dim(x)
+    assertthat::assert_that(all(i[,1] >= 1 & i[,1] <= dims[1]))
+    assertthat::assert_that(all(i[,2] >= 1 & i[,2] <= dims[2]))
+    assertthat::assert_that(all(i[,3] >= 1 & i[,3] <= dims[3]))
 
     # Build bounding box for i
     ir <- lapply(seq_len(ncol(i)), function(j) seq(min(i[,j]), max(i[,j])))
 
     # e.g. sub-block
-    ret <- x@obj[["data/elements"]][
-      ir[[1]][1]:ir[[1]][length(ir[[1]])],
-      ir[[2]][1]:ir[[2]][length(ir[[2]])],
-      ir[[3]][1]:ir[[3]][length(ir[[3]])],
-      , drop=FALSE
-    ]
+    ret <- with_h5_dataset(x@obj, "data/elements", function(ds) {
+      ds[
+        ir[[1]][1]:ir[[1]][length(ir[[1]])],
+        ir[[2]][1]:ir[[2]][length(ir[[2]])],
+        ir[[3]][1]:ir[[3]][length(ir[[3]])],
+        , drop = FALSE
+      ]
+    })
 
     # flatten
     ret2 <- t(array(ret, c(prod(dim(ret)[1:3]), dim(ret)[4])))
@@ -235,8 +254,9 @@ setMethod(
     minT <- min(coords[,4]); maxT <- max(coords[,4])
 
     # 3) Read sub-block
-    dset <- x@obj[["data/elements"]]
-    sub4d <- dset[minX:maxX, minY:maxY, minZ:maxZ, minT:maxT, drop=FALSE]
+    sub4d <- with_h5_dataset(x@obj, "data/elements", function(ds) {
+      ds[minX:maxX, minY:maxY, minZ:maxZ, minT:maxT, drop = FALSE]
+    })
 
     # 4) Flatten sub4d
     sub4d_vec <- as.vector(sub4d)
@@ -310,8 +330,9 @@ setMethod(
     minK <- min(k); maxK <- max(k)
     minL <- min(l); maxL <- max(l)
 
-    dset <- x@obj[["data/elements"]]
-    subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, minL:maxL, drop=FALSE]
+    subvol <- with_h5_dataset(x@obj, "data/elements", function(ds) {
+      ds[minI:maxI, minJ:maxJ, minK:maxK, minL:maxL, drop = FALSE]
+    })
 
     i_off <- i - minI + 1
     j_off <- j - minJ + 1
@@ -394,8 +415,8 @@ setMethod(
       # offsets = c(0, nels, 2*nels, ..., (nTime-1)*nels)
       offsets <- seq(0, (dim(x)[4]-1)) * nels
 
-      # For each element in i, we add each offset => flatten
-      # 'map' is from purrr or we can do a base R loop
+      # For each voxel index in i, add offsets to build
+      # the linear indices using base::lapply
       idx_list <- lapply(i, function(pos) pos + offsets)
       idx <- unlist(idx_list, use.names=FALSE)
 
@@ -567,7 +588,7 @@ setMethod(
     cat("║ ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin,2), collapse=" × "), "\n", sep="")
 
     # If axes are known, show them; else fallback
-    if (length(sp@axes@ndim) >= 3) {
+    if (sp@axes@ndim >= 3) {
       cat("║ ", crayon::yellow("Orientation"), "   : ",
           paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
     } else {

@@ -6,7 +6,7 @@
 \alias{show,H5ClusterRunSummary-method}
 \alias{show,H5ClusterExperiment-method}
 \alias{show,LatentNeuroVec-method}
-\title{Show Method for H5ClusterRunSummary}
+\title{Show Methods for H5Cluster Objects}
 \usage{
 \S4method{show}{H5ClusterRun}(object)
 
@@ -17,10 +17,10 @@
 \S4method{show}{LatentNeuroVec}(object)
 }
 \arguments{
-\item{object}{An H5ClusterRunSummary object}
+\item{object}{An object from the H5Cluster family}
 }
 \description{
-Show Method for H5ClusterRunSummary
+Display a concise summary for H5Cluster objects
 }
 \seealso{
 Other H5Clustered: 

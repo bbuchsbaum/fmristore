@@ -237,21 +237,36 @@ test_that("make_run_full reads n_time from HDF5 metadata dataset if NULL", {
   expect_silent(h5file(run_meta)$close_all())
 })
 
-test_that("make_run_full infers n_time from first cluster dataset if NULL and other sources missing", {
+test_that("inference message depends on fmristore.verbose option", {
   setup_none <- setup_test_file_full(write_n_time_attr = FALSE, write_n_time_meta = FALSE)
   on.exit(cleanup_test_file(setup_none))
 
-  # Use new constructor
-  expect_message( # Expect message about inference
-      run_infer <- H5ClusterRun(file = setup_none$filepath,
-                                    scan_name = setup_none$scan_name,
-                                    mask = setup_none$mask,
-                                    clusters = setup_none$clusters,
-                                    n_time = NULL),
-      "Inferred n_time"
+  expect_message(
+    run_infer_verbose <- withr::with_options(
+      list(fmristore.verbose = TRUE),
+      H5ClusterRun(file = setup_none$filepath,
+                   scan_name = setup_none$scan_name,
+                   mask = setup_none$mask,
+                   clusters = setup_none$clusters,
+                   n_time = NULL)
+    ),
+    "Inferred n_time"
   )
-  expect_equal(run_infer@n_time, setup_none$n_time)
-  expect_silent(h5file(run_infer)$close_all())
+  expect_equal(run_infer_verbose@n_time, setup_none$n_time)
+  expect_silent(h5file(run_infer_verbose)$close_all())
+
+  expect_no_message(
+    run_infer_silent <- withr::with_options(
+      list(fmristore.verbose = FALSE),
+      H5ClusterRun(file = setup_none$filepath,
+                   scan_name = setup_none$scan_name,
+                   mask = setup_none$mask,
+                   clusters = setup_none$clusters,
+                   n_time = NULL)
+    )
+  )
+  expect_equal(run_infer_silent@n_time, setup_none$n_time)
+  expect_silent(h5file(run_infer_silent)$close_all())
 })
 
 
@@ -274,6 +289,24 @@ test_that("make_run_full throws errors for invalid inputs", {
   expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=bad_mask, clusters=setup_info$clusters, n_time=setup_info$n_time), "Dimensions of 'mask' and 'clusters' must match")
   # Test cluster length mismatch
   expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=setup_info$mask, clusters=bad_clusters, n_time=setup_info$n_time), "Mismatch: clusters@clusters length")
+
+  # Test invalid compress inputs
+  expect_error(
+    H5ClusterRun(file = setup_info$filepath,
+                 scan_name = setup_info$scan_name,
+                 mask = setup_info$mask,
+                 clusters = setup_info$clusters,
+                 n_time = setup_info$n_time,
+                 compress = c(TRUE, FALSE)),
+    "'compress' must be a single logical value")
+  expect_error(
+    H5ClusterRun(file = setup_info$filepath,
+                 scan_name = setup_info$scan_name,
+                 mask = setup_info$mask,
+                 clusters = setup_info$clusters,
+                 n_time = setup_info$n_time,
+                 compress = "yes"),
+    "'compress' must be a single logical value")
   # Test error if n_time cannot be determined
   setup_uninferrable <- setup_test_file_full(clear_cluster_data = TRUE)
   on.exit(cleanup_test_file(setup_uninferrable), add = TRUE)

@@ -24,6 +24,10 @@ NULL
 #' object is no longer needed to release system resources. This can be done by calling
 #' \code{close(your_h5neurovol_object)}.
 #'
+#' As a safety net, a finalizer is registered on the internal HDF5 handle so
+#' it will be closed if the object is garbage collected. Explicitly calling
+#' \code{close()} is still recommended.
+#'
 #' Failure to close the handle may lead to issues such as reaching file handle
 #' limits or problems with subsequent access to the file.
 #'
@@ -46,7 +50,11 @@ H5NeuroVol <- function(file_name) {
   assert_that(is.character(file_name))
   assert_that(file.exists(file_name))
 
+
   h5obj <- hdf5r::H5File$new(file_name)
+  # Attach a finalizer so the handle is closed if the object is garbage collected
+  reg.finalizer(h5obj, function(x) safe_h5_close(x), onexit = TRUE)
+
 
   # Check the "rtype" attribute
   rtype <- try(hdf5r::h5attr(h5obj, which="rtype"), silent=TRUE)
@@ -69,6 +77,7 @@ H5NeuroVol <- function(file_name) {
     trans  = h5obj[["space/trans"]][,]
   )
 
+  on.exit(NULL)
   new("H5NeuroVol", space=sp, h5obj=h5obj)
 }
 
@@ -131,10 +140,7 @@ setMethod(
         sp_dims <- dim(sp)
         if (length(sp_dims) != 3) stop("Input NeuroVol must be 3-dimensional.")
         
-        # --- Debug: Print trans matrix before writing ---
         current_trans <- trans(sp)
-        #message("DEBUG: trans matrix BEFORE writing:")
-        print(current_trans)
         
         h5_write(h5_write_obj, "/space/dim", as.integer(sp_dims), overwrite = TRUE)
         h5_write(h5_write_obj, "/space/origin", as.double(origin(sp)), overwrite = TRUE)
@@ -180,7 +186,6 @@ setMethod(
         # Read space info for the new object
         trans_data <- h5_read_obj[["/space/trans"]]$read()
        
-        spacing <- diag(trans_data)[1:3]
         sp_read <- NeuroSpace(
             dim    = h5_read_obj[["/space/dim"]]$read(),
             spacing= h5_read_obj[["/space/spacing"]]$read(),   
@@ -229,18 +234,10 @@ setMethod(
     minz <- min(coords[,3]); maxz <- max(coords[,3])
 
     # 5) Read that bounding box from the dataset
-    dset <- NULL # Initialize for finally
-    subvol <- NULL
-    tryCatch({
-        dset <- x@h5obj[["data/elements"]]
-        if (is.null(dset)) stop("Could not open dataset '/data/elements' for linear_access")
-        subvol <- dset[minx:maxx, miny:maxy, minz:maxz, drop=FALSE]
-    }, finally = {
-        if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-            close_h5_safely(dset)
-        }
+    subvol <- with_h5_dataset(x@h5obj, "data/elements", function(ds) {
+        if (is.null(ds)) stop("Could not open dataset '/data/elements' for linear_access")
+        ds[minx:maxx, miny:maxy, minz:maxz, drop = FALSE]
     })
-    if (is.null(subvol)) stop("Failed to read sub-volume data for linear_access.")
     # shape => (maxx - minx + 1) x (maxy - miny + 1) x (maxz - minz + 1)
 
     # 6) Offset coords to index subvol
@@ -340,18 +337,10 @@ setMethod(
     minK <- floor(min(k)); maxK <- ceiling(max(k))
 
     # 6) Read the bounding box from the dataset
-    dset <- NULL # Initialize for finally
-    subvol <- NULL
-    tryCatch({
-        dset <- x@h5obj[["data/elements"]]
-        if (is.null(dset)) stop("Could not open dataset '/data/elements'")
-        subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, drop=FALSE]
-    }, finally = {
-        if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-            close_h5_safely(dset)
-        }
+    subvol <- with_h5_dataset(x@h5obj, "data/elements", function(ds) {
+        if (is.null(ds)) stop("Could not open dataset '/data/elements'")
+        ds[minI:maxI, minJ:maxJ, minK:maxK, drop = FALSE]
     })
-    if (is.null(subvol)) stop("Failed to read sub-volume data.")
     # shape => c((maxI-minI+1), (maxJ-minJ+1), (maxK-minK+1))
 
     # 7) We then re-map i,j,k into local sub-box coords
@@ -408,9 +397,7 @@ setMethod(
 setAs(
   from = "DenseNeuroVol",
   to   = "H5NeuroVol",
-  def  = function(from) {
-    to_nih5_vol(from, file_name=NULL, data_type="FLOAT")
-  }
+  def  = function(from) as_h5(from, file = NULL, data_type = "FLOAT")
 )
 
 #' Show Method for H5NeuroVol

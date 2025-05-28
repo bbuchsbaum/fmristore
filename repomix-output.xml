@@ -3240,8 +3240,7 @@ setMethod(
       # offsets = c(0, nels, 2*nels, ..., (nTime-1)*nels)
       offsets <- seq(0, (dim(x)[4]-1)) * nels
 
-      # For each element in i, we add each offset => flatten
-      # 'map' is from purrr or we can do a base R loop
+      # For each voxel index in i, add offsets using base::lapply
       idx_list <- lapply(i, function(pos) pos + offsets)
       idx <- unlist(idx_list, use.names=FALSE)
 
