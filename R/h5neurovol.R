@@ -229,18 +229,10 @@ setMethod(
     minz <- min(coords[,3]); maxz <- max(coords[,3])
 
     # 5) Read that bounding box from the dataset
-    dset <- NULL # Initialize for finally
-    subvol <- NULL
-    tryCatch({
-        dset <- x@h5obj[["data/elements"]]
-        if (is.null(dset)) stop("Could not open dataset '/data/elements' for linear_access")
-        subvol <- dset[minx:maxx, miny:maxy, minz:maxz, drop=FALSE]
-    }, finally = {
-        if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-            close_h5_safely(dset)
-        }
+    subvol <- with_h5_dataset(x@h5obj, "data/elements", function(ds) {
+        if (is.null(ds)) stop("Could not open dataset '/data/elements' for linear_access")
+        ds[minx:maxx, miny:maxy, minz:maxz, drop = FALSE]
     })
-    if (is.null(subvol)) stop("Failed to read sub-volume data for linear_access.")
     # shape => (maxx - minx + 1) x (maxy - miny + 1) x (maxz - minz + 1)
 
     # 6) Offset coords to index subvol
@@ -340,18 +332,10 @@ setMethod(
     minK <- floor(min(k)); maxK <- ceiling(max(k))
 
     # 6) Read the bounding box from the dataset
-    dset <- NULL # Initialize for finally
-    subvol <- NULL
-    tryCatch({
-        dset <- x@h5obj[["data/elements"]]
-        if (is.null(dset)) stop("Could not open dataset '/data/elements'")
-        subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, drop=FALSE]
-    }, finally = {
-        if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
-            close_h5_safely(dset)
-        }
+    subvol <- with_h5_dataset(x@h5obj, "data/elements", function(ds) {
+        if (is.null(ds)) stop("Could not open dataset '/data/elements'")
+        ds[minI:maxI, minJ:maxJ, minK:maxK, drop = FALSE]
     })
-    if (is.null(subvol)) stop("Failed to read sub-volume data.")
     # shape => c((maxI-minI+1), (maxJ-minJ+1), (maxK-minK+1))
 
     # 7) We then re-map i,j,k into local sub-box coords
