@@ -63,7 +63,6 @@ H5ClusterRun <- function(file, scan_name,
   if (is.null(determined_n_time)) {
     scan_group_path <- paste0("/scans/", scan_name)
     scan_group <- NULL
-    ds <- NULL
     
     scan_group_exists <- tryCatch(h5obj$exists(scan_group_path), error = function(e) FALSE)
     
