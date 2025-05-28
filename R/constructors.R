@@ -6,6 +6,11 @@
 #' 
 #' This function handles file opening/closing and reads necessary metadata like
 #' \code{n_time} from the HDF5 file if not provided explicitly.
+#'
+#' @details
+#' Diagnostic messages (such as when \code{n_time} is inferred from a dataset)
+#' are printed only when the option \code{fmristore.verbose} is set to
+#' \code{TRUE} via \code{options(fmristore.verbose = TRUE)}.
 #' 
 #' @param file Character string path to the HDF5 file.
 #' @param scan_name The character string name of the scan (e.g., "run1").
@@ -93,7 +98,9 @@ H5ClusterRun <- function(file, scan_name,
                     dims <- dset_cid1$dims
                     if (length(dims) == 2) {
                         determined_n_time <- dims[2]
-                        message(sprintf("[H5ClusterRun] Inferred n_time = %d from dataset '%s'.", determined_n_time, dset_path_cid1))
+                        if (isTRUE(getOption("fmristore.verbose"))) {
+                          message(sprintf("[H5ClusterRun] Inferred n_time = %d from dataset '%s'.", determined_n_time, dset_path_cid1))
+                        }
                     }
                }, finally = {
                     if(!is.null(dset_cid1) && dset_cid1$is_valid) try(dset_cid1$close())
