@@ -397,9 +397,7 @@ setMethod(
 setAs(
   from = "DenseNeuroVol",
   to   = "H5NeuroVol",
-  def  = function(from) {
-    to_nih5_vol(from, file_name=NULL, data_type="FLOAT")
-  }
+  def  = function(from) as_h5(from, file = NULL, data_type = "FLOAT")
 )
 
 #' Show Method for H5NeuroVol
