@@ -27,6 +27,23 @@ test_that("H5NeuroVol construction and subsetting works", {
   expect_equal(as.array(subset), data[1:5, 1:5, 1:5], tolerance=1e-6)
 })
 
+test_that("coercion via as() uses as_h5 for DenseNeuroVol", {
+  dims <- c(4, 4, 4)
+  sp   <- NeuroSpace(dims)
+  arr  <- array(rnorm(prod(dims)), dim = dims)
+  dvol <- DenseNeuroVol(arr, sp)
+
+  h5vol <- as(dvol, "H5NeuroVol")
+
+  expect_true(inherits(h5vol, "H5NeuroVol"))
+  expect_equal(dim(h5vol), dims)
+  expect_equal(h5vol[2,2,2], arr[2,2,2], tolerance = 1e-6)
+
+  filepath <- h5vol@h5obj$get_filename()
+  close(h5vol)
+  unlink(filepath)
+})
+
 test_that("H5NeuroVec construction and series extraction works", {
   # Create test data
   dims <- c(10, 10, 10)
