@@ -318,13 +318,15 @@ write_labeled_vec <- function(vec,
 read_labeled_vec <- function(file_path) {
   # --- 1. Handle File Source ---
   # Call simplified open_h5 (no auto_close)
-  fh <- open_h5(file_path, mode = "r") 
+  fh <- open_h5(file_path, mode = "r")
   h5obj <- fh$h5
-  # CRITICAL: Remove on.exit/defer call for h5obj. 
-  # Closing is now the responsibility of the user via the close() method 
-  # if fh$owns is TRUE.
-  # Example removed call: 
-  # if (fh$owns) on.exit(safe_h5_close(h5obj), add = TRUE)
+
+  # If we opened the file from a path, register a closing handler
+  # in case an error occurs before the LabeledVolumeSet object is
+  # successfully returned. The handler is cleared on success.
+  if (fh$owns) {
+    on.exit(safe_h5_close(h5obj), add = TRUE)
+  }
 
   hdr_grp <- NULL # Initialize for finally block
   hdr_values <- list()
@@ -507,6 +509,10 @@ read_labeled_vec <- function(file_path) {
 
   # If file was opened internally, the defer handler takes care of closing.
   # If user provided handle, they manage its lifecycle.
+
+  if (fh$owns) {
+    on.exit(NULL, add = FALSE)  # clear handler on success
+  }
 
   return(lvol)
 }
