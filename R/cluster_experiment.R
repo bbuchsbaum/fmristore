@@ -289,22 +289,21 @@ H5ClusterExperiment <- function(file,
   opened_datasets <- list() 
   on.exit({
     # Close datasets first
-    lapply(opened_datasets, function(ds) if (!is.null(ds) && is(ds, "H5D") && ds$is_valid) close_h5_safely(ds))
+    lapply(opened_datasets, function(ds)
+      if (!is.null(ds) && is(ds, "H5D") && ds$is_valid) close_h5_safely(ds))
     # Then close groups
-    lapply(opened_groups, function(grp) if (!is.null(grp) && is(grp, "H5Group") && grp$is_valid) close_h5_safely(grp))
-    # Finally, close file if opened here and not keeping open
-    if (opened_here && !keep_handle_open && !is.null(h5obj) && h5obj$is_valid) {
-         close_h5_safely(h5obj)
-    }
+    lapply(opened_groups, function(grp)
+      if (!is.null(grp) && is(grp, "H5Group") && grp$is_valid) close_h5_safely(grp))
+    # File handle closure is handled via defer() below when keep_handle_open is FALSE
     # TODO: Add finalizer registration if keep_handle_open is TRUE
   }, add = TRUE)
 
   # --- 1. Handle File Source and Read Header/Create Space ---
   fh <- open_h5(file_source, mode = "r")
+  opened_here <- fh$owns       # track whether this call opened the file
   h5obj <- fh$h5
-  # Defer closing the file only if we opened it and the user doesn't want to keep it open.
-  # Note: keep_handle_open is TRUE by default, so defer usually won't close it here.
-  # The H5ClusterExperiment object's finalizer handles closing if keep_handle_open=TRUE.
+  # Defer closing the file when keep_handle_open is FALSE.
+  # Note: keep_handle_open is TRUE by default, so this usually won't close the file.
   defer({
       if (fh$owns && !keep_handle_open && h5obj$is_valid) {
           message("[H5ClusterExperiment] Closing HDF5 file handle opened by constructor.")
@@ -689,7 +688,8 @@ H5ClusterExperiment <- function(file,
                  cluster_metadata = cluster_metadata)
 
   # --- Add Finalizer if needed (Checklist Item 4.3) ---
-  # Removed finalizer logic for simplicity. User manages handle if keep_handle_open=TRUE.
+  # Removed finalizer logic for simplicity. File closing is handled by defer()
+  # when keep_handle_open = FALSE. User manages the handle if keep_handle_open = TRUE.
   # if (opened_here && keep_handle_open) {
   #   message("Registering finalizer to close HDF5 handle when experiment object is garbage collected.")
   #   reg.finalizer(exp_obj, function(e) {
@@ -708,11 +708,6 @@ H5ClusterExperiment <- function(file,
   #     try(h5obj$close_all(), silent = TRUE)
   # } # else: handle was passed in open, user manages its lifecycle
   # --- End Finalizer ---
-
-  # If file was opened here and we are NOT keeping it open, close it now.
-  if (opened_here && !keep_handle_open) {
-      try(h5obj$close_all(), silent = TRUE)
-  }
 
   return(exp_obj)
 }
@@ -858,4 +853,33 @@ setMethod("show", "H5ClusterExperiment", function(object) {
   }
 })
 
-# TODO: Add show method for H5ClusterExperiment 
+
+# TODO: Add show method for H5ClusterExperiment
+
+#' Close an H5ClusterExperiment
+#'
+#' Manually close the shared HDF5 file handle used by all runs in the
+#' experiment. The handle is retrieved from the first run and closed using
+#' \code{safe_h5_close}. Optionally, internal references to the handle can be
+#' invalidated after closing.
+#'
+#' @param con An \code{H5ClusterExperiment} object.
+#' @param invalidate Logical. If \code{TRUE}, each run's \code{obj} slot is set
+#'   to \code{NULL} after closing. Defaults to \code{FALSE}.
+#' @param ... Additional arguments (ignored).
+#' @return Invisibly returns \code{NULL}.
+#' @rdname close
+#' @export
+setMethod("close", "H5ClusterExperiment", function(con, invalidate = FALSE, ...) {
+  if (length(con@runs) > 0) {
+    shared <- con@runs[[1]]@obj
+    safe_h5_close(shared)
+    if (isTRUE(invalidate)) {
+      for (i in seq_along(con@runs)) {
+        slot(con@runs[[i]], "obj") <- NULL
+      }
+    }
+  }
+  invisible(NULL)
+})
+
