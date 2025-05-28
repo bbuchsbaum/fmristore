@@ -858,4 +858,31 @@ setMethod("show", "H5ClusterExperiment", function(object) {
   }
 })
 
-# TODO: Add show method for H5ClusterExperiment 
+# TODO: Add show method for H5ClusterExperiment
+
+#' Close an H5ClusterExperiment
+#'
+#' Manually close the shared HDF5 file handle used by all runs in the
+#' experiment. The handle is retrieved from the first run and closed using
+#' \code{safe_h5_close}. Optionally, internal references to the handle can be
+#' invalidated after closing.
+#'
+#' @param con An \code{H5ClusterExperiment} object.
+#' @param invalidate Logical. If \code{TRUE}, each run's \code{obj} slot is set
+#'   to \code{NULL} after closing. Defaults to \code{FALSE}.
+#' @param ... Additional arguments (ignored).
+#' @return Invisibly returns \code{NULL}.
+#' @rdname close
+#' @export
+setMethod("close", "H5ClusterExperiment", function(con, invalidate = FALSE, ...) {
+  if (length(con@runs) > 0) {
+    shared <- con@runs[[1]]@obj
+    safe_h5_close(shared)
+    if (isTRUE(invalidate)) {
+      for (i in seq_along(con@runs)) {
+        slot(con@runs[[i]], "obj") <- NULL
+      }
+    }
+  }
+  invisible(NULL)
+})
