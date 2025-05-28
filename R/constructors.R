@@ -49,6 +49,10 @@ H5ClusterRun <- function(file, scan_name,
     ))
   }
 
+  if (!is.logical(compress) || length(compress) != 1) {
+    stop("[H5ClusterRun] 'compress' must be a single logical value.")
+  }
+
   # --- 2. Open HDF5 file --- 
   # Use open_h5 with mode 'r' by default. It handles file existence check.
   # Note: open_h5 now returns a list(h5=handle, owns=TRUE/FALSE)
