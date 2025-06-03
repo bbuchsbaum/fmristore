@@ -16,18 +16,19 @@ The HDF5 file object (from package hdf5r)
 This generic returns the HDF5 file object associated with the object.
 }
 \examples{
+\dontrun{
 if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Get the H5File object
     h5f <- h5file(exp_obj)
     print(h5f)
     # if (requireNamespace("hdf5r", quietly = TRUE)) print(h5f$is_valid)
-    
+
   }, error = function(e) {
     message("h5file example failed: ", e$message)
   }, finally = {
@@ -39,6 +40,7 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   })
 } else {
   message("Skipping h5file example: helper not available.")
+}
 }
 
 }

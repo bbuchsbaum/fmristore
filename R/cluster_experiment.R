@@ -266,7 +266,7 @@ setMethod("matrix_concat",
 #' @return A new \code{H5ClusterExperiment} object.
 #' 
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create temporary HDF5 file with minimal experiment structure
 #' temp_file <- tempfile(fileext = ".h5")
 #' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)

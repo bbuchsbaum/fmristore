@@ -21,17 +21,18 @@ The offset vector
 Get the offset vector
 }
 \examples{
+\dontrun{
 # For LatentNeuroVec:
 if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   lnv <- NULL
   tryCatch({
     lnv <- fmristore:::create_minimal_LatentNeuroVec(
-      space_dims = c(3L, 3L, 2L), 
+      space_dims = c(3L, 3L, 2L),
       n_mask_voxels = 4L # Specify a small number of voxels in mask
     )
     off_vector <- offset(lnv)
     print(head(off_vector))
-    # The neuroim2::LatentNeuroVec constructor (used by helper) defaults to zero offset.
+    # The LatentNeuroVec constructor (used by helper) defaults to zero offset.
     # Length should be n_voxels_in_mask.
     if (inherits(lnv, "LatentNeuroVec")) {
        # Assuming lnv@mask is a LogicalNeuroVol created by the helper
@@ -43,6 +44,7 @@ if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   })
 } else {
   message("Skipping offset example for LatentNeuroVec: helper not available.")
+}
 }
 
 }

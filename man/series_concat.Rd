@@ -30,6 +30,7 @@ Concatenate Voxel Time Series Across Runs (Generic)
 
 }}
 \examples{
+\dontrun{
 if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   temp_exp_file <- NULL
   exp_obj <- NULL
@@ -39,36 +40,36 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
       n_time_run1 = 5L # Shorter time series for Run1_Full
     )
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Get some valid voxel indices from the mask
     # The master mask is created by the helper.
-    # exp_mask <- mask(exp_obj) 
-    # valid_mask_indices <- which(exp_mask@.Data) 
+    # exp_mask <- mask(exp_obj)
+    # valid_mask_indices <- which(exp_mask@.Data)
     # For simplicity, let's assume first few indices if mask is not empty.
-    # If mask has at least 2 voxels: 
+    # If mask has at least 2 voxels:
     # selected_vox_indices <- valid_mask_indices[1:min(2, length(valid_mask_indices))]
     # A more robust way for an example without directly loading mask here:
     # The H5ClusterExperiment has a mask, and its linear indices are 1:sum(mask_data)
     # For a 4x4x2 mask, if 50\% are true, there are 16 true voxels. Indices are 1 to 16.
     # Let's pick first 2 voxels in the mask's internal indexing (1-based).
-    
+
     # Note: series_concat typically works on runs with full data (H5ClusterRun)
     # The helper creates "Run1_Full".
     # concatenated_series <- series_concat(exp_obj, mask_idx = c(1, 2), run_indices = "Run1_Full")
     # print(dim(concatenated_series)) # Should be n_time_run1 x 2
     # print(head(concatenated_series))
-    
+
     # For a fully runnable example, need to ensure mask_idx is valid for the created object.
     # Since the helper creates a mask, we can try to use mask_idx = 1 (first voxel in mask).
     # The `series_concat` method for H5ClusterExperiment handles this.
     if (n_voxels(exp_obj) > 0) { # n_voxels from H5ClusteredArray slot
        conc_series <- series_concat(exp_obj, mask_idx = 1, run_indices = "Run1_Full")
-       print(paste("Dimensions of concatenated series for voxel 1 from Run1_Full:", 
+       print(paste("Dimensions of concatenated series for voxel 1 from Run1_Full:",
                    paste(dim(conc_series), collapse="x")))
     } else {
        message("Skipping series_concat demonstration as experiment mask is empty.")
     }
-    
+
   }, error = function(e) {
     message("series_concat example failed: ", e$message)
   }, finally = {
@@ -79,6 +80,7 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   })
 } else {
   message("Skipping series_concat example: helper not available.")
+}
 }
 
 }
@@ -91,6 +93,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},

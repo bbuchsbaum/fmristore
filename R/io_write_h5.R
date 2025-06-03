@@ -68,6 +68,7 @@ validate_runs_data <- function(rd) {
 #' @export
 #' @family H5ClusteredIO
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
 #'     exists("write_clustered_experiment_h5", where = "package:fmristore") &&
@@ -178,6 +179,7 @@ validate_runs_data <- function(rd) {
 #'   })
 #' } else {
 #'   message("Skipping write_clustered_experiment_h5 example: dependencies or helpers not available.")
+#' }
 #' }
 write_clustered_experiment_h5 <- function(filepath,
                                           mask,

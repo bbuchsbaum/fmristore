@@ -18,17 +18,4 @@ Path to the created HDF5 file.
 This function creates a temporary HDF5 file with the minimal structure
 expected by the \code{H5NeuroVec} constructor (rtype, /space, /data).
 }
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE) && 
-    requireNamespace("hdf5r", quietly = TRUE)) {
-  temp_file <- fmristore:::create_minimal_h5_for_H5NeuroVec()
-  print(temp_file)
-  # Example usage:
-  # h5vec <- H5NeuroVec(temp_file)
-  # print(h5vec)
-  # close(h5vec)
-  if (file.exists(temp_file)) unlink(temp_file)
-}
-}
 \keyword{internal}

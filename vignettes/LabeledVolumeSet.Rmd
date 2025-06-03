@@ -131,7 +131,7 @@ unlink(h5_file)
 
 Store individual subject maps for later analysis:
 
-```{r subject_maps}
+```{r subject_maps, fig.width=8, fig.height=6}
 # Simulate beta maps from 5 subjects
 n_subjects <- 5
 brain_dims <- c(15, 15, 8)
@@ -191,7 +191,7 @@ unlink(h5_file)
 
 When working with many volumes, access them efficiently:
 
-```{r efficient_access}
+```{r efficient_access, fig.width=8, fig.height=6}
 # Create a dataset with many conditions
 n_conditions <- 10
 brain_dims <- c(20, 20, 10)

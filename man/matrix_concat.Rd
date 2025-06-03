@@ -29,6 +29,7 @@ Concatenate Cluster Summary Matrices Across Runs (Generic)
 
 }}
 \examples{
+\dontrun{
 if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   temp_exp_file <- NULL
   exp_obj <- NULL
@@ -37,23 +38,23 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
       n_time_run2 = 6L # Shorter time series for Run2_Summary
     )
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Note: matrix_concat typically works on runs with summary data (H5ClusterRunSummary)
     # The helper creates "Run2_Summary".
     # concatenated_matrix <- matrix_concat(exp_obj, run_indices = "Run2_Summary")
-    # print(dim(concatenated_matrix)) 
+    # print(dim(concatenated_matrix))
     # Should be n_time_run2 x n_master_clusters (e.g., 6x3 if num_master_clusters is 3)
     # print(head(concatenated_matrix))
 
     # The method should correctly identify and use the summary run.
     # If only one summary run is present, run_indices can often be omitted.
     conc_matrix <- matrix_concat(exp_obj, run_indices = "Run2_Summary")
-    print(paste("Dimensions of concatenated matrix from Run2_Summary:", 
+    print(paste("Dimensions of concatenated matrix from Run2_Summary:",
                 paste(dim(conc_matrix), collapse="x")))
 
     # Example with all compatible runs (should pick up Run2_Summary)
     # conc_matrix_all <- matrix_concat(exp_obj)
-    # print(paste("Dimensions of concatenated matrix from all compatible runs:", 
+    # print(paste("Dimensions of concatenated matrix from all compatible runs:",
     #             paste(dim(conc_matrix_all), collapse="x")))
 
   }, error = function(e) {
@@ -67,6 +68,7 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 } else {
   message("Skipping matrix_concat example: helper not available.")
 }
+}
 
 }
 \seealso{
@@ -78,6 +80,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},

@@ -64,7 +64,7 @@ ensure_mask <- function(mask, h5, space, path = "/mask") {
     }
     # Assume read_h5_mask_to_LogicalNeuroVol handles H5File validation and path existence
     # Use the internal helper function and pass the reference space
-    m <- fmristore:::read_h5_mask_to_LogicalNeuroVol(h5, path, space)
+    m <- read_h5_mask_to_LogicalNeuroVol(h5, path, space)
   } else {
     # Validate provided mask type
     if (!is(mask, "LogicalNeuroVol")) {
@@ -237,7 +237,7 @@ h5_read_subset <- function(h5, path, index = NULL) {
     stop(sprintf("h5_read_subset: failed reading subset from '%s': %s",
                  path, conditionMessage(e)))
   }, finally = {
-    fmristore:::close_h5_safely(dset)
+    close_h5_safely(dset)
   })
 
   out

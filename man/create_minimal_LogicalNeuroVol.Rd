@@ -9,7 +9,7 @@ create_minimal_LogicalNeuroVol(dims = c(3L, 3L, 2L), true_voxels = NULL)
 \arguments{
 \item{dims}{3D dimensions, e.g., c(3L, 3L, 2L).}
 
-\item{true_voxels}{A list of 3-element integer vectors for TRUE voxels, 
+\item{true_voxels}{A list of 3-element integer vectors for TRUE voxels,
 e.g., list(c(1L,1L,1L), c(2L,1L,1L)). If NULL, creates a small default pattern.}
 }
 \value{
@@ -17,15 +17,5 @@ A \code{LogicalNeuroVol} object.
 }
 \description{
 Create a minimal LogicalNeuroVol for examples
-}
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE)) {
-  logi_vol <- fmristore:::create_minimal_LogicalNeuroVol()
-  print(logi_vol)
-  logi_vol2 <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2,2,2), 
-                                                         true_voxels = list(c(1L,1L,1L)))
-  print(logi_vol2)
-}
 }
 \keyword{internal}

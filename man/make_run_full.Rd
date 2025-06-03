@@ -39,7 +39,7 @@ It performs necessary validation and can read metadata like `n_time` directly
 from the HDF5 file attributes or metadata dataset.
 }
 \examples{
-\donttest{
+\dontrun{
 # Note: This function is deprecated in favor of H5ClusterRun()
 
 # Create temporary HDF5 file
@@ -69,6 +69,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},

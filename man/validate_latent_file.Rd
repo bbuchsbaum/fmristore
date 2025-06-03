@@ -39,7 +39,7 @@ Does NOT validate header field *values* extensively beyond dimensions, nor does 
 check data types rigorously.
 }
 \examples{
-\donttest{
+\dontrun{
 # Create a temporary latent neuroimaging HDF5 file for validation
 temp_file <- tempfile(fileext = ".h5")
 

@@ -60,7 +60,7 @@
 #' \code{\link{read_labeled_vec}} for reading the file back in.
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create a simple labeled neuroimaging dataset
 #' vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(4, 4, 3, 5))
 #' 
@@ -662,6 +662,7 @@ setMethod(
 )
 
 #' @export
+#' @rdname extract-methods
 setMethod(
   f = "[[",
   signature = signature(x="LabeledVolumeSet", i="numeric"),
@@ -693,6 +694,7 @@ setMethod(
 # The next method is the one for character indexing `[[`, which should remain.
 
 #' @export
+#' @rdname names-methods
 setMethod(
   f = "names",
   signature = signature(x = "LabeledVolumeSet"),
@@ -772,6 +774,7 @@ setMethod(
 
 # Define the method for character index `i`
 #' @export
+#' @rdname extract-methods
 setMethod(
   f = "[[",
   signature = signature(x = "LabeledVolumeSet", i = "character"),

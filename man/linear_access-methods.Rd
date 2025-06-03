@@ -9,8 +9,10 @@
 \alias{linear_access,H5NeuroVec,numeric-method}
 \alias{linear_access,H5NeuroVec,integer-method}
 \alias{linear_access,H5NeuroVol,numeric-method}
+\alias{linear_access,H5NeuroVol,integer-method}
 \alias{linear_access,LabeledVolumeSet,numeric-method}
 \alias{linear_access,LatentNeuroVec,numeric-method}
+\alias{linear_access,LatentNeuroVec,integer-method}
 \title{Linear Access to Neuroimaging Data (Methods for neuroim2 Generic)}
 \usage{
 linear_access(x, i, ...)
@@ -25,9 +27,13 @@ linear_access(x, i, ...)
 
 \S4method{linear_access}{H5NeuroVol,numeric}(x, i)
 
+\S4method{linear_access}{H5NeuroVol,integer}(x, i)
+
 \S4method{linear_access}{LabeledVolumeSet,numeric}(x, i)
 
 \S4method{linear_access}{LatentNeuroVec,numeric}(x, i)
+
+\S4method{linear_access}{LatentNeuroVec,integer}(x, i)
 }
 \arguments{
 \item{x}{An \code{H5ClusterRun} object.}
@@ -57,6 +63,7 @@ It reconstructs voxel values on the fly from the HDF5 file based on their cluste
 Values for voxels outside the mask are returned as 0.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -119,6 +126,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   message("Skipping linear_access H5ClusterRun example: dependencies/helpers not available.")
 }
 }
+}
 \seealso{
 \code{neuroim2::\link[neuroim2]{linear_access}}, specific methods like
   \code{\link{linear_access,H5ClusterRun,numeric-method}}.
@@ -131,6 +139,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
@@ -156,6 +165,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},

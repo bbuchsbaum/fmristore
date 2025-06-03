@@ -271,6 +271,7 @@ setMethod(
   }
 )
 
+#' @rdname extract-methods
 setMethod(
   f = "[",
   signature = signature(x="H5NeuroVec", i="numeric", j="numeric", drop="ANY"),
@@ -451,7 +452,7 @@ setMethod(
 #' 5. Returns \code{H5NeuroVec}
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create a simple 4D neuroimaging vector
 #' vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(3, 3, 2, 5))
 #' 

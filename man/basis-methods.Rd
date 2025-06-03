@@ -21,13 +21,14 @@ The basis matrix (typically time x components)
 Get the basis matrix (temporal components)
 }
 \examples{
+\dontrun{
 # For LatentNeuroVec:
 if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   lnv <- NULL
   tryCatch({
     lnv <- fmristore:::create_minimal_LatentNeuroVec(
-      space_dims = c(4L, 4L, 2L), 
-      n_time = 10L, 
+      space_dims = c(4L, 4L, 2L),
+      n_time = 10L,
       n_comp = 3L
     )
     b_matrix <- basis(lnv)
@@ -37,6 +38,7 @@ if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   })
 } else {
   message("Skipping basis example for LatentNeuroVec: helper not available.")
+}
 }
 
 }

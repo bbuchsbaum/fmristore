@@ -27,6 +27,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},

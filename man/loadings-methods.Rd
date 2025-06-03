@@ -21,24 +21,26 @@ The loadings matrix (typically voxels x components)
 Get the loadings matrix (spatial components)
 }
 \examples{
+\dontrun{
 # For LatentNeuroVec:
 if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   lnv <- NULL
   tryCatch({
     # Helper creates a mask, n_mask_voxels determined internally or by arg
     lnv <- fmristore:::create_minimal_LatentNeuroVec(
-      space_dims = c(4L, 4L, 2L), 
-      n_time = 10L, 
+      space_dims = c(4L, 4L, 2L),
+      n_time = 10L,
       n_comp = 3L
     )
     l_matrix <- loadings(lnv)
     # Dimensions should be n_voxels_in_mask x n_comp
-    print(dim(l_matrix)) 
+    print(dim(l_matrix))
   }, error = function(e) {
     message("loadings example for LatentNeuroVec failed: ", e$message)
   })
 } else {
   message("Skipping loadings example for LatentNeuroVec: helper not available.")
+}
 }
 
 }

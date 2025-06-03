@@ -34,6 +34,7 @@ setOldClass("H5File")
 #' \code{\link[hdf5r]{H5File}} for details on HDF5 file objects.
 #'
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
 #'     exists("H5NeuroVol", where = "package:fmristore") && # Check if constructor is available
@@ -45,18 +46,18 @@ setOldClass("H5File")
 #'   h5_vol <- NULL
 #'   tryCatch({
 #'     temp_h5_path <- fmristore:::create_minimal_h5_for_H5NeuroVol(dims = c(5L, 5L, 3L))
-#'     
+#'
 #'     # Create an H5NeuroVol object using the constructor
 #'     # The constructor defaults to dataset_name = "data/elements" if not specified
 #'     # and if a NeuroSpace is not given, it reads it from /space in the HDF5 file.
-#'     h5_vol <- fmristore::H5NeuroVol(file_name = temp_h5_path) 
-#'     
+#'     h5_vol <- fmristore::H5NeuroVol(file_name = temp_h5_path)
+#'
 #'     print(h5_vol)
-#'     
+#'
 #'     # Access a subset of the data
 #'     subset_data <- h5_vol[1:2, 1:2, 1]
 #'     print(subset_data)
-#'     
+#'
 #'   }, error = function(e) {
 #'     message("H5NeuroVol example failed: ", e$message)
 #'   }, finally = {
@@ -71,6 +72,7 @@ setOldClass("H5File")
 #'   })
 #' } else {
 #'   message("Skipping H5NeuroVol example: fmristore, neuroim2, hdf5r, or helper not available.")
+#' }
 #' }
 #'
 #' @export
@@ -116,27 +118,28 @@ setClass("H5NeuroVol",
 #' \code{\link[hdf5r]{H5File}} for details on HDF5 file objects.
 #'
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5NeuroVec", where = "package:fmristore") && 
-#'     !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) { 
+#'     exists("H5NeuroVec", where = "package:fmristore") &&
+#'     !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) {
 #'
 #'   # Setup: Create a temporary HDF5 file using a helper
 #'   temp_h5_path <- NULL
 #'   h5_vec <- NULL
 #'   tryCatch({
 #'     temp_h5_path <- fmristore:::create_minimal_h5_for_H5NeuroVec(dims = c(5L, 5L, 3L, 4L))
-#'     
+#'
 #'     # Create an H5NeuroVec object using the constructor
 #'     # Constructor defaults: dataset_name = "data/elements", space from HDF5 /space group
-#'     h5_vec <- fmristore::H5NeuroVec(file_name = temp_h5_path) 
-#'     
+#'     h5_vec <- fmristore::H5NeuroVec(file_name = temp_h5_path)
+#'
 #'     print(h5_vec)
-#'     
+#'
 #'     # Access a subset of the data
 #'     subset_data <- h5_vec[1:2, 1:2, 1, 1:2]
 #'     print(subset_data)
-#'     
+#'
 #'   }, error = function(e) {
 #'     message("H5NeuroVec example failed: ", e$message)
 #'   }, finally = {
@@ -151,6 +154,7 @@ setClass("H5NeuroVol",
 #'   })
 #' } else {
 #'   message("Skipping H5NeuroVec example: fmristore, neuroim2, hdf5r, or helper not available.")
+#' }
 #' }
 #'
 #' @export
@@ -217,7 +221,7 @@ setClass("H5NeuroVecSource",
 #' can be reconstructed as:
 #' \deqn{data[v,t] = \sum_k \bigl(basis[t,k] \times loadings[v,k]\bigr) + offset[v]}.
 #' (Note: `v` indexes voxels within the mask).
-#' 
+#'
 #' **Important Naming Note:**
 #' * In this R object: `@basis` stores temporal components (`nTime x k`), `@loadings` stores spatial components (`nVox x k`).
 #' * In the HDF5 spec: `/scans/.../embedding` stores temporal (`nTime x k`), `/basis/basis_matrix` stores spatial (`k x nVox`).
@@ -238,42 +242,44 @@ setClass("H5NeuroVecSource",
 #' \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}.
 #'
 #' @examples
-#' if (requireNamespace("neuroim2", quietly = TRUE) && 
+#' \dontrun{
+#' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("Matrix", quietly = TRUE) &&
 #'     !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'   
+#'
 #'   # Create a LatentNeuroVec object using the helper
 #'   # The helper creates a mask, basis, and loadings internally.
 #'   # It uses new("LatentNeuroVec", ...) after creating constituent parts if not directly calling
-#'   # a neuroim2::LatentNeuroVec constructor, or directly calls a constructor.
-#'   # Our helper fmristore:::create_minimal_LatentNeuroVec returns a neuroim2::LatentNeuroVec.
-#' 
+#'   # a LatentNeuroVec constructor, or directly calls a constructor.
+#'   # Our helper fmristore:::create_minimal_LatentNeuroVec returns a LatentNeuroVec.
+#'
 #'   latent_vec <- NULL
 #'   tryCatch({
 #'     latent_vec <- fmristore:::create_minimal_LatentNeuroVec(
-#'       space_dims = c(5L, 5L, 3L), 
-#'       n_time = 8L, 
+#'       space_dims = c(5L, 5L, 3L),
+#'       n_time = 8L,
 #'       n_comp = 2L
 #'     )
-#'     
+#'
 #'     print(latent_vec)
-#'     
+#'
 #'     # Access slots (example)
 #'     # print(dim(latent_vec@basis))
 #'     # print(dim(latent_vec@loadings))
-#'     
+#'
 #'     # Example of accessing data (reconstruction for a voxel would be more complex)
 #'     # This class is more about representation; direct element access is usually via methods.
 #'     # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
 #'     # For a simple demonstration, we can show its dimensions:
 #'     print(dim(latent_vec)) # from NeuroVec inheritance
-#'     
+#'
 #'   }, error = function(e) {
 #'     message("LatentNeuroVec example failed: ", e$message)
 #'   })
-#'   
+#'
 #' } else {
 #'   message("Skipping LatentNeuroVec example: neuroim2, Matrix, or helper not available.")
+#' }
 #' }
 #'
 #' @export
@@ -286,7 +292,7 @@ setClass("LatentNeuroVec",
            map = "IndexLookupVol",
            label = "character"
          ),
-        
+
          contains = c("NeuroVec", "AbstractSparseNeuroVec"))
 
 #' LatentNeuroVecSource Class
@@ -329,9 +335,10 @@ setClass("LatentNeuroVecSource",
 #' @seealso \code{\link[neuroim2]{NeuroVec-class}}
 #'
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("read_labeled_vec", where = "package:fmristore") && 
+#'     exists("read_labeled_vec", where = "package:fmristore") &&
 #'     !is.null(fmristore:::create_minimal_h5_for_LabeledVolumeSet)) {
 #'
 #'   # Setup: Create a temporary HDF5 file suitable for read_labeled_vec
@@ -343,17 +350,17 @@ setClass("LatentNeuroVecSource",
 #'       labels = c("CondA", "CondB"),
 #'       num_vols_per_label = 2L
 #'     )
-#'     
+#'
 #'     # Create a LabeledVolumeSet object using the constructor
 #'     lvs <- fmristore::read_labeled_vec(file_name = temp_h5_path)
-#'     
+#'
 #'     print(lvs)
 #'     print(labels(lvs)) # Access labels
-#'     
+#'
 #'     # Access data for a specific label (returns a NeuroVol or similar)
-#'     # data_cond_a <- lvs[["CondA"]] 
+#'     # data_cond_a <- lvs[["CondA"]]
 #'     # print(dim(data_cond_a)) # Should be 3D x num_vols_per_label
-#'     
+#'
 #'   }, error = function(e) {
 #'     message("LabeledVolumeSet example failed: ", e$message)
 #'   }, finally = {
@@ -368,6 +375,7 @@ setClass("LatentNeuroVecSource",
 #'   })
 #' } else {
 #'   message("Skipping LabeledVolumeSet example: fmristore, neuroim2, hdf5r, or helper not available.")
+#' }
 #' }
 #'
 #' @export
@@ -401,7 +409,7 @@ setClass("LabeledVolumeSet",
 #' @examples
 #' # H5ClusteredArray is a virtual class and cannot be directly instantiated.
 #' # See its subclasses H5ClusterRun and H5ClusterRunSummary for examples.
-#' 
+#'
 #' # You can check if an object inherits from it:
 #' # run_object <- H5ClusterRun(...) # Assuming run_object is created
 #' # inherits(run_object, "H5ClusteredArray") # Should return TRUE
@@ -423,15 +431,15 @@ setClass("H5ClusteredArray",
          validity = function(object) {
             errors <- character()
             # Check 1: n_voxels should match sum(mask), if mask is valid
-            mask_space_valid <- !is.null(object@mask) && 
-                                 is(object@mask, "LogicalNeuroVol") && 
+            mask_space_valid <- !is.null(object@mask) &&
+                                 is(object@mask, "LogicalNeuroVol") &&
                                  validObject(object@mask@space, test=TRUE)
-                                
+
             if (mask_space_valid) {
                 expected_nvox <- sum(object@mask)
                 if (!is.na(object@n_voxels) && object@n_voxels != expected_nvox) {
-                   errors <- c(errors, 
-                               sprintf("Slot 'n_voxels' (%d) does not match sum(mask) (%d).", 
+                   errors <- c(errors,
+                               sprintf("Slot 'n_voxels' (%d) does not match sum(mask) (%d).",
                                        object@n_voxels, expected_nvox))
                 }
                 # Check 2: length of cluster vector should match n_voxels (which should match sum(mask))
@@ -447,7 +455,7 @@ setClass("H5ClusteredArray",
             if (!is.null(object@obj) && !inherits(object@obj, "H5File")) {
                 errors <- c(errors, "Slot 'obj' must be an H5File object or NULL.")
             }
-            
+
             if (length(errors) == 0) TRUE else errors
          },
          contains = "VIRTUAL")
@@ -613,6 +621,7 @@ setClass("H5ClusterExperiment",
 #' @family H5Cluster
 #'
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
 #'     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -623,14 +632,14 @@ setClass("H5ClusterExperiment",
 #'   tryCatch({
 #'     # 1. Create an HDF5 file for an experiment containing runs
 #'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
-#'     
+#'
 #'     # 2. Load the experiment using the constructor
 #'     exp <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-#'     
+#'
 #'     # 3. Show the experiment object
 #'     print(exp)
 #'     print(names(runs(exp))) # Show the names of the runs it loaded
-#'     
+#'
 #'   }, error = function(e) {
 #'     message("H5ClusterExperiment example failed: ", e$message)
 #'   }, finally = {
@@ -643,6 +652,7 @@ setClass("H5ClusterExperiment",
 #'   })
 #' } else {
 #'   message("Skipping H5ClusterExperiment example: dependencies or helper not available.")
+#' }
 #' }
 #'
 #' @export

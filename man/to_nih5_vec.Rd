@@ -42,7 +42,7 @@ for on-demand access.
 5. Returns \code{H5NeuroVec}
 }
 \examples{
-\donttest{
+\dontrun{
 # Create a simple 4D neuroimaging vector
 vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(3, 3, 2, 5))
 

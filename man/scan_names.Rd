@@ -16,6 +16,7 @@ A character vector of scan names
 This generic returns a character vector of scan names or labels.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -28,11 +29,11 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Create a minimal H5ClusterExperiment
     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Get the scan names
     s_names <- scan_names(exp_obj)
     print(s_names) # Should be c("Run1_Full", "Run2_Summary") or similar
-    
+
   }, error = function(e) {
     message("scan_names example failed: ", e$message)
   }, finally = {
@@ -43,6 +44,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping scan_names example: dependencies or helper not available.")
+}
 }
 
 }

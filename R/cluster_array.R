@@ -288,6 +288,7 @@ setMethod("[",
 
 #' @export
 #' @family H5Cluster
+#' @rdname extract-methods
 setMethod("[",
   signature(x = "H5ClusterRun", i = "ANY", j = "missing", drop = "ANY"),
   definition = function(x, i, ..., drop = TRUE) {
@@ -441,6 +442,7 @@ setMethod(
 #' @return A numeric vector of values corresponding to the provided linear indices.
 #'
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
 #'     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -501,6 +503,7 @@ setMethod(
 #'   })
 #' } else {
 #'   message("Skipping linear_access H5ClusterRun example: dependencies/helpers not available.")
+#' }
 #' }
 setMethod(
   f = "linear_access",
@@ -621,7 +624,7 @@ setMethod(
 #' @return A new `H5ClusterRun` object.
 #' 
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Note: This function is deprecated in favor of H5ClusterRun()
 #' 
 #' # Create temporary HDF5 file
@@ -879,6 +882,7 @@ setMethod(
 
 #' @export
 #' @family H5Cluster
+#' @rdname extract-methods
 setMethod("[",
   signature(x = "H5ClusterRunSummary", i = "ANY", j = "ANY", drop = "ANY"),
   function(x, i, j, k, l, ..., drop = TRUE) {
@@ -888,6 +892,7 @@ setMethod("[",
 
 #' @export
 #' @family H5Cluster
+#' @rdname extract-methods
 setMethod("[",
   signature(x = "H5ClusterRunSummary", i = "ANY", j = "missing", drop = "ANY"),
   definition = function(x, i, ..., drop = TRUE) {
@@ -940,7 +945,7 @@ setMethod(
 #' @return A new `H5ClusterRunSummary` object.
 #' 
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Note: This function is deprecated in favor of H5ClusterRunSummary()
 #' 
 #' # Create temporary HDF5 file

@@ -16,6 +16,7 @@ A list (or other structure) containing metadata for each scan
 This generic returns any available metadata associated with each scan.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -28,14 +29,14 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Create a minimal H5ClusterExperiment
     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Get the scan metadata
     s_meta <- scan_metadata(exp_obj)
     print(s_meta)
-    # The helper currently doesn't add rich scan_metadata, 
+    # The helper currently doesn't add rich scan_metadata,
     # so this might be an empty list or list of NULLs by default.
     # length(s_meta) == n_scans(exp_obj) # This should hold TRUE
-    
+
   }, error = function(e) {
     message("scan_metadata example failed: ", e$message)
   }, finally = {
@@ -46,6 +47,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping scan_metadata example: dependencies or helper not available.")
+}
 }
 
 }

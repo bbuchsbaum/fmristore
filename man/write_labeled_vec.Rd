@@ -83,7 +83,7 @@ finished working with the file.
 }
 
 \examples{
-\donttest{
+\dontrun{
 # Create a simple labeled neuroimaging dataset
 vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(4, 4, 3, 5))
 

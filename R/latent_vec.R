@@ -231,6 +231,7 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
 #' all inside an HDF5 file for future loading.
 #'
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
 #'     requireNamespace("Matrix", quietly = TRUE) && 
@@ -267,6 +268,7 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
 #'       unlink(temp_h5_file)
 #'     }
 #'   })
+#' }
 #' }
 #'
 #' @seealso
@@ -393,17 +395,8 @@ setMethod(
   }
 )
 
-#' Internal Linear Access Method for LatentNeuroVec
-#'
-#' @description
-#' Internal method providing linear access to elements.
-#'
-#' @param x A \code{LatentNeuroVec}.
-#' @param i A numeric vector of indices.
-#'
-#' @return Computed values
-#' @keywords internal
-#' @noRd
+#' @export 
+#' @rdname linear_access-methods
 setMethod(
   f = "linear_access",
   signature = signature(x="LatentNeuroVec", i="integer"),
@@ -568,27 +561,7 @@ setMethod("[[", signature(x="LatentNeuroVec", i="numeric"),
           }
 )
 
-#' 4D subsetting for LatentNeuroVec
-#'
-#' @description
-#' Allows \code{latent_vec[i, j, k, l]} style subsetting:
-#' \itemize{
-#'   \item \code{i,j,k} are currently assumed missing or full range
-#'   \item \code{l} can be a numeric vector (subset of timepoints)
-#' }
-#'
-#' @param x A \code{LatentNeuroVec} object
-#' @param i,j,k Numeric index vectors for the 3D spatial dims. If missing,
-#'   all voxels are included.
-#' @param l Numeric index vector (timepoints). If missing, all time.
-#' @param drop \code{logical} drop dims of size 1?
-#' @param ... Not used
-#'
-#' @return An array with shape \code{[length(i), length(j), length(k), length(l)]}
-#'   or, if \code{i,j,k} are missing, \code{[dim(x)[1], dim(x)[2], dim(x)[3], length(l)]}.
-#'   Then we reconstruct each timepoint on-the-fly using \code{basis[l, ]} and
-#'   \code{loadings}, plus \code{offset}.
-#'
+#' @rdname extract-methods
 #' @export
 setMethod(
   f = "[",
@@ -1443,7 +1416,7 @@ setMethod(
 #' check data types rigorously.
 #'
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create a temporary latent neuroimaging HDF5 file for validation
 #' temp_file <- tempfile(fileext = ".h5")
 #' 
@@ -1568,7 +1541,7 @@ validate_latent_file <- function(file_path) {
          sparse_grp <- NULL
          tryCatch({
             sparse_grp <- h5obj[[basis_sparse_path]]
-            if (!hdf5r::h5attr_exists(sparse_grp, "shape")) stop("Sparse basis group missing 'shape' attribute.")
+            if (!"shape" %in% names(hdf5r::h5attributes(sparse_grp))) stop("Sparse basis group missing 'shape' attribute.")
             basis_dim <- hdf5r::h5attr(sparse_grp, "shape") # Should be [k, nVox_basis]
          }, finally= if(!is.null(sparse_grp) && sparse_grp$is_valid) try(sparse_grp$close(), silent=TRUE))
     }

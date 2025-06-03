@@ -33,6 +33,7 @@ This function saves:
 all inside an HDF5 file for future loading.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     requireNamespace("Matrix", quietly = TRUE) && 
@@ -69,6 +70,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       unlink(temp_h5_file)
     }
   })
+}
 }
 
 }

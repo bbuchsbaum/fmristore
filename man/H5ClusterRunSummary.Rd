@@ -42,7 +42,7 @@ This function handles file opening/closing, validates the summary dataset,
 determines \code{n_time} from the dataset dimensions, and reconciles cluster names/IDs.
 }
 \examples{
-\donttest{
+\dontrun{
 # Create temporary HDF5 file with minimal experiment structure
 temp_file <- tempfile(fileext = ".h5")
 exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)

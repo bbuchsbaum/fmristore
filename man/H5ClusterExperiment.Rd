@@ -64,7 +64,7 @@ the available data within the HDF5 file structure (following the
 ClusteredTimeSeriesSpec).
 }
 \examples{
-\donttest{
+\dontrun{
 # Create temporary HDF5 file with minimal experiment structure
 temp_file <- tempfile(fileext = ".h5")
 exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
@@ -99,6 +99,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},

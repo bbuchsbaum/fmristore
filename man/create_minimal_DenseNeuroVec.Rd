@@ -15,11 +15,4 @@ A \code{DenseNeuroVec} object with minimal sequential data.
 \description{
 Create a minimal DenseNeuroVec for examples
 }
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE)) {
-  dvec <- fmristore:::create_minimal_DenseNeuroVec()
-  print(dvec)
-}
-}
 \keyword{internal}

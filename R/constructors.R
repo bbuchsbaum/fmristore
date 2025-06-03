@@ -18,7 +18,7 @@
 #' @return A new \code{H5ClusterRun} object with an open file handle managed by the object.
 #' 
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create temporary HDF5 file with minimal experiment structure
 #' temp_file <- tempfile(fileext = ".h5")
 #' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
@@ -192,7 +192,7 @@ H5ClusterRun <- function(file, scan_name,
 #' @return A new \code{H5ClusterRunSummary} object with an open file handle managed by the object.
 #' 
 #' @examples
-#' \donttest{
+#' \dontrun{
 #' # Create temporary HDF5 file with minimal experiment structure
 #' temp_file <- tempfile(fileext = ".h5")
 #' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)

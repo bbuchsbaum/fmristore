@@ -8,6 +8,8 @@ Authors@R:
            role = c("aut", "cre"),
            email = "brad.buchsbaum@gmail.com",
            comment = c(ORCID = "0000-0002-5891-3515"))
+Author: Bradley Buchsbaum [aut, cre]
+Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
 Description: Provides efficient storage and retrieval of functional magnetic resonance 
     imaging (fMRI) data using HDF5 format. The package offers S4 classes and methods 
     for working with dense and sparse representations of 4D neuroimaging data, latent 
@@ -31,7 +33,7 @@ Imports:
     methods,
     neuroim2,
     withr
-Suggests: 
+Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
@@ -45,6 +47,7 @@ Collate:
     'cluster_experiment.R'
     'constructors.R'
     'fmristore-package.R'
+    'globals.R'
     'h5_utils.R'
     'h5neurovec.R'
     'h5neurovol.R'

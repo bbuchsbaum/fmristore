@@ -24,29 +24,10 @@ create_minimal_h5_for_LabeledVolumeSet(
 Path to the created HDF5 file.
 }
 \description{
-This function creates a temporary HDF5 file with a minimal structure 
+This function creates a temporary HDF5 file with a minimal structure
 that can be read by \code{read_labeled_vec} to produce a \code{LabeledVolumeSet}.
 }
 \details{
 Refer to \code{write_labeled_vec} and \code{read_labeled_vec} for the expected structure.
-}
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE) && 
-    requireNamespace("hdf5r", quietly = TRUE) && 
-    exists("read_labeled_vec", where = "package:fmristore")) {
-  temp_file <- fmristore:::create_minimal_h5_for_LabeledVolumeSet()
-  print(temp_file)
-  # Example usage (now should work with read_labeled_vec):
-  lvs <- NULL
-  tryCatch({
-    lvs <- fmristore::read_labeled_vec(temp_file)
-    print(lvs)
-    print(labels(lvs))
-  }, finally = {
-    if (!is.null(lvs)) try(close(lvs), silent = TRUE)
-    if (file.exists(temp_file)) unlink(temp_file)
-  })
-}
 }
 \keyword{internal}

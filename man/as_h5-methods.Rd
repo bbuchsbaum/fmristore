@@ -140,24 +140,25 @@ providing a standardized interface for serialization to HDF5.
 }
 
 \examples{
+\dontrun{
 # Example 1: NeuroVec (DenseNeuroVec) to HDF5
 # Ensure helper function is available and as_h5 exists
 # if (!is.null(fmristore:::create_minimal_DenseNeuroVec) &&
 #     exists("as_h5", where = "package:fmristore")) {
-  
+
 dvec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(3L,3L,2L,4L))
 temp_h5_file <- tempfile(fileext = ".h5")
 h5_obj <- NULL
-  
+
 tryCatch({
     # Convert DenseNeuroVec to an HDF5 file and get an H5NeuroVec object back
-    h5_obj <- as_h5(dvec, file = temp_h5_file, 
+    h5_obj <- as_h5(dvec, file = temp_h5_file,
                     data_type = "FLOAT",
                     chunk_dim = c(2, 2, 2, 4),
                     compression = 4)
-    
+
     print(h5_obj) # Should be an H5NeuroVec
-    
+
 }, error = function(e) {
     message("as_h5 NeuroVec example failed: ", e$message)
 }, finally = {
@@ -171,7 +172,7 @@ tryCatch({
 # Example 2: LatentNeuroVec to HDF5
 # if (!is.null(fmristore:::create_minimal_LatentNeuroVec) &&
 #     exists("as_h5", where = "package:fmristore")) {
-  
+
 lnv <- fmristore:::create_minimal_LatentNeuroVec(
     space_dims = c(4L, 4L, 2L),
     n_time = 6L,
@@ -179,16 +180,16 @@ lnv <- fmristore:::create_minimal_LatentNeuroVec(
 )
 temp_h5_file_lnv <- tempfile(fileext = ".h5") # Use a different temp file name
 h5_obj_lnv <- NULL # Use a different object name
-  
+
 tryCatch({
     # Convert LatentNeuroVec to HDF5
     h5_obj_lnv <- as_h5(lnv, file = temp_h5_file_lnv, compression = 4)
-    
+
     # File should exist and h5_obj_lnv should be a valid H5File object
     if (file.exists(temp_h5_file_lnv)) {
       print("LatentNeuroVec HDF5 file created successfully: ", temp_h5_file_lnv)
     }
-    
+
 }, error = function(e) {
     message("as_h5 LatentNeuroVec example failed: ", e$message)
 }, finally = {
@@ -203,19 +204,19 @@ tryCatch({
 
 # Example 3: Clustered dataset (list) to HDF5
 # (This requires more complex setup, so we use a simplified theoretical example)
-\donttest{
-  # Removed: if (requireNamespace("neuroim2", quietly = TRUE) && ... 
-  
+\dontrun{
+  # Removed: if (requireNamespace("neuroim2", quietly = TRUE) && ...
+
   # In practice, you would:
   # 1. Create a list of NeuroVec/DenseNeuroVec objects (scan data)
   # 2. Create a LogicalNeuroVol mask
   # 3. Create a ClusteredNeuroVol defining clusters
   # 4. Define scan names and metadata
   # 5. Call as_h5() with these components
-  
+
   # Note: This example is simplified for documentation and won't execute
   # as the actual clustered dataset structure is more complex
-  
+
   message("Example usage for clustered dataset (as_h5 for list method):")
   message("  # vecs_list <- ... list of NeuroVec objects ...")
   message("  # mask_obj <- fmristore:::create_minimal_LogicalNeuroVol(...)")
@@ -229,6 +230,7 @@ tryCatch({
   message("  # if (!is.null(h5_clust_obj)) try(close(h5_clust_obj), silent=TRUE)")
   message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) unlink(attr(h5_clust_obj, \"filepath\"))")
 
+}
 }
 
 }

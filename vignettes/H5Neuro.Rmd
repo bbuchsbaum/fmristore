@@ -51,7 +51,7 @@ close(h5_brain)
 
 Most fMRI data includes a time dimension. Here's how to handle 4D data efficiently:
 
-```{r fmri_timeseries}
+```{r fmri_timeseries, fig.width=8}
 # Create fMRI data: 10x10x5 brain, 20 time points
 fmri_data <- array(rnorm(10*10*5*20), dim = c(10, 10, 5, 20))
 fmri_vec <- NeuroVec(fmri_data, NeuroSpace(c(10, 10, 5, 20)))
@@ -122,7 +122,7 @@ h5_data <- as_h5(my_4d_data,
 ## Common Use Cases
 
 ### Preprocessing Large Datasets
-```{r preprocess_example}
+```{r preprocess_example, fig.width=8}
 # Create example data
 large_fmri <- NeuroVec(array(rnorm(50*50*30*100), c(50, 50, 30, 100)),
                        NeuroSpace(c(50, 50, 30, 100)))
@@ -147,7 +147,7 @@ unlink(h5_file)
 ```
 
 ### Region of Interest Analysis
-```{r roi_example}
+```{r roi_example, fig.width=8}
 # Create example data with a specific ROI
 brain_data <- array(rnorm(20*20*10*50), c(20, 20, 10, 50))
 roi_mask <- array(FALSE, c(20, 20, 10))

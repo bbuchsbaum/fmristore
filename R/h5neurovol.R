@@ -261,6 +261,7 @@ setMethod(
 )
 
 #' @export
+#' @rdname linear_access-methods
 setMethod(
   f = "linear_access",
   signature = signature(x="H5NeuroVol", i="integer"),

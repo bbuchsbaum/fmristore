@@ -15,3 +15,5 @@
 ^refactor_clustered_vec_todo\.md$
 ^roxygen_strategy\.md$
 ^raw-data$
+^doc$
+^Meta$

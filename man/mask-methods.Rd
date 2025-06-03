@@ -32,6 +32,7 @@ Get the mask volume
 Get the mask object via generic
 }
 \examples{
+\dontrun{
 # For LatentNeuroVec:
 if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   lnv <- NULL
@@ -67,6 +68,7 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 } else {
   message("Skipping mask example for H5ClusterExperiment: helper not available.")
 }
+}
 
 }
 \seealso{
@@ -78,6 +80,7 @@ Other H5Cluster:
 \code{\link{H5ClusterRunSummary-class}},
 \code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},

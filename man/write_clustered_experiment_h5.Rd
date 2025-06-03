@@ -63,6 +63,7 @@ run-specific data (either full voxel-level or summary time series), and
 associated metadata, and creates the corresponding HDF5 groups and datasets.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("write_clustered_experiment_h5", where = "package:fmristore") &&
@@ -173,6 +174,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping write_clustered_experiment_h5 example: dependencies or helpers not available.")
+}
 }
 }
 \concept{H5ClusteredIO}

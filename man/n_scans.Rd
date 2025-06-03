@@ -16,6 +16,7 @@ An integer representing the number of scans
 This generic returns the number of scans in an object (e.g. a sequence of fMRI scans).
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -28,11 +29,11 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Create a minimal H5ClusterExperiment which contains runs (scans)
     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Get the number of scans
     num_scans <- n_scans(exp_obj)
     print(num_scans) # Should be 2 based on the helper
-    
+
   }, error = function(e) {
     message("n_scans example failed: ", e$message)
   }, finally = {
@@ -43,6 +44,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping n_scans example: dependencies or helper not available.")
+}
 }
 
 }

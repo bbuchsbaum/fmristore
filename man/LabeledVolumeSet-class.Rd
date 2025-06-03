@@ -29,9 +29,10 @@ This extends \code{NeuroVec}, so it is logically a 4D object with dimension
 }}
 
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("read_labeled_vec", where = "package:fmristore") && 
+    exists("read_labeled_vec", where = "package:fmristore") &&
     !is.null(fmristore:::create_minimal_h5_for_LabeledVolumeSet)) {
 
   # Setup: Create a temporary HDF5 file suitable for read_labeled_vec
@@ -43,17 +44,17 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       labels = c("CondA", "CondB"),
       num_vols_per_label = 2L
     )
-    
+
     # Create a LabeledVolumeSet object using the constructor
     lvs <- fmristore::read_labeled_vec(file_name = temp_h5_path)
-    
+
     print(lvs)
     print(labels(lvs)) # Access labels
-    
+
     # Access data for a specific label (returns a NeuroVol or similar)
-    # data_cond_a <- lvs[["CondA"]] 
+    # data_cond_a <- lvs[["CondA"]]
     # print(dim(data_cond_a)) # Should be 3D x num_vols_per_label
-    
+
   }, error = function(e) {
     message("LabeledVolumeSet example failed: ", e$message)
   }, finally = {
@@ -68,6 +69,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping LabeledVolumeSet example: fmristore, neuroim2, hdf5r, or helper not available.")
+}
 }
 
 }

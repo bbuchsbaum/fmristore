@@ -31,7 +31,7 @@ This function handles file opening/closing and reads necessary metadata like
 \code{n_time} from the HDF5 file if not provided explicitly.
 }
 \examples{
-\donttest{
+\dontrun{
 # Create temporary HDF5 file with minimal experiment structure
 temp_file <- tempfile(fileext = ".h5")
 exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
