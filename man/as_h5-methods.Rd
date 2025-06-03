@@ -201,7 +201,8 @@ tryCatch({
   message("  #                       scan_metadata = scan_meta)")
   message("  # print(h5_clust_obj)")
   message("  # if (!is.null(h5_clust_obj)) try(close(h5_clust_obj), silent=TRUE)")
-  message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) unlink(attr(h5_clust_obj, \"filepath\"))")
+  message("  # if (file.exists(attr(h5_clust_obj, \"filepath\")))")
+  message("  #   unlink(attr(h5_clust_obj, \"filepath\"))")
 
 }
 
