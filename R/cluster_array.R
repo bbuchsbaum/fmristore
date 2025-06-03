@@ -280,6 +280,7 @@ setMethod(".dataset_path", "H5ClusterRun",
 #' @return An array or vector containing the subset of data.
 #' @export
 #' @family H5Cluster
+#' @rdname sub-H5ClusteredRunFull-ANY-ANY-ANY-method
 setMethod("[",
   signature(x = "H5ClusterRun", i = "ANY", j = "ANY", drop = "ANY"),
   function(x, i, j, k, l, ..., drop = TRUE)
@@ -288,9 +289,10 @@ setMethod("[",
 
 #' @export
 #' @family H5Cluster
+#' @rdname sub-H5ClusteredRunFull-ANY-ANY-ANY-method
 setMethod("[",
   signature(x = "H5ClusterRun", i = "ANY", j = "missing", drop = "ANY"),
-  definition = function(x, i, ..., drop = TRUE) {
+  definition = function(x, i, j, k, l, ..., drop = TRUE) {
        # Handle cases: x[mask_indices], x[coords_matrix], x[i,j,k] (falls through if l missing)
        # Let the main helper sort it out.
       .subset_h5crunfull(x, i = i, j = NULL, k = NULL, l = NULL, drop = drop)
