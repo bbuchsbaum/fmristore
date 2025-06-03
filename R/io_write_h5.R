@@ -1,5 +1,4 @@
 #' @include all_class.R io_h5_helpers.R
-#' @import hdf5r
 #' @import neuroim2
 #' @importFrom methods is
 #' @importFrom utils write.table

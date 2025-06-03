@@ -1,5 +1,4 @@
 #' @include all_class.R
-#' @import hdf5r
 #' @import neuroim2
 #' @importFrom withr defer
 #' @importFrom methods new is
@@ -1103,7 +1102,6 @@ make_run_summary <- function(file_source, scan_name,
 #'
 #' @param object An object from the H5Cluster family
 #' @importFrom cli cli_h1 cli_h2 cli_li col_blue col_green col_yellow col_silver col_red col_magenta symbol cli_text cli_alert_info
-#' @importFrom utils head
 #' @importFrom methods show
 #' @export
 #' @family H5Cluster
