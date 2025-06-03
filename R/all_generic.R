@@ -463,7 +463,7 @@ setGeneric("clusters", function(x, ...) standardGeneric("clusters"))
 #'     if (n_voxels(exp_obj) > 0) { # n_voxels from H5ClusteredArray slot
 #'        conc_series <- series_concat(exp_obj, mask_idx = 1, run_indices = "Run1_Full")
 #'        print(paste("Dimensions of concatenated series for voxel 1 from Run1_Full:", 
-#'                    paste(dim(conc_series), collapse="x"))))
+#'                    paste(dim(conc_series), collapse="x")))
 #'     } else {
 #'        message("Skipping series_concat demonstration as experiment mask is empty.")
 #'     }

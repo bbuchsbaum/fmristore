@@ -6,8 +6,6 @@
 \alias{fmristore}
 \title{fmristore: Efficient Storage of fMRI Data}
 \description{
-Provides efficient storage and retrieval of functional magnetic resonance imaging (fMRI) data using HDF5 format. The package offers S4 classes and methods for working with dense and sparse representations of 4D neuroimaging data, latent space decompositions, and spatially clustered voxel time series. It includes memory-efficient access patterns for large datasets and integrates with the neuroim2 package for standard neuroimaging data structures.
-
 The fmristore package provides efficient storage and retrieval of functional 
 magnetic resonance imaging (fMRI) data using HDF5 format. It offers S4 classes 
 and methods for working with dense and sparse representations of 4D neuroimaging 
@@ -30,7 +28,7 @@ data, latent space decompositions, and spatially clustered voxel time series.
   \item \code{\link{H5NeuroVol}} and \code{\link{H5NeuroVec}}: HDF5-backed 3D/4D volumes
   \item \code{\link{LatentNeuroVec}}: Latent representations with spatial basis and temporal loadings
   \item \code{\link{H5ClusterExperiment}}: Container for multiple runs with clustered organization
-  \item \code{\link{LabeledVolumeSet}}: Collection of labeled brain regions
+  \item \code{LabeledVolumeSet}: Collection of labeled brain regions
 }
 }
 
@@ -50,18 +48,8 @@ Useful links:
   \item Report bugs at \url{https://github.com/bbuchsbaum/fmristore/issues}
 }
 
-
-Useful links:
-\itemize{
-  \item \url{https://github.com/bbuchsbaum/fmristore}
-  \item Report bugs at \url{https://github.com/bbuchsbaum/fmristore/issues}
-}
-
 }
 \author{
-\strong{Maintainer}: Bradley Buchsbaum \email{brad.buchsbaum@gmail.com} (\href{https://orcid.org/0000-0002-5891-3515}{ORCID})
-
-
 Bradley Buchsbaum \email{brad.buchsbaum@gmail.com} [aut, cre]
 }
 \keyword{internal}

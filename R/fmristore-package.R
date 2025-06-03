@@ -1,10 +1,3 @@
-#' @keywords internal
-"_PACKAGE"
-
-## usethis namespace: start
-## usethis namespace: end
-NULL
-
 #' fmristore: Efficient Storage of fMRI Data
 #'
 #' The fmristore package provides efficient storage and retrieval of functional 
@@ -26,7 +19,7 @@ NULL
 #'   \item \code{\link{H5NeuroVol}} and \code{\link{H5NeuroVec}}: HDF5-backed 3D/4D volumes
 #'   \item \code{\link{LatentNeuroVec}}: Latent representations with spatial basis and temporal loadings
 #'   \item \code{\link{H5ClusterExperiment}}: Container for multiple runs with clustered organization
-#'   \item \code{\link{LabeledVolumeSet}}: Collection of labeled brain regions
+#'   \item \code{LabeledVolumeSet}: Collection of labeled brain regions
 #' }
 #'
 #' @section Getting Started:
@@ -36,8 +29,11 @@ NULL
 #'   \item \code{vignette("LabeledVolumeSet", package = "fmristore")}: Managing labeled brain regions
 #' }
 #'
-#' @docType package
-#' @name fmristore-package
-#' @aliases fmristore
+#' @keywords internal
+#' @aliases fmristore-package fmristore
 #' @author Bradley Buchsbaum \email{brad.buchsbaum@@gmail.com} [aut, cre]
+"_PACKAGE"
+
+## usethis namespace: start
+## usethis namespace: end
 NULL

@@ -317,7 +317,7 @@ setMethod(
     if (!is.numeric(i) || ncol(i) != 2L)
       stop("`i` must be a numeric matrix with 2 columns (time, spatial-index)")
 
-    ## ── 1. split and sanity-check the two index columns ───────────────────────
+    ## -- 1. split and sanity-check the two index columns -------------------
     t_idx <- as.integer(i[, 1L])                       # time rows in @basis
     s_idx <- as.integer(i[, 2L])                       # spatial indices 1..X·Y·Z
 
@@ -329,7 +329,7 @@ setMethod(
     if (any(s_idx < 1L | s_idx > nxy))
       stop("spatial index out of bounds")
 
-    ## ── 2. map spatial -> mask rows  (0 means 'outside the mask') ─────────────
+    ## -- 2. map spatial -> mask rows  (0 means 'outside the mask') ---------
     v_idx <- lookup(x@map, s_idx)                      # 0 / 1..nVox
 
     inside <- v_idx > 0L
@@ -337,11 +337,11 @@ setMethod(
 
     if (any(inside)) {
 
-      ## ── 3. gather the relevant rows  --------------------------------------
+      ## -- 3. gather the relevant rows  --------------------------------------
       b1 <- x@basis   [ t_idx[inside] , , drop = FALSE ]   # n_inside × k
       b2 <- x@loadings[ v_idx[inside], , drop = FALSE ]    # n_inside × k
 
-      ## ── 4. pair-wise dot product + offset  --------------------------------
+      ## -- 4. pair-wise dot product + offset  --------------------------------
       out[inside] <- rowSums(b1 * b2) + x@offset[v_idx[inside]]
     }
 
@@ -1754,21 +1754,21 @@ setMethod(
   definition = function(object) {
     # Header
     cat("\n", crayon::bold(crayon::blue("LatentNeuroVec Object")), "\n")
-    cat(crayon::silver("══════════════════════\n"))
+    cat(crayon::silver("======================\n"))
 
     # Dimensions
     dims <- dim(object)
-    spatial_dims <- paste(dims[1:3], collapse=" × ")
+    spatial_dims <- paste(dims[1:3], collapse=" x ")
     cat("\n", crayon::yellow("Dimensions:"), "\n")
-    cat(" ", crayon::silver("•"), " Spatial: ", crayon::green(spatial_dims), "\n")
-    cat(" ", crayon::silver("•"), " Temporal: ", crayon::green(dims[4]), "\n")
+    cat(" ", crayon::silver("*"), " Spatial: ", crayon::green(spatial_dims), "\n")
+    cat(" ", crayon::silver("*"), " Temporal: ", crayon::green(dims[4]), "\n")
 
     # Components
     n_components <- ncol(object@basis)
     first_basis_coeffs <- format(object@basis[1:min(5, nrow(object@basis)), 1], digits=3)
     cat("\n", crayon::yellow("Components:"), "\n")
-    cat(" ", crayon::silver("•"), " Number: ", crayon::green(n_components), "\n")
-    cat(" ", crayon::silver("•"), " First component, first 5 coeffs: ",
+    cat(" ", crayon::silver("*"), " Number: ", crayon::green(n_components), "\n")
+    cat(" ", crayon::silver("*"), " First component, first 5 coeffs: ",
         crayon::green(paste(first_basis_coeffs, collapse=", ")), 
         if (length(first_basis_coeffs) < 5) "" else "...", "\n") # Adjusted description
 
@@ -1778,56 +1778,56 @@ setMethod(
     total_size    <- format(object.size(object),          units="auto")
 
     cat("\n", crayon::yellow("Memory Usage:"), "\n")
-    cat(" ", crayon::silver("•"), " Basis: ",    crayon::green(basis_size),    "\n")
-    cat(" ", crayon::silver("•"), " Loadings: ", crayon::green(loadings_size), "\n")
-    cat(" ", crayon::silver("•"), " Total: ",    crayon::green(total_size),    "\n")
+    cat(" ", crayon::silver("*"), " Basis: ",    crayon::green(basis_size),    "\n")
+    cat(" ", crayon::silver("*"), " Loadings: ", crayon::green(loadings_size), "\n")
+    cat(" ", crayon::silver("*"), " Total: ",    crayon::green(total_size),    "\n")
 
     # Sparsity
     n_nonzero <- sum(object@mask)
     sparsity <- round(100 * n_nonzero / prod(dims[1:3]), 2)
     cat("\n", crayon::yellow("Sparsity:"), "\n")
-    cat(" ", crayon::silver("•"), " Non-zero voxels: ", crayon::green(n_nonzero), "\n")
-    cat(" ", crayon::silver("•"), " Coverage: ",       crayon::green(sparsity), "%\n")
+    cat(" ", crayon::silver("*"), " Non-zero voxels: ", crayon::green(n_nonzero), "\n")
+    cat(" ", crayon::silver("*"), " Coverage: ",       crayon::green(sparsity), "%\n")
 
     # Space Info
     sp <- space(object)
-    spacing_str <- paste(round(spacing(sp), 2), collapse=" × ")
-    origin_str  <- paste(round(origin(sp), 2), collapse=" × ")
+    spacing_str <- paste(round(spacing(sp), 2), collapse=" x ")
+    origin_str  <- paste(round(origin(sp), 2), collapse=" x ")
     cat("\n", crayon::yellow("Space Information:"), "\n")
-    cat(" ", crayon::silver("•"), " Spacing: ", crayon::green(spacing_str), "\n")
-    cat(" ", crayon::silver("•"), " Origin:  ", crayon::green(origin_str),  "\n")
+    cat(" ", crayon::silver("*"), " Spacing: ", crayon::green(spacing_str), "\n")
+    cat(" ", crayon::silver("*"), " Origin:  ", crayon::green(origin_str),  "\n")
 
     # Footer
     cat("\n", crayon::bold("Data Access:"), "\n")
     cat("\n", crayon::yellow("Reconstructed Space Access:"), "\n")
-    cat(" ", crayon::silver("•"), " Extract volume: ",
+    cat(" ", crayon::silver("*"), " Extract volume: ",
         crayon::blue("object[[i]]"),
         crayon::silver("  # 3D volume at timepoint i\n"))
-    cat(" ", crayon::silver("•"), " Get value: ",
+    cat(" ", crayon::silver("*"), " Get value: ",
         crayon::blue("object[i]"),
         crayon::silver("  # Value at linear index i\n"))
-    cat(" ", crayon::silver("•"), " Subset: ",
+    cat(" ", crayon::silver("*"), " Subset: ",
         crayon::blue("object[mask]"),
         crayon::silver("  # Values at mask positions\n"))
 
     cat("\n", crayon::yellow("Latent Space Access:"), "\n")
-    cat(" ", crayon::silver("•"), " Basis vectors: ",
+    cat(" ", crayon::silver("*"), " Basis vectors: ",
         crayon::blue("basis(object)"),
-        crayon::silver("  # n×k temporal basis\n"))
-    cat(" ", crayon::silver("•"), " Loadings: ",
+        crayon::silver("  # nxk temporal basis\n"))
+    cat(" ", crayon::silver("*"), " Loadings: ",
         crayon::blue("loadings(object)"),
-        crayon::silver("  # p×k spatial loadings\n"))
-    cat(" ", crayon::silver("•"), " Components: ",
+        crayon::silver("  # pxk spatial loadings\n"))
+    cat(" ", crayon::silver("*"), " Components: ",
         crayon::blue("components(object)"),
         crayon::silver("  # List of k component volumes\n"))
 
     cat("\n", crayon::yellow("Conversions:"), "\n")
-    cat(" ", crayon::silver("•"), " as.array(object): ",
+    cat(" ", crayon::silver("*"), " as.array(object): ",
         crayon::silver("4D reconstruction\n"))
-    cat(" ", crayon::silver("•"), " as.matrix(object): ",
-        crayon::silver("n×p matrix of reconstructed values\n"))
+    cat(" ", crayon::silver("*"), " as.matrix(object): ",
+        crayon::silver("nxp matrix of reconstructed values\n"))
 
-    cat("\n", crayon::silver("Note: All access methods reconstruct data (X = B × L^T + offset)"),
+    cat("\n", crayon::silver("Note: All access methods reconstruct data (X = B x L^T + offset)"),
         "\n", crayon::silver("unless you're explicitly accessing latent space."), "\n\n")
   }
 )

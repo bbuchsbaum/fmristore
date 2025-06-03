@@ -573,27 +573,27 @@ setMethod(
 
     # Gather dimension info
     d <- dim(object)  # c(X, Y, Z, nVol)
-    cat(crayon::bold("\n╔═ Dimensions "), crayon::silver("───────────────────────────"), "\n", sep="")
-    cat("║ ", crayon::yellow("Spatial (X×Y×Z)"), " : ",
-        paste(d[1:3], collapse=" × "), "\n", sep="")
-    cat("║ ", crayon::yellow("Number of Volumes"), " : ", d[4], "\n", sep="")
+    cat(crayon::bold("\n+= Dimensions "), crayon::silver("---------------------------"), "\n", sep="")
+    cat("| ", crayon::yellow("Spatial (XxYxZ)"), " : ",
+        paste(d[1:3], collapse=" x "), "\n", sep="")
+    cat("| ", crayon::yellow("Number of Volumes"), " : ", d[4], "\n", sep="")
 
     # Spacing, origin
     sp  <- space(object)
-    cat(crayon::bold("\n╠═ Spatial Info "), crayon::silver("───────────────────────────"), "\n", sep="")
-    cat("║ ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" × "), "\n", sep="")
-    cat("║ ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin,2), collapse=" × "), "\n", sep="")
+    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep="")
+    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" x "), "\n", sep="")
+    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin,2), collapse=" x "), "\n", sep="")
 
     # If axes are known, show them; else fallback
     if (length(sp@axes@ndim) >= 3) {
-      cat("║ ", crayon::yellow("Orientation"), "   : ",
+      cat("| ", crayon::yellow("Orientation"), "   : ",
           paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
     } else {
-      cat("║ ", crayon::yellow("Orientation"), "   : Unknown\n")
+      cat("| ", crayon::yellow("Orientation"), "   : Unknown\n")
     }
 
     # HDF5 file info
-    cat(crayon::bold("\n╚═ Storage Info "), crayon::silver("──────────────────────────"), "\n", sep="")
+    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep="")
     if (object@obj$is_valid) {
       cat("  ", crayon::yellow("File"), " : ", object@obj$get_filename(), "\n", sep="")
     } else {

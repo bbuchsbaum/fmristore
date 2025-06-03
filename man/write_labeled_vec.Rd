@@ -51,7 +51,7 @@ Creates an HDF5 file following a NIfTI-like header layout, storing:
   \item \code{/header/dim} => \code{[4, X, Y, Z, nVols, 1,1,1]}
   \item \code{/header/pixdim} => \code{[0.0, dx, dy, dz, ...]} (Note: qfac stored in /header/qfac)
   \item \code{/header/quatern_b,c,d} and \code{qoffset_x,y,z}
-  \item \code{/header/qfac} => Quaternion factor (±1)
+  \item \code{/header/qfac} => Quaternion factor (+/-1)
   \item \code{/mask} => 3D dataset \code{[X, Y, Z]} (0/1) at root level
   \item \code{/labels} => array of label strings at root level
   \item \code{/data/<label>} => 1D array (length = number of nonzero mask voxels)
@@ -59,11 +59,11 @@ Creates an HDF5 file following a NIfTI-like header layout, storing:
 }
 }
 \details{
-The 4×4 matrix in \code{trans(space(vec))} is passed to
+The 4x4 matrix in \code{trans(space(vec))} is passed to
 \code{\link[neuroim2]{matrixToQuatern}}, which returns a list containing:
 \itemize{
   \item \code{quaternion = c(b, c, d)} (the three imaginary parts)
-  \item \code{qfac} (±1 sign)
+  \item \code{qfac} (+/-1 sign)
 }
 This function stores \code{qfac} in \code{/header/qfac} and sets \code{/header/pixdim[0]=0}.
 We also gather voxel spacing (dx,dy,dz) from \code{spacing(space(vec))} and
@@ -112,6 +112,6 @@ unlink(temp_file)
 }
 \seealso{
 \code{\link[neuroim2]{matrixToQuatern}} for how the quaternion is derived,
-\code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4×4,
+\code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4x4,
 \code{\link{read_labeled_vec}} for reading the file back in.
 }

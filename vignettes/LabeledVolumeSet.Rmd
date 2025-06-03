@@ -56,7 +56,7 @@ contrast_names <- c("Faces_vs_Houses", "Words_vs_Nonwords", "Motion_vs_Static")
 # Save as LabeledVolumeSet
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(stat_maps, mask, contrast_names, file = h5_file)
-close(h5_handle)
+h5_handle$close_all()
 
 # Load and use the labeled set
 labeled_maps <- read_labeled_vec(h5_file)
@@ -101,7 +101,7 @@ mask <- LogicalNeuroVol(mask_array, NeuroSpace(brain_dims))
 # Save with descriptive labels
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(stat_vec, mask, names(group_maps), file = h5_file)
-close(h5_handle)
+h5_handle$close_all()
 
 # Load and analyze
 results <- read_labeled_vec(h5_file)
@@ -166,7 +166,7 @@ subject_labels <- paste0("Subject_", sprintf("%02d", 1:n_subjects))
 # Save
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(subject_vec, mask, subject_labels, file = h5_file)
-close(h5_handle)
+h5_handle$close_all()
 
 # Load and compute group average
 subjects <- read_labeled_vec(h5_file)
@@ -204,7 +204,7 @@ condition_names <- paste0("Condition_", LETTERS[1:n_conditions])
 
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(condition_vec, mask, condition_names, file = h5_file)
-close(h5_handle)
+h5_handle$close_all()
 
 # Load the dataset
 conditions <- read_labeled_vec(h5_file)

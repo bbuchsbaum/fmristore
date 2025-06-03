@@ -562,37 +562,37 @@ setMethod(
   signature = "H5ClusterRun",
   definition = function(object) {
     cat("\n", crayon::bold(crayon::blue("H5ClusterRun")), "\n", sep = "")
-    cat(crayon::silver("────────────────────────────────────────\n"))
+    cat(crayon::silver("----------------------------------------\n"))
     cat(crayon::bold(crayon::yellow("Run Info")), "\n")
-    cat(crayon::silver(" • "), crayon::green("Scan Name:"), object@scan_name, "\n")
-    cat(crayon::silver(" • "), crayon::green("Time points:"), object@n_time, "\n")
+    cat(crayon::silver(" * "), crayon::green("Scan Name:"), object@scan_name, "\n")
+    cat(crayon::silver(" * "), crayon::green("Time points:"), object@n_time, "\n")
     cat(crayon::bold("\nShared Info (from H5ClusteredArray)"), "\n")
-    cat(crayon::silver(" • "), crayon::green("Active voxels in mask:"), object@n_voxels, "\n")
+    cat(crayon::silver(" * "), crayon::green("Active voxels in mask:"), object@n_voxels, "\n")
     if (!is.null(object@clusters) && length(object@clusters@clusters) > 0) {
         cluster_ids <- unique(object@clusters@clusters)
         n_clusters  <- length(cluster_ids)
-        cat(crayon::silver(" • "), crayon::green("Number of clusters:"), n_clusters, "\n")
+        cat(crayon::silver(" * "), crayon::green("Number of clusters:"), n_clusters, "\n")
     } else {
-        cat(crayon::silver(" • "), crayon::green("Number of clusters:"), "(NA)", "\n")
+        cat(crayon::silver(" * "), crayon::green("Number of clusters:"), "(NA)", "\n")
     }
     cat(crayon::bold("\nStorage: HDF5 File"), "\n")
     if (!is.null(object@obj) && inherits(object@obj, "H5File") && object@obj$is_valid) {
-      cat(crayon::silver(" • "), "Path: ",
+      cat(crayon::silver(" * "), "Path: ",
           crayon::magenta(object@obj$get_filename()), "\n", sep="")
       # Check if the specific run path exists
       scan_clusters_path <- tryCatch(.dataset_path(object, 1), # Use helper for base path logic
                                       error = function(e) NULL)
       if (!is.null(scan_clusters_path)) {
           scan_clusters_path <- dirname(scan_clusters_path) # Get parent dir /scans/../clusters
-           cat(crayon::silver(" • "), "Run clusters path: ",
+           cat(crayon::silver(" * "), "Run clusters path: ",
                crayon::magenta(scan_clusters_path), " (",
                ifelse(object@obj$exists(scan_clusters_path), crayon::green("exists"), crayon::red("missing")), ")\n", sep="")
       } else {
-           cat(crayon::silver(" • "), "Run clusters path: unable to determine\n")
+           cat(crayon::silver(" * "), "Run clusters path: unable to determine\n")
       }
 
     } else {
-      cat(crayon::silver(" • "), "HDF5 file is ",
+      cat(crayon::silver(" * "), "HDF5 file is ",
           crayon::red("INVALID or CLOSED"), "\n", sep="")
     }
     cat("\n")

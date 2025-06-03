@@ -6,7 +6,7 @@
 #'   \item \code{/header/dim} => \code{[4, X, Y, Z, nVols, 1,1,1]}
 #'   \item \code{/header/pixdim} => \code{[0.0, dx, dy, dz, ...]} (Note: qfac stored in /header/qfac)
 #'   \item \code{/header/quatern_b,c,d} and \code{qoffset_x,y,z}
-#'   \item \code{/header/qfac} => Quaternion factor (±1)
+#'   \item \code{/header/qfac} => Quaternion factor (+/-1)
 #'   \item \code{/mask} => 3D dataset \code{[X, Y, Z]} (0/1) at root level
 #'   \item \code{/labels} => array of label strings at root level
 #'   \item \code{/data/<label>} => 1D array (length = number of nonzero mask voxels)
@@ -14,11 +14,11 @@
 #' }
 #'
 #' @details
-#' The 4×4 matrix in \code{trans(space(vec))} is passed to
+#' The 4x4 matrix in \code{trans(space(vec))} is passed to
 #' \code{\link[neuroim2]{matrixToQuatern}}, which returns a list containing:
 #' \itemize{
 #'   \item \code{quaternion = c(b, c, d)} (the three imaginary parts)
-#'   \item \code{qfac} (±1 sign)
+#'   \item \code{qfac} (+/-1 sign)
 #' }
 #' This function stores \code{qfac} in \code{/header/qfac} and sets \code{/header/pixdim[0]=0}.
 #' We also gather voxel spacing (dx,dy,dz) from \code{spacing(space(vec))} and
@@ -56,7 +56,7 @@
 #'
 #' @seealso
 #' \code{\link[neuroim2]{matrixToQuatern}} for how the quaternion is derived,
-#' \code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4×4,
+#' \code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4x4,
 #' \code{\link{read_labeled_vec}} for reading the file back in.
 #'
 #' @examples
@@ -149,13 +149,13 @@ write_labeled_vec <- function(vec,
   # Get dimensions (already validated above)
   X <- nd[1]; Y <- nd[2]; Z <- nd[3]
 
-  # Extract 4×4 transformation matrix from NeuroSpace
-  tmat <- trans(space(vec))          # e.g. a 4×4
+  # Extract 4x4 transformation matrix from NeuroSpace
+  tmat <- trans(space(vec))          # e.g. a 4x4
   # Convert to quaternion + qfac - Harden error message
   q <- tryCatch(
       matrixToQuatern(tmat),
       error = function(e) {
-          stop("Invalid NeuroSpace in 'vec' – cannot convert transformation matrix to quaternion: ", e$message)
+          stop("Invalid NeuroSpace in 'vec' - cannot convert transformation matrix to quaternion: ", e$message)
       }
   )
 
@@ -738,27 +738,27 @@ setMethod(
     nd3  <- dim(sp)
     nvol <- length(object@labels)
 
-    cat(crayon::bold("\n╔═ Volume Info "), crayon::silver("───────────────────────────"), "\n", sep="")
-    cat("║ ", crayon::yellow("3D Dimensions"), " : ", paste(nd3, collapse=" × "), "\n", sep="")
-    cat("║ ", crayon::yellow("Total Volumes"), " : ", nvol, "\n", sep="")
+    cat(crayon::bold("\n+= Volume Info "), crayon::silver("---------------------------"), "\n", sep="")
+    cat("| ", crayon::yellow("3D Dimensions"), " : ", paste(nd3, collapse=" x "), "\n", sep="")
+    cat("| ", crayon::yellow("Total Volumes"), " : ", nvol, "\n", sep="")
 
     lbl_preview <- object@labels[1:min(3, nvol)]
-    cat("║ ", crayon::yellow("Labels"), "        : ",
+    cat("| ", crayon::yellow("Labels"), "        : ",
         paste(lbl_preview, collapse=", "),
         if (nvol > 3) crayon::silver(paste0(" ... (", nvol - 3, " more)")), "\n", sep="")
 
-    cat(crayon::bold("\n╠═ Spatial Info "), crayon::silver("───────────────────────────"), "\n", sep="")
-    cat("║ ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" × "), "\n", sep="")
-    cat("║ ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse=" × "), "\n", sep="")
+    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep="")
+    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" x "), "\n", sep="")
+    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse=" x "), "\n", sep="")
 
     if (length(sp@axes@ndim) == 1 && sp@axes@ndim >= 3) {
-      cat("║ ", crayon::yellow("Orientation"), "   : ",
+      cat("| ", crayon::yellow("Orientation"), "   : ",
           paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
     } else {
-      cat("║ ", crayon::yellow("Orientation"), "   : Unknown / Not specified\n")
+      cat("| ", crayon::yellow("Orientation"), "   : Unknown / Not specified\n")
     }
 
-    cat(crayon::bold("\n╚═ Storage Info "), crayon::silver("──────────────────────────"), "\n", sep="")
+    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep="")
     cat("  ", crayon::yellow("HDF5 File"), "    : ", file_status, "\n", sep="")
     cat("  ", crayon::yellow("Data Path"), "    : /data/<label>\n", sep="")
     cat("  ", crayon::yellow("Mask Path"), "    : /mask\n", sep="")

@@ -30,7 +30,6 @@ Imports:
     Matrix,
     methods,
     neuroim2,
-    purrr,
     withr
 Suggests: 
     knitr,

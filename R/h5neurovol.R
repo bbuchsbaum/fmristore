@@ -426,15 +426,15 @@ setMethod(
   signature = "H5NeuroVol",
   definition = function(object) {
     cat("\n", crayon::bold(crayon::blue("H5NeuroVol Object")), "\n")
-    cat(crayon::silver("═══════════════════\n"))
+    cat(crayon::silver("===================\n"))
     
     # Display spatial info from the space slot
     sp <- object@space
     dims <- dim(sp)
-    spacing_str <- paste(round(neuroim2::spacing(sp), 2), collapse = " × ")
-    origin_str <- paste(round(neuroim2::origin(sp), 2), collapse = " × ")
+    spacing_str <- paste(round(neuroim2::spacing(sp), 2), collapse = " x ")
+    origin_str <- paste(round(neuroim2::origin(sp), 2), collapse = " x ")
     
-    cat(crayon::yellow("Dimensions:"), crayon::green(paste(dims, collapse = " × ")), "\n")
+    cat(crayon::yellow("Dimensions:"), crayon::green(paste(dims, collapse = " x ")), "\n")
     cat(crayon::yellow("Spacing:"), crayon::green(spacing_str), "\n")
     cat(crayon::yellow("Origin:"), crayon::green(origin_str), "\n")
     
@@ -458,7 +458,7 @@ setMethod(
     }
     
     cat(crayon::yellow("HDF5 Source:"), file_status, "\n")
-    cat(crayon::silver("═══════════════════\n"))
+    cat(crayon::silver("===================\n"))
     cat("Access data using standard array indexing (e.g., object[1:10, 1:10, 1])\n")
     invisible(NULL)
   }
