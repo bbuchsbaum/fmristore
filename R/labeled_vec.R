@@ -59,7 +59,6 @@
 #' \code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4×4,
 #' \code{\link{read_labeled_vec}} for reading the file back in.
 #'
-#' @import hdf5r
 #' @importFrom neuroim2 spacing space origin trans matrixToQuatern
 #' @importFrom hdf5r H5T_STRING H5S
 #' @importFrom lifecycle deprecate_warn
@@ -317,7 +316,6 @@ write_labeled_vec <- function(vec,
 #' # Important: Close the handle when done
 #' close(lvs)
 #' }
-#' @import hdf5r
 #' @export
 read_labeled_vec <- function(file_path) {
   # --- 1. Handle File Source ---

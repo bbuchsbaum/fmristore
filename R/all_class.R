@@ -1,5 +1,4 @@
 #' @import methods
-#' @import Matrix
 #' @importFrom hdf5r H5File
 NULL
 
