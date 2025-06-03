@@ -90,7 +90,9 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       # Example: Access first 5 linear indices and last 5
       indices_to_access <- c(1:5, (total_elements-4):total_elements)
       # Ensure indices are within bounds if total_elements is small
-      indices_to_access <- indices_to_access[indices_to_access <= total_elements & indices_to_access > 0]
+      indices_to_access <- indices_to_access[
+        indices_to_access <= total_elements & indices_to_access > 0
+      ]
       indices_to_access <- unique(indices_to_access)
       
       if (length(indices_to_access) > 0) {
