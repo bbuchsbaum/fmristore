@@ -264,6 +264,34 @@ setMethod("matrix_concat",
 #'   *Note:* For most operations, the handle needs to remain open.
 #'
 #' @return A new \code{H5ClusterExperiment} object.
+#' 
+#' @examples
+#' \donttest{
+#' # Create temporary HDF5 file with minimal experiment structure
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create H5ClusterExperiment object
+#' experiment <- H5ClusterExperiment(exp_file)
+#' 
+#' # Access scan names
+#' print(scan_names(experiment))
+#' 
+#' # Get number of scans
+#' print(n_scans(experiment))
+#' 
+#' # Access runs
+#' print(names(experiment@runs))
+#' 
+#' # Extract data for specific voxels (first 5 mask indices)
+#' voxel_data <- series_concat(experiment, mask_idx = 1:5)
+#' print(dim(voxel_data))
+#' 
+#' # Clean up
+#' close(experiment)
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom hdf5r H5File list.groups H5A H5D h5attr h5attr_names
 #' @importFrom methods new is
 #' @export

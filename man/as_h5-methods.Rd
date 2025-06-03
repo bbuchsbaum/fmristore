@@ -49,7 +49,33 @@ as_h5(object, file, ...)
 
 \item{file}{The path to the HDF5 file to create or modify.}
 
-\item{...}{Additional arguments specific to the particular method (e.g., \code{dataset_name}).}
+\item{...}{Additional arguments specific to the particular method (see Details).}
+
+\item{data_type}{For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). Default "FLOAT"}
+
+\item{chunk_dim}{For NeuroVec method: Chunk dimensions. Default depends on input dimensions}
+
+\item{compression}{For all methods: Integer compression level [0..9]. Default varies by method}
+
+\item{mask}{For LabeledVolumeSet method: The mask to use (LogicalNeuroVol)}
+
+\item{labels}{For LabeledVolumeSet method: Character vector of labels}
+
+\item{dtype}{For LabeledVolumeSet method: HDF5 data type for values. Default H5T_NATIVE_DOUBLE}
+
+\item{chunk_size}{For LabeledVolumeSet/list methods: Integer chunk size for HDF5. Default 1024}
+
+\item{header_values}{For LabeledVolumeSet method: List of additional header values}
+
+\item{scan_names}{For list method: Character vector of scan names}
+
+\item{clusters}{For list method: ClusteredNeuroVol with cluster IDs}
+
+\item{scan_metadata}{For list method: List of metadata lists, one per scan}
+
+\item{cluster_metadata}{For list method: Optional data.frame with cluster descriptions}
+
+\item{summary_only}{For list method: If TRUE, save summary data only}
 }
 \value{
 An object representing the HDF5 storage, typically of a class

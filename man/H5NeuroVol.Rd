@@ -43,5 +43,5 @@ close(h5vol)
 }
 }
 \seealso{
-\code{\link{close.H5NeuroVol}} for closing the file handle, \code{\link[neuroim2]{NeuroVol-class}}
+\code{\link{close}} for closing the file handle, \code{\link[neuroim2]{NeuroVol-class}}
 }

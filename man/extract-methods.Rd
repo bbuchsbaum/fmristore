@@ -7,7 +7,7 @@
 \S4method{[[}{LatentNeuroVec,numeric}(x, i)
 }
 \arguments{
-\item{x}{A \code{\link[neuroim2]{LatentNeuroVec-class}} object.}
+\item{x}{A \code{\link{LatentNeuroVec-class}} object.}
 
 \item{i}{A numeric index specifying which volume to extract (must be a single value).}
 }

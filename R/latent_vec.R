@@ -212,11 +212,10 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
 #' @description
 #' Writes a \code{LatentNeuroVec} to an HDF5 file with optional compression.
 #'
-#' @param x A \code{\link[neuroim2]{LatentNeuroVec-class}} to write.
+#' @param x A \code{LatentNeuroVec} to write.
 #' @param file_name \code{character} file path to the output HDF5.
 #' @param nbit \code{logical}; if TRUE, uses N-bit compression (default: FALSE).
 #' @param compression \code{integer} in [1..9] specifying compression level (default: 9).
-#' @param chunk_dim Optional numeric vector specifying chunk dimensions.
 #'
 #' @return Invisible \code{NULL}, called for side effects (writes to disk).
 #'
@@ -512,7 +511,7 @@ setMethod(
 #' @description
 #' Extracts a single volume from a \code{LatentNeuroVec} as a \code{SparseNeuroVol}.
 #'
-#' @param x A \code{\link[neuroim2]{LatentNeuroVec-class}} object.
+#' @param x A \code{\link{LatentNeuroVec-class}} object.
 #' @param i A numeric index specifying which volume to extract (must be a single value).
 #'
 #' @return A \code{\link[neuroim2]{SparseNeuroVol-class}} containing:
@@ -1443,6 +1442,43 @@ setMethod(
 #' Does NOT validate header field *values* extensively beyond dimensions, nor does it
 #' check data types rigorously.
 #'
+#' @examples
+#' \donttest{
+#' # Create a temporary latent neuroimaging HDF5 file for validation
+#' temp_file <- tempfile(fileext = ".h5")
+#' 
+#' # Create minimal latent data and write to HDF5
+#' lnv <- fmristore:::create_minimal_LatentNeuroVec()
+#' 
+#' # Write to HDF5 (using internal structure expected by validate_latent_file)
+#' # Note: This is a simplified example - real files would use write_vec methods
+#' h5f <- hdf5r::H5File$new(temp_file, mode = "w")
+#' 
+#' # Write required groups and datasets
+#' header_grp <- h5f$create_group("header")
+#' header_grp$create_dataset("dim", robj = c(4L, dim(lnv@mask), dim(lnv@basis)[1]))
+#' 
+#' basis_grp <- h5f$create_group("basis")
+#' basis_grp$create_dataset("basis_matrix", robj = lnv@basis)
+#' 
+#' scans_grp <- h5f$create_group("scans")
+#' h5f$create_dataset("mask", robj = as.array(lnv@mask))
+#' 
+#' h5f$close_all()
+#' 
+#' # Now validate the file
+#' result <- validate_latent_file(temp_file)
+#' 
+#' if (result$is_valid) {
+#'   message("File is valid!")
+#' } else {
+#'   message("File validation failed: ", result$error_message)
+#' }
+#' 
+#' # Clean up
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom hdf5r H5File h5attr
 #' @export
 validate_latent_file <- function(file_path) {

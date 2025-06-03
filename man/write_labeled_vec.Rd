@@ -41,9 +41,9 @@ Default is \code{hdf5r::h5types$H5T_NATIVE_DOUBLE}.}
 \item{verbose}{Logical, whether to print verbose messages during processing.}
 }
 \value{
-Invisibly returns the open \code{\link[hdf5r]{H5File}} handle containing
-  the written data. Close this handle with \code{close()} or
-  \code{h5file\$close_all()} when finished.
+Invisibly returns the open \code{\link[hdf5r]{H5File}} handle
+  containing the written data. The caller should close this handle when
+  finished.
 }
 \description{
 Creates an HDF5 file following a NIfTI-like header layout, storing:
@@ -75,9 +75,40 @@ augment *some* additional fields (e.g., \code{qform_code=1L}). See implementatio
 notes for which fields are protected.
 }
 \section{Lifecycle Management}{
-The file is opened in write mode and the resulting HDF5 handle is returned
-without being automatically closed. It is the user's responsibility to close
-this handle once writing is complete.
+
+The HDF5 file is opened in write mode and the resulting handle is returned
+without being automatically closed. **It is the caller's responsibility to
+close this handle** (via \code{h5file$close_all()} or \code{close()}) when
+finished working with the file.
+}
+
+\examples{
+\donttest{
+# Create a simple labeled neuroimaging dataset
+vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(4, 4, 3, 5))
+
+# Create mask with same spatial dimensions
+mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(4, 4, 3))
+
+# Define labels for each volume
+labels <- c("condition_A", "condition_B", "condition_C", "condition_D", "condition_E")
+
+# Write to temporary HDF5 file
+temp_file <- tempfile(fileext = ".h5")
+h5_handle <- write_labeled_vec(vec, mask, labels, file = temp_file)
+
+# Close the file handle returned by write_labeled_vec
+h5_handle$close_all()
+
+# Read it back
+labeled_data <- read_labeled_vec(temp_file)
+print(labeled_data@labels)
+
+# Clean up
+close(labeled_data)
+unlink(temp_file)
+}
+
 }
 \seealso{
 \code{\link[neuroim2]{matrixToQuatern}} for how the quaternion is derived,

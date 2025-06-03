@@ -16,6 +16,29 @@
 #' @param compress (Optional) Logical indicating compression status (metadata).
 #' 
 #' @return A new \code{H5ClusterRun} object with an open file handle managed by the object.
+#' 
+#' @examples
+#' \donttest{
+#' # Create temporary HDF5 file with minimal experiment structure
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask and clusters
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' clusters <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 3)
+#' 
+#' # Create H5ClusterRun object
+#' run <- H5ClusterRun(exp_file, scan_name = "Run1_Full", mask = mask, clusters = clusters)
+#' 
+#' # Access properties
+#' print(run@n_time)
+#' print(dim(mask))
+#' 
+#' # Clean up
+#' close(run)
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom methods new is
 #' @importFrom hdf5r h5attr
 #' @importFrom withr defer
@@ -167,6 +190,28 @@ H5ClusterRun <- function(file, scan_name,
 #'   (default: "summary_data").
 #'
 #' @return A new \code{H5ClusterRunSummary} object with an open file handle managed by the object.
+#' 
+#' @examples
+#' \donttest{
+#' # Create temporary HDF5 file with minimal experiment structure
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' 
+#' # Create H5ClusterRunSummary object
+#' run_summary <- H5ClusterRunSummary(exp_file, scan_name = "Run2_Summary", mask = mask)
+#' 
+#' # Access properties
+#' print(run_summary@cluster_names)
+#' print(run_summary@n_time)
+#' 
+#' # Clean up
+#' close(run_summary)
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom methods new is
 #' @importFrom hdf5r H5D
 #' @export
@@ -284,14 +329,6 @@ H5ClusterRunSummary <- function(file, scan_name,
   if (!is.integer(final_cluster_ids)) {
     final_cluster_ids <- as.integer(final_cluster_ids)
   }
-
-  }, error = function(e) {
-      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds)
-      if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-      stop(sprintf("[H5ClusterRunSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
-  }, finally = {
-      if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds)
-  })
 
   # --- 5. Create the object ---
   new_obj <- tryCatch({

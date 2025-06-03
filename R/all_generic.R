@@ -562,7 +562,20 @@ setGeneric(".dataset_path",
 #'
 #' @param object The R object to convert to HDF5 (e.g., a \code{NeuroVol} or \code{NeuroVec}).
 #' @param file The path to the HDF5 file to create or modify.
-#' @param ... Additional arguments specific to the particular method (e.g., \code{dataset_name}).
+#' @param ... Additional arguments specific to the particular method (see Details).
+#' @param data_type For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). Default "FLOAT"
+#' @param chunk_dim For NeuroVec method: Chunk dimensions. Default depends on input dimensions
+#' @param compression For all methods: Integer compression level [0..9]. Default varies by method
+#' @param mask For LabeledVolumeSet method: The mask to use (LogicalNeuroVol)
+#' @param labels For LabeledVolumeSet method: Character vector of labels
+#' @param dtype For LabeledVolumeSet method: HDF5 data type for values. Default H5T_NATIVE_DOUBLE
+#' @param chunk_size For LabeledVolumeSet/list methods: Integer chunk size for HDF5. Default 1024
+#' @param header_values For LabeledVolumeSet method: List of additional header values
+#' @param scan_names For list method: Character vector of scan names
+#' @param clusters For list method: ClusteredNeuroVol with cluster IDs
+#' @param scan_metadata For list method: List of metadata lists, one per scan
+#' @param cluster_metadata For list method: Optional data.frame with cluster descriptions
+#' @param summary_only For list method: If TRUE, save summary data only
 #'
 #' @section Methods:
 #' \describe{
@@ -745,7 +758,7 @@ setGeneric("as_h5", function(object, file, ...) {
 #'
 #' @export
 #' @rdname series-methods 
-#' @name series # Keep @name if you want the generic itself to be findable by ?series
+#' @name series
 series <- neuroim2::series
 
 #' Linear Access to Neuroimaging Data (Methods for neuroim2 Generic)
@@ -769,7 +782,7 @@ series <- neuroim2::series
 #'   The order of values in the returned vector matches the order of indices in `i`.
 #'
 #' @seealso \code{neuroim2::\link[neuroim2]{linear_access}}, specific methods like
-#'   \code{\link{linear_access,H5ClusterRun-method}}.
+#'   \code{\link{linear_access,H5ClusterRun,numeric-method}}.
 #'
 #' @name linear_access-methods
 #' @aliases linear_access
@@ -810,6 +823,7 @@ NULL
 #' implementing the S4 generic function \code{\link[base]{as.matrix}} from the `base` package.
 #'
 #' @param x An object for which a `as.matrix` method is defined.
+#' @param ... Additional arguments passed to specific as.matrix methods.
 #' @rdname as.matrix-methods
 #' @name as.matrix
 as.matrix <- neuroim2::as.matrix
@@ -823,6 +837,9 @@ as.matrix <- neuroim2::as.matrix
 #' implementing the S4 generic function \code{\link[base]{as.data.frame}} from the `base` package.
 #' 
 #' @param x An object for which a `as.data.frame` method is defined.
+#' @param row.names A character vector giving the row names for the data frame, or \code{NULL}.
+#' @param optional Logical. If \code{TRUE}, setting row names and converting column names is optional.
+#' @param ... Additional arguments passed to the underlying as.data.frame methods.
 #' @rdname as.data.frame-methods
 #' @name as.data.frame
 as.data.frame <- base::as.data.frame

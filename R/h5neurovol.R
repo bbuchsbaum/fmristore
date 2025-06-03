@@ -30,7 +30,7 @@ NULL
 #' @param file_name A \code{character} string giving the path to an existing 3D HDF5 neuroimaging file.
 #' @return A new \code{\link{H5NeuroVol-class}} instance with an open HDF5 file handle.
 #'
-#' @seealso \code{\link{close.H5NeuroVol}} for closing the file handle, \code{\link[neuroim2]{NeuroVol-class}}
+#' @seealso \code{\link{close}} for closing the file handle, \code{\link[neuroim2]{NeuroVol-class}}
 #'
 #' @examples
 #' \dontrun{

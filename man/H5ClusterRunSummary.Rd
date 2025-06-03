@@ -41,3 +41,25 @@ summary cluster time-series data from an HDF5 file.
 This function handles file opening/closing, validates the summary dataset,
 determines \code{n_time} from the dataset dimensions, and reconciles cluster names/IDs.
 }
+\examples{
+\donttest{
+# Create temporary HDF5 file with minimal experiment structure
+temp_file <- tempfile(fileext = ".h5")
+exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+
+# Create mask
+mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+
+# Create H5ClusterRunSummary object
+run_summary <- H5ClusterRunSummary(exp_file, scan_name = "Run2_Summary", mask = mask)
+
+# Access properties
+print(run_summary@cluster_names)
+print(run_summary@n_time)
+
+# Clean up
+close(run_summary)
+unlink(temp_file)
+}
+
+}

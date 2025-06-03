@@ -619,6 +619,28 @@ setMethod(
 #' @param compress (Optional) Logical indicating compression status (metadata).
 #'
 #' @return A new `H5ClusterRun` object.
+#' 
+#' @examples
+#' \donttest{
+#' # Note: This function is deprecated in favor of H5ClusterRun()
+#' 
+#' # Create temporary HDF5 file
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask and clusters
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' clusters <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 3)
+#' 
+#' # Create run object (deprecated - will show deprecation warning)
+#' suppressWarnings({
+#'   run <- make_run_full(exp_file, scan_name = "Run1_Full", mask = mask, clusters = clusters)
+#' })
+#' 
+#' # Clean up - note: make_run_full returns an object that doesn't own the file handle
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom hdf5r H5File h5attr h5attr_names H5A 
 #' @importFrom methods new is
 #' @export
@@ -916,6 +938,27 @@ setMethod(
 #'   (default: "summary_data").
 #'
 #' @return A new `H5ClusterRunSummary` object.
+#' 
+#' @examples
+#' \donttest{
+#' # Note: This function is deprecated in favor of H5ClusterRunSummary()
+#' 
+#' # Create temporary HDF5 file
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' 
+#' # Create summary run object (deprecated - will show deprecation warning)
+#' suppressWarnings({
+#'   run_summary <- make_run_summary(exp_file, scan_name = "Run2_Summary", mask = mask)
+#' })
+#' 
+#' # Clean up - note: make_run_summary returns an object that doesn't own the file handle
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom hdf5r H5File H5D
 #' @importFrom methods new is
 #' @importFrom lifecycle deprecate_warn

@@ -59,6 +59,33 @@
 #' \code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4×4,
 #' \code{\link{read_labeled_vec}} for reading the file back in.
 #'
+#' @examples
+#' \donttest{
+#' # Create a simple labeled neuroimaging dataset
+#' vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(4, 4, 3, 5))
+#' 
+#' # Create mask with same spatial dimensions
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(4, 4, 3))
+#' 
+#' # Define labels for each volume
+#' labels <- c("condition_A", "condition_B", "condition_C", "condition_D", "condition_E")
+#' 
+#' # Write to temporary HDF5 file
+#' temp_file <- tempfile(fileext = ".h5")
+#' h5_handle <- write_labeled_vec(vec, mask, labels, file = temp_file)
+#' 
+#' # Close the file handle returned by write_labeled_vec
+#' h5_handle$close_all()
+#' 
+#' # Read it back
+#' labeled_data <- read_labeled_vec(temp_file)
+#' print(labeled_data@labels)
+#' 
+#' # Clean up
+#' close(labeled_data)
+#' unlink(temp_file)
+#' }
+#' 
 #' @import hdf5r
 #' @importFrom neuroim2 spacing space origin trans matrixToQuatern
 #' @importFrom hdf5r H5T_STRING H5S
@@ -301,7 +328,7 @@ write_labeled_vec <- function(vec,
 #' @seealso
 #' \code{\link{write_labeled_vec}} for the (deprecated) writing function,
 #' \code{\link{LabeledVolumeSet-class}} for details on the object structure,
-#' \code{\link{close.LabeledVolumeSet}} for closing the file handle.
+#' \code{\link{close}} for closing the file handle.
 #'
 #' @examples
 #' \dontrun{
@@ -680,7 +707,7 @@ setMethod(
 #' number of volumes, label previews, spacing, origin, orientation (if known),
 #' and storage paths.
 #'
-#' @param object A \code{\link{LabeledVolumeSet}} instance
+#' @param object A \code{\link{LabeledVolumeSet-class}} instance
 #' @importFrom crayon bold blue silver yellow green italic
 #' @importFrom methods show
 #' @export

@@ -98,7 +98,8 @@ create_minimal_ClusteredNeuroVol <- function(mask_vol = NULL, num_clusters = 2L)
   
   cluster_data <- rep_len(seq_len(num_clusters), n_vox_in_mask)
   cluster_labels <- paste0("Cluster", seq_len(num_clusters))
-  label_map <- stats::setNames(as.list(seq_len(num_clusters)), cluster_labels)
+  # Create label_map as a named vector mapping cluster IDs to labels
+  label_map <- stats::setNames(cluster_labels, as.character(seq_len(num_clusters)))
   
   return(neuroim2::ClusteredNeuroVol(mask_vol, clusters = cluster_data, label_map = label_map))
 }
