@@ -476,7 +476,8 @@ setGeneric("clusters", function(x, ...) standardGeneric("clusters"))
 #'
 #'     # Note: series_concat typically works on runs with full data (H5ClusterRun)
 #'     # The helper creates "Run1_Full".
-#'     # concatenated_series <- series_concat(exp_obj, mask_idx = c(1, 2), run_indices = "Run1_Full")
+#'     # concatenated_series <- series_concat(exp_obj, mask_idx = c(1, 2), 
+#'     #                                       run_indices = "Run1_Full")
 #'     # print(dim(concatenated_series)) # Should be n_time_run1 x 2
 #'     # print(head(concatenated_series))
 #'
@@ -589,7 +590,8 @@ setGeneric(".dataset_path",
 #' @param object The R object to convert to HDF5 (e.g., a \code{NeuroVol} or \code{NeuroVec}).
 #' @param file The path to the HDF5 file to create or modify.
 #' @param ... Additional arguments specific to the particular method (see Details).
-#' @param data_type For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). Default "FLOAT"
+#' @param data_type For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). 
+#'   Default "FLOAT"
 #' @param chunk_dim For NeuroVec method: Chunk dimensions. Default depends on input dimensions
 #' @param compression For all methods: Integer compression level [0..9]. Default varies by method
 #' @param mask For LabeledVolumeSet method: The mask to use (LogicalNeuroVol)
@@ -651,6 +653,21 @@ setGeneric(".dataset_path",
 #'       \item{\code{chunk_size}}{Chunk dimension for 2D writes, default 1024}
 #'     }
 #'     Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusterExperiment).
+#'   }
+#'   \item{\code{signature(object = "NeuroVecSeq")}}{
+#'     Writes a sequence of NeuroVec objects (multiple 4D scans) to a single HDF5 file.
+#'     All NeuroVec objects must have the same spatial dimensions.
+#'     Additional parameters:
+#'     \describe{
+#'       \item{\code{scan_names}}{Optional character vector of scan names. 
+#'         If NULL, uses "scan_1", "scan_2", etc.}
+#'       \item{\code{data_type}}{Character string: "FLOAT" (default), "DOUBLE", or "INT"}
+#'       \item{\code{chunk_dim}}{Numeric vector specifying chunk sizes. 
+#'         If NULL, uses time-optimized chunking}
+#'       \item{\code{compression}}{Integer [0..9], default 6}
+#'       \item{\code{scan_metadata}}{Optional named list of metadata lists, one per scan}
+#'     }
+#'     Returns the file path of the created HDF5 file.
 #'   }
 #' }
 #'
@@ -747,7 +764,8 @@ setGeneric(".dataset_path",
 #'   message("  #                       scan_metadata = scan_meta)")
 #'   message("  # print(h5_clust_obj)")
 #'   message("  # if (!is.null(h5_clust_obj)) try(close(h5_clust_obj), silent=TRUE)")
-#'   message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) unlink(attr(h5_clust_obj, \"filepath\"))")
+#'   message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) ")
+#'   message("  #     unlink(attr(h5_clust_obj, \"filepath\"))")
 #'
 #' }
 #' }
@@ -866,7 +884,8 @@ as.matrix <- neuroim2::as.matrix
 #'
 #' @param x An object for which a `as.data.frame` method is defined.
 #' @param row.names A character vector giving the row names for the data frame, or \code{NULL}.
-#' @param optional Logical. If \code{TRUE}, setting row names and converting column names is optional.
+#' @param optional Logical. If \code{TRUE}, setting row names and converting column names 
+#'   is optional.
 #' @param ... Additional arguments passed to the underlying as.data.frame methods.
 #' @rdname as.data.frame-methods
 #' @name as.data.frame

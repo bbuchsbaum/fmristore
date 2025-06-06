@@ -2,7 +2,7 @@
 
 library(testthat)
 library(neuroim2)
-#library(fmristore)  # or whatever your package is called
+library(fmristore)
 library(Matrix)
 
 test_that("H5NeuroVol handles empty or single-slice subsetting", {

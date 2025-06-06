@@ -14,7 +14,8 @@ as.data.frame(x, row.names = NULL, optional = FALSE, ...)
 
 \item{row.names}{A character vector giving the row names for the data frame, or \code{NULL}.}
 
-\item{optional}{Logical. If \code{TRUE}, setting row names and converting column names is optional.}
+\item{optional}{Logical. If \code{TRUE}, setting row names and converting column names 
+is optional.}
 
 \item{...}{Additional arguments passed to the underlying as.data.frame methods.}
 }
@@ -33,6 +34,7 @@ Other H5Cluster:
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},

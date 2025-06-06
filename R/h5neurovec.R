@@ -1,4 +1,5 @@
 #' @include all_class.R
+#' @importFrom neuroim2 load_data
 NULL
 
 #' H5NeuroVecSource

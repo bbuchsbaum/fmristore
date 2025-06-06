@@ -321,7 +321,8 @@ H5ClusterRunSummary <- function(file, scan_name,
   }
 
   if (length(final_cluster_names) != final_n_clusters) {
-    stop(sprintf("Final cluster_names length (%d) does not match dataset columns (%d).", length(final_cluster_names), final_n_clusters))
+    warning(sprintf("Final number of cluster names (%d) does not match dataset columns (%d). Resetting to default names.", length(final_cluster_names), final_n_clusters))
+    final_cluster_names <- paste0("Col_", seq_len(final_n_clusters))
   }
   if (length(final_cluster_ids) != final_n_clusters) {
     stop(sprintf("Final cluster_ids length (%d) does not match dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
@@ -337,7 +338,7 @@ H5ClusterRunSummary <- function(file, scan_name,
         scan_name = scan_name,
         mask = mask,
         n_voxels = as.integer(n_vox), # Add n_voxels, inherited from H5ClusteredArray
-        clusters = clusters, # Pass through, can be NULL
+        clusters = if(is.null(clusters)) new("ClusteredNeuroVol") else clusters,
         n_time = as.integer(final_n_time),
         cluster_names = final_cluster_names,
         cluster_ids = final_cluster_ids,

@@ -55,7 +55,7 @@ test_that("linear_access returns correct values and errors out-of-range", {
   idx <- sample(nels, 10)
 
   expect_equal(linear_access(lvec, idx), full_arr[idx], tolerance = 1e-12)
-  expect_error(linear_access(lvec, 0), "out of bounds")
-  expect_error(linear_access(lvec, nels + 1), "out of bounds")
+  expect_error(linear_access(lvec, 0), "positive integers")
+  expect_error(linear_access(lvec, nels + 1), "exceed the total number of elements")
 })
 

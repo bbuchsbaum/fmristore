@@ -6,6 +6,7 @@
 \alias{as_h5,LatentNeuroVec-method}
 \alias{as_h5,LabeledVolumeSet-method}
 \alias{as_h5,list-method}
+\alias{as_h5,NeuroVecSeq-method}
 \title{Generic function to convert R objects to HDF5 format}
 \usage{
 as_h5(object, file, ...)
@@ -43,6 +44,8 @@ as_h5(object, file, ...)
   compression = 4,
   chunk_size = 1024
 )
+
+\S4method{as_h5}{NeuroVecSeq}(object, file = NULL, ...)
 }
 \arguments{
 \item{object}{The R object to convert to HDF5 (e.g., a \code{NeuroVol} or \code{NeuroVec}).}
@@ -51,7 +54,8 @@ as_h5(object, file, ...)
 
 \item{...}{Additional arguments specific to the particular method (see Details).}
 
-\item{data_type}{For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). Default "FLOAT"}
+\item{data_type}{For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). 
+Default "FLOAT"}
 
 \item{chunk_dim}{For NeuroVec method: Chunk dimensions. Default depends on input dimensions}
 
@@ -135,6 +139,21 @@ providing a standardized interface for serialization to HDF5.
       \item{\code{chunk_size}}{Chunk dimension for 2D writes, default 1024}
     }
     Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusterExperiment).
+  }
+  \item{\code{signature(object = "NeuroVecSeq")}}{
+    Writes a sequence of NeuroVec objects (multiple 4D scans) to a single HDF5 file.
+    All NeuroVec objects must have the same spatial dimensions.
+    Additional parameters:
+    \describe{
+      \item{\code{scan_names}}{Optional character vector of scan names. 
+        If NULL, uses "scan_1", "scan_2", etc.}
+      \item{\code{data_type}}{Character string: "FLOAT" (default), "DOUBLE", or "INT"}
+      \item{\code{chunk_dim}}{Numeric vector specifying chunk sizes. 
+        If NULL, uses time-optimized chunking}
+      \item{\code{compression}}{Integer [0..9], default 6}
+      \item{\code{scan_metadata}}{Optional named list of metadata lists, one per scan}
+    }
+    Returns the file path of the created HDF5 file.
   }
 }
 }
@@ -228,7 +247,8 @@ tryCatch({
   message("  #                       scan_metadata = scan_meta)")
   message("  # print(h5_clust_obj)")
   message("  # if (!is.null(h5_clust_obj)) try(close(h5_clust_obj), silent=TRUE)")
-  message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) unlink(attr(h5_clust_obj, \"filepath\"))")
+  message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) ")
+  message("  #     unlink(attr(h5_clust_obj, \"filepath\"))")
 
 }
 }

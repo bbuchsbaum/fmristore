@@ -1,6 +1,6 @@
 #' @include all_class.R
-#' @import hdf5r
-#' @import neuroim2
+#' @importFrom hdf5r H5File h5file is.h5file
+#' @importFrom neuroim2 NeuroSpace space
 #' @importFrom withr defer
 #' @importFrom methods new is
 #' @importFrom lifecycle deprecate_warn
@@ -37,7 +37,8 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
 #'
 #' @param x An object inheriting from `H5ClusteredArray`.
 #' @param mask_indices An integer vector of voxel indices relative to the mask (1 to `x@n_voxels`).
-#' @param time_indices An integer vector specifying which time points to retrieve. If `NULL`, all time points are retrieved.
+#' @param time_indices An integer vector specifying which time points to retrieve. 
+#'   If `NULL`, all time points are retrieved.
 #' @param n_time The total number of time points for the specific run/scan being accessed.
 #'
 #' @return A numeric matrix of shape `[length(mask_indices), length(time_indices)]`
@@ -106,23 +107,21 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             }
             row_offsets_in_dataset <- as.integer(row_offsets_in_dataset)
 
-            cluster_data_subset <- h5_read_subset(
-                x@obj,
-                dset_path,
-                list(row_offsets_in_dataset, time_indices)
-            )
-            # Accessing obj slot from H5ClusteredArray
-            assert_h5_path(x@obj, dset_path,
-                           sprintf("Dataset for cluster %d", cid))
-            ds <- x@obj[[dset_path]]
-            # Simplified on.exit handling: rely on hdf5r GC or explicit closure later
-            # on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) ds$close(), add = TRUE, after = FALSE)
-
-            cluster_data_subset <- ds[row_offsets_in_dataset, time_indices, drop = FALSE]
-
-            # Close dataset handle immediately after reading
-            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-                 close_h5_safely(ds)
+            # If time_indices spans all time points, we can read without column subsetting
+            if (identical(time_indices, seq_len(full_time_length))) {
+                # Read only rows, all columns
+                cluster_data_subset <- h5_read_subset(
+                    x@obj,
+                    dset_path,
+                    list(row_offsets_in_dataset)
+                )
+            } else {
+                # Read specific rows and columns
+                cluster_data_subset <- h5_read_subset(
+                    x@obj,
+                    dset_path,
+                    list(row_offsets_in_dataset, time_indices)
+                )
             }
 
             expected_rows <- length(row_indices_in_result)
@@ -136,9 +135,6 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             result_mat[row_indices_in_result, ] <- cluster_data_subset
 
         }, error = function(e) {
-            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-                close_h5_safely(ds)
-            }
             stop(sprintf("[.get_cluster_timeseries] Failed processing cluster %d at path '%s'. Original error: %s", cid, dset_path, e$message))
         })
     } # End loop over clusters
@@ -286,12 +282,28 @@ setMethod("[",
       .subset_h5crunfull(x, i, j, k, l, drop))
 
 
+#' Extract data from H5ClusterRun with missing j parameter
+#' 
+#' @description
+#' Extracts data from an \code{H5ClusterRun} object when only the first index is provided.
+#' Can handle mask indices, coordinate matrices, or pass through to coordinate-based indexing.
+#' 
+#' @param x An \code{H5ClusterRun} object
+#' @param i Row index (x-coordinate), mask indices, or coordinate matrix
+#' @param j Missing (not provided)
+#' @param k Slice index (z-coordinate) - optional, passed via ...
+#' @param l Time index - optional, passed via ...
+#' @param ... Additional arguments
+#' @param drop Logical. If \code{TRUE}, the result is coerced to the lowest possible dimension
+#' 
+#' @return An array or vector containing the subset of data
+#' 
 #' @export
 #' @family H5Cluster
 #' @rdname extract-methods
 setMethod("[",
   signature(x = "H5ClusterRun", i = "ANY", j = "missing", drop = "ANY"),
-  definition = function(x, i, ..., drop = TRUE) {
+  definition = function(x, i, j, ..., drop = TRUE) {
        # Handle cases: x[mask_indices], x[coords_matrix], x[i,j,k] (falls through if l missing)
        # Let the main helper sort it out.
       .subset_h5crunfull(x, i = i, j = NULL, k = NULL, l = NULL, drop = drop)
@@ -476,7 +488,8 @@ setMethod(
 #'       # Example: Access first 5 linear indices and last 5
 #'       indices_to_access <- c(1:5, (total_elements-4):total_elements)
 #'       # Ensure indices are within bounds if total_elements is small
-#'       indices_to_access <- indices_to_access[indices_to_access <= total_elements & indices_to_access > 0]
+#'       indices_to_access <- indices_to_access[indices_to_access <= total_elements & 
+#'                                               indices_to_access > 0]
 #'       indices_to_access <- unique(indices_to_access)
 #'       
 #'       if (length(indices_to_access) > 0) {
@@ -1128,7 +1141,7 @@ make_run_summary <- function(file_source, scan_name,
                  obj           = h5obj,
                  scan_name     = scan_name,
                  mask          = mask,
-                 clusters      = clusters,
+                 clusters      = if(is.null(clusters)) new("ClusteredNeuroVol") else clusters,
                  n_voxels      = as.integer(n_vox),
                  n_time        = n_time,
                  cluster_names = as.character(final_cluster_names),
@@ -1145,7 +1158,8 @@ make_run_summary <- function(file_source, scan_name,
 
 #' Show Method for H5ClusterRunSummary
 #' @param object An H5ClusterRunSummary object
-#' @importFrom cli cli_h1 cli_h2 cli_li col_blue col_green col_yellow col_silver col_red col_magenta symbol cli_text cli_alert_info
+#' @importFrom cli cli_h1 cli_h2 cli_li col_blue col_green col_yellow col_silver 
+#' @importFrom cli col_red col_magenta symbol cli_text cli_alert_info
 #' @importFrom utils head
 #' @importFrom methods show
 #' @export

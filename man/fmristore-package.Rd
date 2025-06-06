@@ -45,6 +45,7 @@ For an introduction to the package, see the vignettes:
 Useful links:
 \itemize{
   \item \url{https://github.com/bbuchsbaum/fmristore}
+  \item \url{https://bbuchsbaum.github.io/fmristore/}
   \item Report bugs at \url{https://github.com/bbuchsbaum/fmristore/issues}
 }
 

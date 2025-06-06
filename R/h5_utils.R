@@ -231,7 +231,23 @@ h5_read_subset <- function(h5, path, index = NULL) {
     if (length(read_args) == 0L) {
       out <- dset$read()
     } else {
-      out <- do.call(dset$read, read_args)
+      # For subsetting, pass indices directly to read()
+      if (!is.null(index)) {
+        # Check dataset dimensions to handle 1D vs 2D indexing
+        dims <- dset$dims
+        if (length(dims) == 2 && length(index) == 1) {
+          # For 2D datasets, if only row indices provided, select all columns
+          # Use drop=FALSE to ensure matrix output
+          out <- dset[index[[1]], , drop=FALSE]
+        } else if (length(dims) == 2 && length(index) == 2) {
+          # For 2D datasets with row and column indices
+          out <- dset[index[[1]], index[[2]], drop=FALSE]
+        } else {
+          out <- do.call(dset$read, index)
+        }
+      } else {
+        out <- do.call(dset$read, read_args)
+      }
     }
   }, error = function(e) {
     stop(sprintf("h5_read_subset: failed reading subset from '%s': %s",
@@ -283,7 +299,12 @@ h5_write <- function(h5, path, data,
                      verbose       = getOption("h5.write.verbose", FALSE)) {
 
   # -- 1. Validate --------------------------------------------------------
-  stopifnot(inherits(h5, "H5File") && h5$is_valid)
+  if (!inherits(h5, "H5File")) {
+    stop(sprintf("h5_write: 'h5' must be an H5File object, got class: %s", paste(class(h5), collapse=", ")))
+  }
+  if (!h5$is_valid) {
+    stop("h5_write: H5File object is not valid (file may be closed)")
+  }
   if (!is.character(path) || length(path) != 1L || !nzchar(path) || substr(path, 1, 1) != "/")
     stop("`path` must be an absolute HDF5 path (beginning with '/').")
   if (!is.numeric(compression) || compression < 0 || compression > 9)
@@ -338,18 +359,21 @@ h5_write <- function(h5, path, data,
 # (already present in read_write_hdf5.R - should be centralized)
 #' @keywords internal
 guess_h5_type <- function(x) {
-  if (is.character(x)) {
+  # For vectors/arrays, check the base type
+  base_type <- typeof(x)
+  
+  if (base_type == "character") {
     return(hdf5r::H5T_STRING$new(size = Inf))
-  } else if (is.integer(x)) {
+  } else if (base_type == "integer") {
     return(hdf5r::h5types$H5T_NATIVE_INT32)
-  } else if (is.numeric(x)) {
+  } else if (base_type == "double") {
     return(hdf5r::h5types$H5T_NATIVE_DOUBLE)
-  } else if (is.logical(x)) {
+  } else if (base_type == "logical") {
     # Using INT8 for logical as HBOOL can be problematic sometimes
     # return(hdf5r::h5types$H5T_NATIVE_HBOOL) 
     return(hdf5r::h5types$H5T_NATIVE_INT8) 
   }
-  stop("Unsupported R data type for guess_h5_type().")
+  stop(sprintf("Unsupported R data type for guess_h5_type(): %s", base_type))
 } 
 
 #' Safely close an HDF5 file handle

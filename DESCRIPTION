@@ -17,7 +17,7 @@ Description: Provides efficient storage and retrieval of functional magnetic res
     memory-efficient access patterns for large datasets and integrates with the 
     neuroim2 package for standard neuroimaging data structures.
 License: GPL (>= 3)
-URL: https://github.com/bbuchsbaum/fmristore
+URL: https://github.com/bbuchsbaum/fmristore, https://bbuchsbaum.github.io/fmristore/
 BugReports: https://github.com/bbuchsbaum/fmristore/issues
 Encoding: UTF-8
 LazyData: false
@@ -25,7 +25,6 @@ RoxygenNote: 7.3.2.9000
 Imports: 
     assertthat,
     cli,
-    colorplane,
     crayon,
     hdf5r,
     lifecycle,
@@ -56,4 +55,5 @@ Collate:
     'io_write_h5.R'
     'labeled_vec.R'
     'latent_vec.R'
+    'neurovecseq_h5.R'
     'zzz_example_helpers.R'

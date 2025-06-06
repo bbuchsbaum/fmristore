@@ -33,15 +33,21 @@ Key benefits:
 
 Let's say you have t-statistic maps from different contrasts in your fMRI study:
 
-```{r quick_example}
-# Create example statistical maps (10x10x5 brain)
+### Step 1: Create Example Data
+
+```{r create_data}
+# Define brain dimensions
 brain_dims <- c(10, 10, 5)
 n_contrasts <- 3
 
-# Simulate t-stat maps for different contrasts
+# Simulate t-statistic maps for different contrasts
 contrast_data <- array(rnorm(prod(brain_dims) * n_contrasts), 
                       dim = c(brain_dims, n_contrasts))
+```
 
+### Step 2: Create Brain Mask
+
+```{r create_mask}
 # Create a brain mask (only analyze certain voxels)
 brain_mask <- array(TRUE, dim = brain_dims)
 brain_mask[1:3, 1:3, ] <- FALSE  # Exclude corners
@@ -49,7 +55,11 @@ brain_mask[1:3, 1:3, ] <- FALSE  # Exclude corners
 # Convert to neuroim2 objects
 stat_maps <- NeuroVec(contrast_data, NeuroSpace(c(brain_dims, n_contrasts)))
 mask <- LogicalNeuroVol(brain_mask, NeuroSpace(brain_dims))
+```
 
+### Step 3: Save with Labels
+
+```{r save_labeled}
 # Define meaningful labels
 contrast_names <- c("Faces_vs_Houses", "Words_vs_Nonwords", "Motion_vs_Static")
 
@@ -57,8 +67,12 @@ contrast_names <- c("Faces_vs_Houses", "Words_vs_Nonwords", "Motion_vs_Static")
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(stat_maps, mask, contrast_names, file = h5_file)
 h5_handle$close_all()
+```
 
-# Load and use the labeled set
+### Step 4: Load and Access
+
+```{r load_access}
+# Load the labeled set
 labeled_maps <- read_labeled_vec(h5_file)
 
 # Access by name
@@ -131,7 +145,9 @@ unlink(h5_file)
 
 Store individual subject maps for later analysis:
 
-```{r subject_maps, fig.width=8, fig.height=6}
+### Create Subject Data
+
+```{r subject_setup}
 # Simulate beta maps from 5 subjects
 n_subjects <- 5
 brain_dims <- c(15, 15, 8)
@@ -139,7 +155,11 @@ brain_dims <- c(15, 15, 8)
 # Create subject-specific activation maps
 subject_data <- array(rnorm(prod(brain_dims) * n_subjects), 
                      dim = c(brain_dims, n_subjects))
+```
 
+### Add Activation Patterns
+
+```{r add_activations}
 # Add subject-specific patterns
 for (subj in 1:n_subjects) {
   # Each subject has slightly different activation center
@@ -157,7 +177,11 @@ for (subj in 1:n_subjects) {
     }
   }
 }
+```
 
+### Save Subject Maps
+
+```{r save_subjects}
 # Create objects
 subject_vec <- NeuroVec(subject_data, NeuroSpace(c(brain_dims, n_subjects)))
 mask <- LogicalNeuroVol(array(TRUE, brain_dims), NeuroSpace(brain_dims))
@@ -167,7 +191,11 @@ subject_labels <- paste0("Subject_", sprintf("%02d", 1:n_subjects))
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(subject_vec, mask, subject_labels, file = h5_file)
 h5_handle$close_all()
+```
 
+### Compute Group Statistics
+
+```{r group_stats, fig.width=8, fig.height=6}
 # Load and compute group average
 subjects <- read_labeled_vec(h5_file)
 

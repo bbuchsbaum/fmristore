@@ -1,5 +1,6 @@
 
 library(neuroim2)
+library(fmristore)
 
 test_that("H5NeuroVol construction and subsetting works", {
   # Create test data

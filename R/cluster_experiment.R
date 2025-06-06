@@ -49,7 +49,11 @@ NULL
       coords_matrix <- vox_coords_dset$read()
       # Ensure master_space@dim is valid and has 3 dimensions for this calculation
       if (length(master_space@dim) < 3) stop("Master space dimensions are less than 3.")
-      file_voxel_indices <- coords_matrix[,1] + (coords_matrix[,2]-1)*master_space@dim[1] + (coords_matrix[,3]-1)*master_space@dim[1]*master_space@dim[2]
+      # Convert array indices (1-based) to linear indices
+      # coords_matrix contains 1-based indices from which(..., arr.ind = TRUE)
+      file_voxel_indices <- coords_matrix[,1] + 
+                           (coords_matrix[,2] - 1) * master_space@dim[1] + 
+                           (coords_matrix[,3] - 1) * master_space@dim[1] * master_space@dim[2]
     } else if (h5_handle$exists("/mask")) {
       warning("Dataset '/voxel_coords' not found, validating user mask against HDF5 '/mask' data. Consider adding /voxel_coords for efficiency.")
       mask_dset_val <- h5_handle[["/mask"]]
@@ -63,7 +67,8 @@ NULL
   })
 
   provided_voxel_indices <- which(user_mask@.Data)
-  if (!identical(sort(provided_voxel_indices), sort(file_voxel_indices))) {
+  # Convert to same type for comparison (file_voxel_indices might be numeric due to calculations)
+  if (!identical(sort(as.integer(provided_voxel_indices)), sort(as.integer(file_voxel_indices)))) {
     # Comparing sorted indices because order might not be guaranteed identical even if sets are same
     stop("User-provided mask's pattern of TRUE voxels does not match the pattern derived from the HDF5 file ('/voxel_coords' or '/mask'). User mask override rejected.")
   }
@@ -292,7 +297,7 @@ setMethod("matrix_concat",
 #' unlink(temp_file)
 #' }
 #' 
-#' @importFrom hdf5r H5File list.groups H5A H5D h5attr h5attr_names
+#' @importFrom hdf5r H5File list.groups H5A H5D h5attr h5attr_names list.datasets
 #' @importFrom methods new is
 #' @export
 #' @family H5Cluster
@@ -523,6 +528,21 @@ H5ClusterExperiment <- function(file,
 
   for (sname in scan_names) {
     scan_path <- file.path(scans_group_path, sname)
+    
+    # Read class attribute to determine scan type
+    scan_class <- NULL
+    scan_grp <- NULL
+    tryCatch({
+      scan_grp <- h5obj[[scan_path]]
+      if ("class" %in% h5attr_names(scan_grp)) {
+        scan_class <- h5attr(scan_grp, "class")
+      }
+    }, error = function(e) {
+      # Ignore errors, will fall back to data existence checks
+    }, finally = {
+      if (!is.null(scan_grp) && scan_grp$is_valid) try(scan_grp$close(), silent = TRUE)
+    })
+    
     has_full_data = h5obj$exists(file.path(scan_path, "clusters"))
     has_summary_data = h5obj$exists(file.path(scan_path, "clusters_summary")) # Check group first
     summary_dset_name <- "summary_data" # Default, could be made configurable
@@ -549,14 +569,43 @@ H5ClusterExperiment <- function(file,
     found_full <- found_full || has_full_data
     found_summary <- found_summary || summary_dset_exists
     
+    # Determine scan type based on class attribute first, then fall back to data existence
     create_summary <- FALSE
-    if (summary_preference == "require") {
-        if (!summary_dset_exists) stop(sprintf("Summary data required but not found for scan '%s' at %s", sname, file.path(summary_group_path, summary_dset_name)))
+    if (!is.null(scan_class)) {
+      # Use class attribute if available
+      if (scan_class == "H5ClusterRunSummary") {
         create_summary <- TRUE
-    } else if (summary_preference == "prefer") {
-        create_summary <- summary_dset_exists
-    } else { # ignore
+        if (!summary_dset_exists) {
+          stop(sprintf("Scan '%s' has class='H5ClusterRunSummary' but summary data not found at %s", 
+                       sname, file.path(summary_group_path, summary_dset_name)))
+        }
+      } else if (scan_class == "H5ClusterRun") {
         create_summary <- FALSE
+        if (!has_full_data) {
+          stop(sprintf("Scan '%s' has class='H5ClusterRun' but full data not found under %s", 
+                       sname, file.path(scan_path, "clusters")))
+        }
+      } else {
+        # Unknown class, fall back to preference logic
+        if (summary_preference == "require") {
+            if (!summary_dset_exists) stop(sprintf("Summary data required but not found for scan '%s' at %s", sname, file.path(summary_group_path, summary_dset_name)))
+            create_summary <- TRUE
+        } else if (summary_preference == "prefer") {
+            create_summary <- summary_dset_exists
+        } else { # ignore
+            create_summary <- FALSE
+        }
+      }
+    } else {
+      # No class attribute, use preference logic
+      if (summary_preference == "require") {
+          if (!summary_dset_exists) stop(sprintf("Summary data required but not found for scan '%s' at %s", sname, file.path(summary_group_path, summary_dset_name)))
+          create_summary <- TRUE
+      } else if (summary_preference == "prefer") {
+          create_summary <- summary_dset_exists
+      } else { # ignore
+          create_summary <- FALSE
+      }
     }
 
     # --- Load Scan-Specific Metadata ---
@@ -886,4 +935,17 @@ setMethod("show", "H5ClusterExperiment", function(object) {
   }
 })
 
-# TODO: Add show method for H5ClusterExperiment 
+#' Close the HDF5 file handle
+#' @param con H5ClusterExperiment object
+#' @param ... Additional arguments (ignored)
+#' @return NULL invisibly
+#' @rdname close
+#' @export
+#' @family H5Cluster
+setMethod("close", "H5ClusterExperiment", function(con, ...) {
+  # All runs share the same H5File handle, so we only need to close it once
+  if (length(con@runs) > 0 && !is.null(con@runs[[1]]@obj)) {
+    safe_h5_close(con@runs[[1]]@obj)
+  }
+  invisible(NULL)
+}) 

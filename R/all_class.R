@@ -1,5 +1,5 @@
 #' @import methods
-#' @import Matrix
+#' @importFrom Matrix Matrix sparseMatrix t
 #' @importFrom hdf5r H5File
 NULL
 

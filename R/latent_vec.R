@@ -1,4 +1,4 @@
-#' @importFrom neuroim2 matricized_access
+#' @importFrom neuroim2 matricized_access concat axes indices space origin spacing trans
 NULL
 
 #' Latent Space Representation of Neuroimaging Data
@@ -344,7 +344,16 @@ setMethod(
       b2 <- x@loadings[ v_idx[inside], , drop = FALSE ]    # n_inside × k
 
       ## -- 4. pair-wise dot product + offset  --------------------------------
-      out[inside] <- rowSums(b1 * b2) + x@offset[v_idx[inside]]
+      # Handle potential NA from sparse matrix multiplication
+      dot_products <- rowSums(b1 * b2)
+      # Replace NA with 0 (happens when all elements in a row are 0)
+      dot_products[is.na(dot_products)] <- 0
+      
+      if (length(x@offset) > 0) {
+        out[inside] <- dot_products + x@offset[v_idx[inside]]
+      } else {
+        out[inside] <- dot_products
+      }
     }
 
     out
@@ -369,7 +378,11 @@ setMethod(
     b2 <- x@loadings[as.integer(i),, drop=FALSE] # Use as.integer explicitly
     out <- tcrossprod(b1, b2)
     # Add offsets
-    as.matrix(sweep(out, 2, x@offset[as.integer(i)], "+")) # Use as.integer here too
+    if (length(x@offset) > 0) {
+      as.matrix(sweep(out, 2, x@offset[as.integer(i)], "+"))
+    } else {
+      as.matrix(out)
+    }
   }
 )
 
@@ -533,6 +546,7 @@ setMethod(
 #' \code{\link[neuroim2]{SparseNeuroVol-class}} for the return type,
 #' \code{\link[neuroim2]{NeuroSpace-class}} for spatial metadata.
 #'
+#' @importFrom neuroim2 SparseNeuroVol
 #' @rdname extract-methods
 #' @export
 # single volume at time i
@@ -694,6 +708,7 @@ setMethod(
 #' @seealso
 #' \code{\link[neuroim2]{NeuroVecSeq-class}}
 #'
+#' @importFrom neuroim2 NeuroVecSeq
 #' @rdname concat-methods
 #' @export
 setMethod(
@@ -918,8 +933,12 @@ to_h5_latentvec <- function(vec, file_name=NULL, data_type="FLOAT",
         glmax = 0L, glmin = 0L,
         descrip = paste("LatentNeuroVec data:", vec@label %||% "(no label)"),
         aux_file = "", qform_code = 1L, sform_code = 0L,
-        quatern_b = q$quaternion[1], quatern_c = q$quaternion[2], quatern_d = q$quaternion[3],
-        qoffset_x = q$qoffset[1], qoffset_y = q$qoffset[2], qoffset_z = q$qoffset[3],
+        quatern_b = if(!is.null(q$quaternion)) q$quaternion[1] else 0.0,
+        quatern_c = if(!is.null(q$quaternion)) q$quaternion[2] else 0.0,
+        quatern_d = if(!is.null(q$quaternion)) q$quaternion[3] else 0.0,
+        qoffset_x = if(!is.null(q$qoffset)) q$qoffset[1] else 0.0,
+        qoffset_y = if(!is.null(q$qoffset)) q$qoffset[2] else 0.0,
+        qoffset_z = if(!is.null(q$qoffset)) q$qoffset[3] else 0.0,
         srow_x = c(tmat[1,1], tmat[1,2], tmat[1,3], tmat[1,4]),
         srow_y = c(tmat[2,1], tmat[2,2], tmat[2,3], tmat[2,4]),
         srow_z = c(tmat[3,1], tmat[3,2], tmat[3,3], tmat[3,4]),
@@ -1024,14 +1043,14 @@ to_h5_latentvec <- function(vec, file_name=NULL, data_type="FLOAT",
     element_size <- h5dtype$get_size()
     chunk_len <- max(1L, floor(target_min_chunk / element_size))
     if (nnz > 0 && chunk_len > nnz) chunk_len <- nnz else if(nnz == 0) chunk_len <- NULL
-    h5_write(sparse_grp, "data", t_loadings@x, h5dtype,
+    h5_write(h5, "/basis/basis_matrix_sparse/data", t_loadings@x, h5dtype,
              chunk_dims = chunk_len, compression = compression,
              overwrite = TRUE)
-    h5_write(sparse_grp, "indices", as.integer(t_loadings@i),
+    h5_write(h5, "/basis/basis_matrix_sparse/indices", as.integer(t_loadings@i),
              hdf5r::h5types$H5T_NATIVE_INT32,
              chunk_dims = chunk_len, compression = compression,
              overwrite = TRUE)
-    h5_write(sparse_grp, "indptr", as.integer(t_loadings@p),
+    h5_write(h5, "/basis/basis_matrix_sparse/indptr", as.integer(t_loadings@p),
              hdf5r::h5types$H5T_NATIVE_INT32,
              chunk_dims = NULL, compression = 0,
              overwrite = TRUE)
@@ -1144,7 +1163,7 @@ to_h5_latentvec <- function(vec, file_name=NULL, data_type="FLOAT",
 #' @seealso `LatentNeuroVecSource`, `LatentNeuroVec`, `validate_latent_file`
 #'
 #' @importFrom hdf5r H5File h5attr
-#' @importFrom neuroim2 NeuroSpace NeuroVol LogicalNeuroVol IndexLookupVol drop_dim quaternToMatrix
+#' @importFrom neuroim2 NeuroSpace NeuroVol LogicalNeuroVol IndexLookupVol drop_dim quaternToMatrix lookup
 #' @noRd
 setMethod(
   f = "load_data",
@@ -1609,14 +1628,13 @@ validate_latent_file <- function(file_path) {
 
   }, error = function(e) {
     is_valid <<- FALSE # Modify variable in parent env
-    error_message <<- paste("Error during validation: ", e$message) # Capture error message
+    error_message <<- e$message # Capture error message without prefix
     # Ensure h5obj is closed by on.exit, which should still trigger
   })
 
   if (!is.null(error_message)) {
-      # Avoid stop() here if defer needs to run reliably? Just issue warning?
-      warning(paste("[validate_latent_file] ", error_message)) # Use warning instead of stop
-      # Let the function return is_valid=FALSE
+      # Re-throw the error to match test expectations
+      stop(error_message)
   }
 
   return(is_valid)

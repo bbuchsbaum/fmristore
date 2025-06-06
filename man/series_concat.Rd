@@ -55,7 +55,8 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 
     # Note: series_concat typically works on runs with full data (H5ClusterRun)
     # The helper creates "Run1_Full".
-    # concatenated_series <- series_concat(exp_obj, mask_idx = c(1, 2), run_indices = "Run1_Full")
+    # concatenated_series <- series_concat(exp_obj, mask_idx = c(1, 2), 
+    #                                       run_indices = "Run1_Full")
     # print(dim(concatenated_series)) # Should be n_time_run1 x 2
     # print(head(concatenated_series))
 
@@ -96,6 +97,7 @@ Other H5Cluster:
 \code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},

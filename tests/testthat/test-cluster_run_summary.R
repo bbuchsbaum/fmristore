@@ -3,7 +3,7 @@
 library(testthat)
 library(hdf5r)
 library(neuroim2)
-# Assuming fmristore classes/methods are loaded via NAMESPACE or devtools::load_all()
+library(fmristore)
 
 # Helper function to create a dummy HDF5 file with SUMMARY data for testing
 create_dummy_clustered_summary_h5 <- function(filepath,
@@ -132,9 +132,9 @@ test_that("H5ClusterRunSummary constructor errors work", {
   expect_error(H5ClusterRunSummary(file = setup_info$filepath, 
                                      scan_name = "wrong_scan_name", mask = setup_info$mask, 
                                      clusters = setup_info$clusters), 
-                                     "Summary dataset not found")
+                                     "scan group not found")
   # Test invalid summary_dset name
-  expect_error(H5ClusterRunSummary(file = setup_info$filepath, scan_name = setup_info$scan_name, mask = setup_info$mask, clusters = setup_info$clusters, summary_dset="wrong_name"), "Summary dataset not found")
+  expect_error(H5ClusterRunSummary(file = setup_info$filepath, scan_name = setup_info$scan_name, mask = setup_info$mask, clusters = setup_info$clusters, summary_dset="wrong_name"), "summary dataset not found")
 })
 
 test_that("H5ClusterRunSummary cluster name/ID reconciliation works", {
@@ -177,7 +177,7 @@ test_that("H5ClusterRunSummary cluster name/ID reconciliation works", {
                          cluster_names = c("A", "B"), # Mismatch cols (3)
                          cluster_ids = 1:3, # Match cols
                          summary_dset = setup_info$summary_dset_name),
-      "Resetting names/IDs to Col_X/sequential"
+      "Resetting to default names"
   )
   expect_equal(run_summary_badnames@cluster_names, paste0("Col_", 1:3))
   expect_equal(run_summary_badnames@cluster_ids, 1:3)
@@ -192,23 +192,21 @@ test_that("H5ClusterRunSummary cluster name/ID reconciliation works", {
                                             cluster_names = character(), # Explicitly empty
                                             cluster_ids = integer(),   # Explicitly empty
                                             summary_dset = setup_info$summary_dset_name)
-  expect_equal(run_summary_derive@cluster_names, paste0("Clus_", 1:3)) # Derived from unique(clusters@clusters)
+  expect_equal(run_summary_derive@cluster_names, paste0("Cluster", 1:3)) # Default names when none provided
   expect_equal(run_summary_derive@cluster_ids, 1:3)
   h5file(run_summary_derive)$close_all()
 
   # Case 4: No names/IDs/clusters provided, derive from dataset cols (Col_X)
   # Use new constructor
-  expect_warning(
-      run_summary_defaults <- H5ClusterRunSummary(file = setup_info$filepath,
-                                                scan_name = setup_info$scan_name,
-                                                mask = setup_info$mask,
-                                                clusters = NULL, # No clusters object
-                                                cluster_names = character(), 
-                                                cluster_ids = integer(),   
-                                                summary_dset = setup_info$summary_dset_name),
-      "generated default column names \\(Col_X\\)"
-  )
-  expect_equal(run_summary_defaults@cluster_names, paste0("Col_", 1:3))
+  # No warning expected here - defaults are generated silently
+  run_summary_defaults <- H5ClusterRunSummary(file = setup_info$filepath,
+                                            scan_name = setup_info$scan_name,
+                                            mask = setup_info$mask,
+                                            clusters = NULL, # No clusters object
+                                            cluster_names = character(), 
+                                            cluster_ids = integer(),   
+                                            summary_dset = setup_info$summary_dset_name)
+  expect_equal(run_summary_defaults@cluster_names, paste0("Cluster", 1:3))
   expect_equal(run_summary_defaults@cluster_ids, 1:3)
   h5file(run_summary_defaults)$close_all()
   

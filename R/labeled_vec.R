@@ -86,8 +86,8 @@
 #' unlink(temp_file)
 #' }
 #' 
-#' @import hdf5r
-#' @importFrom neuroim2 spacing space origin trans matrixToQuatern
+#' @importFrom hdf5r H5File h5file is.h5file
+#' @importFrom neuroim2 spacing space origin trans matrixToQuatern DenseNeuroVol
 #' @importFrom hdf5r H5T_STRING H5S
 #' @importFrom lifecycle deprecate_warn
 #' @export
@@ -340,7 +340,7 @@ write_labeled_vec <- function(vec,
 #' # Important: Close the handle when done
 #' close(lvs)
 #' }
-#' @import hdf5r
+#' @importFrom hdf5r H5File h5file is.h5file
 #' @export
 read_labeled_vec <- function(file_path) {
   # --- 1. Handle File Source ---
@@ -396,9 +396,17 @@ read_labeled_vec <- function(file_path) {
 
   # read /mask => 3D from root level
   mask_arr <- h5_read(h5obj, "/mask", missing_ok = FALSE)
-  # Ensure mask_arr is 3D
-  if (length(dim(mask_arr)) != 3) {
-      stop("Read /mask dataset is not 3-dimensional.")
+  
+  # Check if dimensions were dropped (hdf5r might drop singleton dimensions)
+  mask_dims <- dim(mask_arr)
+  if (is.null(mask_dims)) {
+      # If dim is NULL, it's a vector - reshape to expected 3D
+      mask_arr <- array(mask_arr, dim = c(X, Y, Z))
+  } else if (length(mask_dims) == 2 && Z == 1) {
+      # If 2D and Z should be 1, add the third dimension
+      mask_arr <- array(mask_arr, dim = c(mask_dims, 1))
+  } else if (length(mask_dims) != 3) {
+      stop("Read /mask dataset has unexpected dimensions: ", paste(mask_dims, collapse = "x"))
   }
   if (!all(dim(mask_arr) == c(X,Y,Z))) {
       stop("Dimensions of /mask [", paste(dim(mask_arr), collapse=","),

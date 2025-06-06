@@ -1,6 +1,6 @@
 #' @include all_class.R io_h5_helpers.R
-#' @import hdf5r
-#' @import neuroim2
+#' @importFrom hdf5r H5File h5file is.h5file H5S H5D H5T_STRING h5attr h5attr_names
+#' @importFrom neuroim2 NeuroSpace space spacing origin trans matrixToQuatern
 #' @importFrom methods is
 #' @importFrom utils write.table
 #' @importFrom hdf5r H5T_STRING H5S h5types
@@ -221,7 +221,7 @@ write_clustered_experiment_h5 <- function(filepath,
   
   tryCatch({
     if (verbose) message("Creating HDF5 file: ", filepath)
-    h5f <- H5File$new(filepath, mode = "w")
+    h5f <- hdf5r::H5File$new(filepath, mode = "w")
     
     # --- Write Global Structures --- 
     if (verbose) message("Writing global structures (mask, clusters, header)... ")
@@ -257,7 +257,7 @@ write_clustered_experiment_h5 <- function(filepath,
     global_clus_grp <- h5f$create_group("clusters")
     unique_cluster_ids <- sort(unique(clusters@clusters))
     # Write cluster_ids using h5_write
-    h5_write(global_clus_grp, "cluster_ids", unique_cluster_ids, 
+    h5_write(h5f, "/clusters/cluster_ids", unique_cluster_ids, 
              dtype = h5types$H5T_NATIVE_INT32, overwrite = TRUE)
     
     # Write cluster_metadata using h5_write
@@ -286,18 +286,13 @@ write_clustered_experiment_h5 <- function(filepath,
     if (verbose) message("Writing scan data...")
     scans_grp <- h5f$create_group("scans")
 
-    # Validate that all runs_data have the same type before proceeding
+    # Check if all runs are summary-only
     if (length(runs_data) > 0) {
       all_run_types <- vapply(runs_data, function(run) run$type, character(1))
-      unique_run_types <- unique(all_run_types)
-      if (length(unique_run_types) > 1) {
-        stop(sprintf("All items in 'runs_data' must have the same 'type' (either 'full' or 'summary'). Found mixed types: %s", 
-                     paste(unique_run_types, collapse=", ")))
-      }
-      # All types are the same, so the first one is representative
-      summary_only <- (unique_run_types[1] == "summary")
+      # Set summary_only attribute based on whether ALL runs are summary type
+      summary_only <- all(all_run_types == "summary")
     } else {
-      # No runs, default summary_only to FALSE (or could be NA/absent, but FALSE is safer for attribute)
+      # No runs, default summary_only to FALSE
       summary_only <- FALSE 
     }
     hdf5r::h5attr(scans_grp, "summary_only") <- as.logical(summary_only)
@@ -310,7 +305,14 @@ write_clustered_experiment_h5 <- function(filepath,
         smeta <- run$metadata %||% list()
         
         if (verbose) message(sprintf("  Writing scan: %s (type: %s)", sname, stype))
-        # scan_grp <- scans_grp$create_group(sname) # h5_write creates parent
+        scan_grp <- scans_grp$create_group(sname)
+        
+        # Set class attribute based on type
+        if (stype == "full") {
+            hdf5r::h5attr(scan_grp, "class") <- "H5ClusterRun"
+        } else if (stype == "summary") {
+            hdf5r::h5attr(scan_grp, "class") <- "H5ClusterRunSummary"
+        }
         
         # Write metadata using h5_write
         if (length(smeta) > 0) {

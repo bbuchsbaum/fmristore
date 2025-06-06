@@ -10,7 +10,7 @@
 \alias{[[,LabeledVolumeSet,character-method}
 \alias{[[,LatentNeuroVec,numeric-method}
 \alias{[,LatentNeuroVec,numeric,numeric,ANY-method}
-\title{Extract a Single Volume from LatentNeuroVec}
+\title{Extract data from H5ClusterRun with missing j parameter}
 \usage{
 \S4method{[}{H5ClusterRun,ANY,missing,ANY}(x, i, j, ..., drop = TRUE)
 
@@ -32,8 +32,20 @@
 \item{x}{A \code{\link{LatentNeuroVec-class}} object.}
 
 \item{i}{A numeric index specifying which volume to extract (must be a single value).}
+
+\item{j}{Missing (not provided)}
+
+\item{...}{Additional arguments}
+
+\item{drop}{Logical. If \code{TRUE}, the result is coerced to the lowest possible dimension}
+
+\item{k}{Slice index (z-coordinate) - optional, passed via ...}
+
+\item{l}{Time index - optional, passed via ...}
 }
 \value{
+An array or vector containing the subset of data
+
 A \code{\link[neuroim2]{SparseNeuroVol-class}} containing:
 \itemize{
   \item The computed volume data
@@ -42,6 +54,9 @@ A \code{\link[neuroim2]{SparseNeuroVol-class}} containing:
 }
 }
 \description{
+Extracts data from an \code{H5ClusterRun} object when only the first index is provided.
+Can handle mask indices, coordinate matrices, or pass through to coordinate-based indexing.
+
 Extracts a single volume from a \code{LatentNeuroVec} as a \code{SparseNeuroVol}.
 }
 \details{
@@ -74,6 +89,7 @@ Other H5Cluster:
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -100,6 +116,7 @@ Other H5Cluster:
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -126,6 +143,7 @@ Other H5Cluster:
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},

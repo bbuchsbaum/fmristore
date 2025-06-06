@@ -1,3 +1,6 @@
+library(neuroim2)
+library(fmristore)
+
 context("HDF5 read/write functions")
 
 test_that("round trip write/read preserves data integrity", {
