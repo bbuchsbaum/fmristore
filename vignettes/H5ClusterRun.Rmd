@@ -1,5 +1,7 @@
 ---
 title: "Understanding H5ClusterRun and H5ClusterRunSummary"
+author: "fmristore Package"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Understanding H5ClusterRun and H5ClusterRunSummary}

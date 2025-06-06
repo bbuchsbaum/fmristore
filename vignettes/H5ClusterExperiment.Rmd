@@ -1,5 +1,7 @@
 ---
 title: "Working with Clustered fMRI Data: H5ClusterExperiment"
+author: "fmristore Package"
+date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Working with Clustered fMRI Data: H5ClusterExperiment}
