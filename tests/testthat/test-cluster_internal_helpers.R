@@ -38,7 +38,10 @@ test_that(".dataset_path validates inputs and constructs path", {
 # Test internal .get_cluster_timeseries_by_mask_index helper
 
 test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds", {
-  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2,2,1))
+  # Create mask with specific TRUE voxels to match cluster count
+  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2,2,1), 
+                                                      true_voxels = list(c(1L,1L,1L), c(2L,1L,1L), 
+                                                                         c(1L,2L,1L), c(2L,2L,1L)))
   clus_vals <- c(1L,2L,1L,2L)
   clus <- ClusteredNeuroVol(mask, clusters = clus_vals)
   n_time <- 3L
@@ -46,7 +49,10 @@ test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds
   tmp <- tempfile(fileext=".h5")
   h5f <- H5File$new(tmp, mode="w")
   on.exit({h5f$close_all(); unlink(tmp)}, add=TRUE)
-  grp <- h5f$create_group("/scans/runA/clusters")
+  # Create nested group structure
+  scans_grp <- h5f$create_group("scans")
+  runA_grp <- scans_grp$create_group("runA")
+  grp <- runA_grp$create_group("clusters")
   grp[["cluster_1"]] <- matrix(1:6, nrow=2, ncol=3)
   grp[["cluster_2"]] <- matrix(11:16, nrow=2, ncol=3)
 
@@ -60,10 +66,14 @@ test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds
               compress = FALSE)
 
   res <- fmristore:::.get_cluster_timeseries_by_mask_index(run, c(1,3), c(1,3), n_time)
-  expect_equal(res, matrix(c(1,5,3,6), nrow=2, byrow=FALSE))
+  # mask index 1 -> cluster 1, position 1: times 1,3 -> [1,5]
+  # mask index 3 -> cluster 1, position 2: times 1,3 -> [2,6]
+  expect_equal(res, matrix(c(1,2,5,6), nrow=2, ncol=2))
 
   res2 <- fmristore:::.get_cluster_timeseries_by_mask_index(run, c(2,4), NULL, n_time)
-  expect_equal(res2, matrix(c(11:16), nrow=2, byrow=TRUE))
+  # mask index 2 -> cluster 2, position 1: all times -> [11,13,15]
+  # mask index 4 -> cluster 2, position 2: all times -> [12,14,16]
+  expect_equal(res2, matrix(c(11,12,13,14,15,16), nrow=2, ncol=3))
 
   expect_error(fmristore:::.get_cluster_timeseries_by_mask_index(run, 5L, NULL, n_time),
                "out of the valid mask range")
