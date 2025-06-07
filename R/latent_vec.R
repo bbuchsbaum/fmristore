@@ -1801,26 +1801,21 @@ setMethod(
 setMethod(
   f = "series",
   signature = c(x="LatentNeuroVec", i="integer"),
-  definition = function(x, i, ...) {
-    # Extract optional arguments if present
-    dots <- list(...)
-    j <- NULL
-    k <- NULL
-    drop <- TRUE
+  definition = function(x, i, j, k, ..., drop = TRUE) {
+    # Handle missing arguments
+    if (missing(j)) j <- NULL
+    if (missing(k)) k <- NULL
     
-    if ("j" %in% names(dots)) j <- dots$j
-    if ("k" %in% names(dots)) k <- dots$k  
+    # Extract any remaining arguments from dots
+    dots <- list(...)
     if ("drop" %in% names(dots)) drop <- dots$drop
     
-    # Check if j and k were actually provided in the dots
-    has_j <- "j" %in% names(dots) && !is.null(j)
-    has_k <- "k" %in% names(dots) && !is.null(k)
+    # Check if j and k were actually provided
+    has_j <- !is.null(j)
+    has_k <- !is.null(k)
     
     nTime  <- dim(x)[4]
     nels3d <- prod(dim(x)[1:3])
-
-    # Pre-calculate transposed loadings (k x nVox_in_mask)
-    t_loadings <- t(x@loadings)
 
     # CASE A: user gave only i -> interpret as multiple 3D voxel indices
     if (!has_j && !has_k) {
@@ -1892,7 +1887,7 @@ setMethod(
       # Add the single offset value
       out_vec <- out_vec + x@offset[mr]
 
-      if (drop) drop(out_vec) else out_vec
+      if (drop) as.vector(out_vec) else out_vec
     }
   }
 )
