@@ -66,9 +66,10 @@ read_vec <- function(file_name) {
 #' @importFrom assertthat assert_that
 #' @importFrom neuroim2 NeuroSpace
 #' @export
-H5NeuroVec <- function(file_name) {
+H5NeuroVec <- function(file_name, dataset_name = "data") {
   assert_that(is.character(file_name))
   assert_that(file.exists(file_name))
+  assert_that(is.character(dataset_name) && length(dataset_name) == 1)
 
   h5obj <- hdf5r::H5File$new(file_name)
 
@@ -92,8 +93,11 @@ H5NeuroVec <- function(file_name) {
     origin = h5obj[["space/origin"]][],
     trans  = h5obj[["space/trans"]][, ]
   )
+  if (!h5obj$exists(dataset_name)) {
+    stop("Dataset '", dataset_name, "' not found in HDF5 file")
+  }
 
-  new("H5NeuroVec", space = sp, obj = h5obj)
+  new("H5NeuroVec", space = sp, obj = h5obj, dataset_name = dataset_name)
 }
 
 #' Convert DenseNeuroVec to H5NeuroVec
@@ -121,7 +125,7 @@ setMethod(
   definition = function(x, i) {
     assertthat::assert_that(max(i) <= dim(x)[4])
     assertthat::assert_that(min(i) >= 1)
-    x@obj[["data"]][, , , i, drop = FALSE]
+    x@obj[[x@dataset_name]][, , , i, drop = FALSE]
   }
 )
 
@@ -142,7 +146,7 @@ setMethod(
     assertthat::assert_that(ncol(i) == 3)
     assertthat::assert_that(max(i) <= prod(dim(x)[1:3]))
     assertthat::assert_that(min(i) >= 1)
-    x@obj[["data"]][i]
+    x@obj[[x@dataset_name]][i]
   }
 )
 
@@ -163,7 +167,7 @@ setMethod(
         length(i) == 1 && length(j) == 1 && length(k) == 1,
         msg = "Expecting single-voxel indices for i,j,k"
       )
-      ret <- x@obj[["data/elements"]][i, j, k, ]
+      ret <- x@obj[[x@dataset_name]][i, j, k, ]
       if (drop) drop(ret) else ret
     }
   }
@@ -196,7 +200,7 @@ setMethod(
     ir <- lapply(seq_len(ncol(i)), function(j) seq(min(i[, j]), max(i[, j])))
 
     # e.g. sub-block
-    ret <- x@obj[["data/elements"]][
+    ret <- x@obj[[x@dataset_name]][
       ir[[1]][1]:ir[[1]][length(ir[[1]])],
       ir[[2]][1]:ir[[2]][length(ir[[2]])],
       ir[[3]][1]:ir[[3]][length(ir[[3]])], ,
@@ -240,7 +244,7 @@ setMethod(
     maxT <- max(coords[, 4])
 
     # 3) Read sub-block
-    dset <- x@obj[["data/elements"]]
+    dset <- x@obj[[x@dataset_name]]
     sub4d <- dset[minX:maxX, minY:maxY, minZ:maxZ, minT:maxT, drop = FALSE]
 
     # 4) Flatten sub4d
@@ -323,7 +327,7 @@ setMethod(
     minL <- min(l)
     maxL <- max(l)
 
-    dset <- x@obj[["data/elements"]]
+    dset <- x@obj[[x@dataset_name]]
     subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, minL:maxL, drop = FALSE]
 
     i_off <- i - minI + 1
@@ -561,7 +565,7 @@ to_nih5_vec <- function(vec,
   dset[, , , ] <- as.array(vec)
 
   # 13) Return new H5NeuroVec
-  new("H5NeuroVec", space = space(vec), obj = h5obj)
+  new("H5NeuroVec", space = space(vec), obj = h5obj, dataset_name = "data/elements")
 }
 
 #' Display an H5NeuroVec object
@@ -610,7 +614,7 @@ setMethod(
     } else {
       cat("  ", crayon::yellow("File"), " : (CLOSED HDF5 File)\n", sep = "")
     }
-    cat("  ", crayon::yellow("Dataset"), " : /data/elements\n", sep = "")
+    cat("  ", crayon::yellow("Dataset"), " : ", object@dataset_name, "\n", sep = "")
     cat("\n")
   }
 )

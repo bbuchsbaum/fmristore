@@ -160,10 +160,12 @@ setClass("H5NeuroVol",
 #' @rdname H5NeuroVec-class
 setClass("H5NeuroVec",
   slots = c(
-    obj = "H5File"  # underlying HDF5 file handle
+    obj = "H5File",        # underlying HDF5 file handle
+    dataset_name = "character" # path to 4D dataset within the file
   ),
   prototype = list(
-    obj = NULL # Default to NULL
+    obj = NULL,
+    dataset_name = "data" # default dataset path
   ),
   contains = c("NeuroVec", "ArrayLike4D"))
 
@@ -615,6 +617,25 @@ setClass("H5ClusterExperiment",
   }
   # Does not contain H5ClusteredArray
 )
+
+#' H5NeuroVecSeq Class
+#'
+#' @description
+#' Represents a collection of 4D scans stored in a single HDF5 file.
+#' Each scan is accessed lazily via an internal \code{H5NeuroVec}.
+#'
+#' @slot obj An \code{H5File} handle to the underlying HDF5 file.
+#' @slot vecs A list of \code{H5NeuroVec} objects, one per scan.
+#' @export
+setClass("H5NeuroVecSeq",
+  slots = c(
+    obj  = "H5File",
+    vecs = "list"
+  ),
+  prototype = list(
+    obj  = NULL,
+    vecs = list()
+  ))
 
 #' @seealso \code{\link{H5ClusterRun-class}}, \code{\link{H5ClusterRunSummary-class}}
 #' @family H5Cluster
