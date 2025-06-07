@@ -1,0 +1,29 @@
+linters: linters_with_defaults(
+    # Use reasonable defaults but adjust some rules
+    line_length_linter(120),  # Allow longer lines for complex code
+    
+    # Disable some overly strict linters for this scientific package
+    object_name_linter = NULL,      # Allow snake_case which is common in R packages
+    object_usage_linter = NULL,     # Can be too strict with complex metaprogramming
+    cyclocomp_linter = NULL,        # Some functions are inherently complex
+    
+    # Keep important style and quality checks
+    assignment_linter(),
+    commas_linter(),
+    infix_spaces_linter(),
+    pipe_continuation_linter(),
+    quotes_linter(),
+    semicolon_linter(),
+    seq_linter(),
+    spaces_inside_linter(),
+    spaces_left_parentheses_linter(),
+    trailing_blank_lines_linter(),
+    trailing_whitespace_linter(),
+    T_and_F_symbol_linter()
+  )
+
+exclusions: list(
+  "R/zzz_example_helpers.R",     # Helper functions can have different style
+  "deprecated/",                 # Don't lint deprecated code
+  "tests/testthat.R"            # Standard testthat file
+) 

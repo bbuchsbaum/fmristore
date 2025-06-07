@@ -1,0 +1,75 @@
+name: dependencies
+
+on:
+  schedule:
+    - cron: '0 8 * * 1' # Weekly on Monday at 8 AM UTC
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-check:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libhdf5-dev \
+            libssl-dev \
+            libcurl4-openssl-dev \
+            libxml2-dev
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pak, any::sessioninfo
+          needs: check
+
+      - name: Check package dependencies
+        run: |
+          # Get dependency information
+          deps <- pak::pkg_deps(".")
+          print("Package dependencies:")
+          print(deps[, c("ref", "type", "version", "license")])
+          
+          # Check for any packages with restrictive licenses
+          restrictive_licenses <- c("GPL-3", "AGPL-3", "LGPL-3")
+          restrictive_deps <- deps[deps$license %in% restrictive_licenses, ]
+          
+          if (nrow(restrictive_deps) > 0) {
+            cat("⚠️  Found dependencies with restrictive licenses:\n")
+            print(restrictive_deps[, c("ref", "license")])
+          } else {
+            cat("✅ No restrictive license dependencies found\n")
+          }
+          
+          # Session info for reproducibility
+          sessioninfo::session_info()
+        shell: Rscript {0}
+
+      - name: Check for outdated dependencies
+        run: |
+          # Check for packages that could be updated
+          old_packages <- old.packages()
+          if (!is.null(old_packages)) {
+            cat("📦 The following packages have updates available:\n")
+            print(old_packages[, c("Package", "Installed", "ReposVer")])
+          } else {
+            cat("✅ All packages are up to date\n")
+          }
+        shell: Rscript {0} 
