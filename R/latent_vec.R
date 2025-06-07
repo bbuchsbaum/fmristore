@@ -1627,8 +1627,8 @@ setMethod(
     t_loadings <- t(x@loadings)
 
     # treat NULL/zero-length j,k same as missing (generic may supply NULL)
-    j_missing <- missing(j) || is.null(j) || length(j) == 0L
-    k_missing <- missing(k) || is.null(k) || length(k) == 0L
+    j_missing <- missing(j) || is.null(j) || length(j) == 0L || all(is.na(j))
+    k_missing <- missing(k) || is.null(k) || length(k) == 0L || all(is.na(k))
 
     # CASE A: user gave only i -> interpret as multiple 3D voxel indices
     if (j_missing && k_missing) {
@@ -1706,13 +1706,13 @@ setMethod(
     # Cast to integer when supplied. Preserve missing/NULL for j,k
     if (!missing(i)) i <- as.integer(i)
 
-    if (missing(j) || is.null(j) || length(j) == 0L) {
+    if (missing(j) || is.null(j) || length(j) == 0L || all(is.na(j))) {
       j_call <- NULL
     } else {
       j_call <- as.integer(j)
     }
 
-    if (missing(k) || is.null(k) || length(k) == 0L) {
+    if (missing(k) || is.null(k) || length(k) == 0L || all(is.na(k))) {
       k_call <- NULL
     } else {
       k_call <- as.integer(k)
