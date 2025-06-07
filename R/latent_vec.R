@@ -1811,9 +1811,11 @@ setMethod(
     if ("j" %in% names(dots)) j <- dots$j
     if ("k" %in% names(dots)) k <- dots$k  
     if ("drop" %in% names(dots)) drop <- dots$drop
-    # Check if j and k were provided
-    has_j <- !missing(j)
-    has_k <- !missing(k)
+    
+    # Check if j and k were actually provided in the dots
+    has_j <- "j" %in% names(dots) && !is.null(j)
+    has_k <- "k" %in% names(dots) && !is.null(k)
+    
     nTime  <- dim(x)[4]
     nels3d <- prod(dim(x)[1:3])
 
