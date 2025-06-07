@@ -10,6 +10,7 @@
 \alias{[[,LabeledVolumeSet,character-method}
 \alias{[[,LatentNeuroVec,numeric-method}
 \alias{[,LatentNeuroVec,numeric,numeric,ANY-method}
+\alias{[,LatentNeuroVec,ANY,ANY,ANY-method}
 \title{Extract data from H5ClusterRun with missing j parameter}
 \usage{
 \S4method{[}{H5ClusterRun,ANY,missing,ANY}(x, i, j, ..., drop = TRUE)
@@ -24,9 +25,13 @@
 
 \S4method{[[}{LabeledVolumeSet,character}(x, i, j, ...)
 
-\S4method{[[}{LatentNeuroVec,numeric}(x, i)
+\S4method{[[}{LatentNeuroVec,numeric}(x, i, j, ...)
 
 \S4method{[}{LatentNeuroVec,numeric,numeric,ANY}(x, i, j, k, l, ..., drop = TRUE)
+
+\S4method{[}{LatentNeuroVec,ANY,ANY,ANY}(x, i, j, k, l, ..., drop = TRUE)
+
+\S4method{[[}{LatentNeuroVec,numeric}(x, i, j, ...)
 }
 \arguments{
 \item{x}{A \code{\link{LatentNeuroVec-class}} object.}

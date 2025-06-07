@@ -11,6 +11,7 @@
 \alias{series,H5NeuroVec,matrix-method}
 \alias{series,LatentNeuroVec,integer-method}
 \alias{series,LatentNeuroVec,numeric-method}
+\alias{series,LatentNeuroVec,ANY-method}
 \title{Extract Time Series Data}
 \usage{
 series(x, i, ...)
@@ -31,9 +32,11 @@ series(x, i, ...)
 
 \S4method{series}{H5NeuroVec,numeric}(x, i, j, k, drop = TRUE)
 
-\S4method{series}{LatentNeuroVec,integer}(x, i, j, k, drop = TRUE)
+\S4method{series}{LatentNeuroVec,integer}(x, i, ...)
 
-\S4method{series}{LatentNeuroVec,numeric}(x, i, j, k, drop = TRUE)
+\S4method{series}{LatentNeuroVec,numeric}(x, i, ...)
+
+\S4method{series}{LatentNeuroVec,ANY}(x, i, ...)
 }
 \arguments{
 \item{x}{The object from which to extract series data.}

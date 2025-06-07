@@ -1,4 +1,5 @@
 #' @importFrom neuroim2 matricized_access concat axes indices space origin spacing trans
+#' @importFrom Matrix tcrossprod
 NULL
 
 #' Latent Space Representation of Neuroimaging Data
@@ -345,6 +346,18 @@ setMethod(
 
       ## -- 4. pair-wise dot product + offset  --------------------------------
       # Handle potential NA from sparse matrix multiplication
+      # Ensure we have matrices for rowSums - handle Matrix objects properly
+      if (is.vector(b1) || (inherits(b1, "Matrix") && prod(dim(b1)) == length(b1))) {
+        b1 <- as.matrix(b1)
+        if (is.vector(b1)) b1 <- matrix(b1, nrow = 1)
+      }
+      if (is.vector(b2) || (inherits(b2, "Matrix") && prod(dim(b2)) == length(b2))) {
+        b2 <- as.matrix(b2)
+        if (is.vector(b2)) b2 <- matrix(b2, nrow = 1)
+      }
+      # Ensure both are regular matrices for element-wise multiplication
+      if (inherits(b1, "Matrix")) b1 <- as.matrix(b1)
+      if (inherits(b2, "Matrix")) b2 <- as.matrix(b2)
       dot_products <- rowSums(b1 * b2)
       # Replace NA with 0 (happens when all elements in a row are 0)
       dot_products[is.na(dot_products)] <- 0
@@ -363,10 +376,14 @@ setMethod(
 #' @keywords internal
 #' @noRd
 #' @importFrom neuroim2 matricized_access
+#' @importFrom Matrix tcrossprod
 setMethod(
   f = "matricized_access",
   signature = signature(x="LatentNeuroVec", i="integer"),
   definition = function(x, i) {
+    # Import functions needed
+    tcrossprod <- Matrix::tcrossprod
+    
     # Ensure component dimensions match
     stopifnot("[matricized_access,LatentNeuroVec,integer] Number of components mismatch." = 
               ncol(x@basis) == ncol(x@loadings))
@@ -376,7 +393,13 @@ setMethod(
     }
     b1 <- x@basis
     b2 <- x@loadings[as.integer(i),, drop=FALSE] # Use as.integer explicitly
-    out <- tcrossprod(b1, b2)
+    
+    # Convert to regular matrices to avoid dispatch issues
+    if (inherits(b1, "Matrix")) b1 <- as.matrix(b1)
+    if (inherits(b2, "Matrix")) b2 <- as.matrix(b2)
+    
+    # Use regular tcrossprod
+    out <- b1 %*% t(b2)
     # Add offsets
     if (length(x@offset) > 0) {
       as.matrix(sweep(out, 2, x@offset[as.integer(i)], "+"))
@@ -560,7 +583,11 @@ setMethod("[[", signature(x="LatentNeuroVec", i="numeric"),
             # We want (1 x p).
             # Calculate using tcrossprod(B, L) for B %*% t(L)
             # tcrossprod(x@basis[i,,drop=FALSE], x@loadings) => (1 x k) %*% (k x p) => (1 x p)
-            dat <- as.numeric(tcrossprod(x@basis[i,,drop=FALSE], x@loadings))
+            # Ensure both are Matrix objects for tcrossprod
+            b1 <- x@basis[i,,drop=FALSE]
+            b2 <- x@loadings
+            # Matrix objects already - no need to convert
+            dat <- as.numeric(b1 %*% t(b2))
             dat <- dat + x@offset  # length p
 
             # Now place them in a SparseNeuroVol with the known mask
@@ -642,7 +669,11 @@ setMethod(
     #    => result_valid (length(l) x length(valid_mask_indices))
     basis_subset <- x@basis[l, , drop = FALSE]
     # Use tcrossprod, subsetting loadings directly
-    result_valid <- tcrossprod(basis_subset, x@loadings[valid_mask_indices, , drop = FALSE])
+    # Ensure both are Matrix objects for tcrossprod
+    b1 <- basis_subset
+    b2 <- x@loadings[valid_mask_indices, , drop = FALSE]
+    # Matrix objects already - no need to convert
+    result_valid <- b1 %*% t(b2)
 
     # 5. Add offset (only for the valid mask indices)
     #    Use sweep along the columns (MARGIN=2) of result_valid
@@ -1037,7 +1068,7 @@ to_h5_latentvec <- function(vec, file_name=NULL, data_type="FLOAT",
     hdf5r::h5attr(sparse_grp, "storage") <- "csc"
     hdf5r::h5attr(sparse_grp, "shape") <- dim(t_loadings)
     if (!inherits(t_loadings, "dgCMatrix"))
-      t_loadings <- as(t_loadings, "CsparseMatrix")
+      t_loadings <- methods::as(t_loadings, "CsparseMatrix")
     nnz <- length(t_loadings@x)
     target_min_chunk <- 128 * 1024
     element_size <- h5dtype$get_size()
@@ -1641,12 +1672,148 @@ validate_latent_file <- function(file_path) {
 }
 
 
+#' Extract method for LatentNeuroVec
+#' @rdname extract-methods
+#' @importFrom neuroim2 lookup
 #' @export
-#' @rdname series-methods
+setMethod(
+  f = "[",
+  signature = signature(x="LatentNeuroVec", i="ANY", j="ANY", drop="ANY"),
+  definition = function(x, i, j, k, l, ..., drop=TRUE) {
+    # Get dimensions
+    dims <- dim(x)
+    
+    # Handle missing indices
+    if (missing(i)) i <- seq_len(dims[1])
+    if (missing(j)) j <- seq_len(dims[2])
+    if (missing(k)) k <- seq_len(dims[3])
+    if (missing(l)) l <- seq_len(dims[4])
+    
+    # Convert to integer
+    i <- as.integer(i)
+    j <- as.integer(j)
+    k <- as.integer(k)
+    l <- as.integer(l)
+    
+    # Calculate output dimensions
+    out_dims <- c(length(i), length(j), length(k), length(l))
+    result <- array(0, dim = out_dims)
+    
+    # Calculate the linear indices for the 3D spatial locations
+    spatial_indices <- array(0, dim = out_dims[1:3])
+    idx <- 1
+    for (kk in seq_along(k)) {
+      for (jj in seq_along(j)) {
+        for (ii in seq_along(i)) {
+          # Calculate linear index in original 3D space
+          lin_idx <- i[ii] + (j[jj] - 1) * dims[1] + (k[kk] - 1) * dims[1] * dims[2]
+          spatial_indices[ii, jj, kk] <- lin_idx
+        }
+      }
+    }
+    
+    # Map spatial indices to mask indices
+    spatial_vec <- as.vector(spatial_indices)
+    mask_indices <- lookup(x@map, spatial_vec)
+    
+    # Get unique valid mask indices
+    valid_mask_idx <- unique(mask_indices[mask_indices > 0])
+    
+    if (length(valid_mask_idx) > 0) {
+      # Extract the subset of basis and loadings we need
+      basis_sub <- x@basis[l, , drop = FALSE]  # [n_time_sub, k]
+      loadings_sub <- x@loadings[valid_mask_idx, , drop = FALSE]  # [n_valid_vox, k]
+      
+      # Calculate values: basis_sub %*% t(loadings_sub)
+      # Result is [n_time_sub, n_valid_vox]
+      values <- basis_sub %*% t(loadings_sub)
+      
+      # Add offset
+      if (length(x@offset) > 0) {
+        values <- sweep(values, 2, x@offset[valid_mask_idx], "+")
+      }
+      
+      # Now map these values back to the output array
+      for (t_idx in seq_along(l)) {
+        slice_3d <- array(0, dim = out_dims[1:3])
+        # Map values back using mask_indices
+        for (v_idx in seq_along(valid_mask_idx)) {
+          # Find which spatial positions map to this mask index
+          positions <- which(mask_indices == valid_mask_idx[v_idx])
+          if (length(positions) > 0) {
+            slice_3d[positions] <- values[t_idx, v_idx]
+          }
+        }
+        result[,,,t_idx] <- slice_3d
+      }
+    }
+    
+    if (drop) {
+      result <- drop(result)
+    }
+    
+    result
+  }
+)
+
+#' Double bracket extract method for LatentNeuroVec
+#' @rdname extract-methods
+#' @importFrom neuroim2 NeuroSpace SparseNeuroVol spacing origin trans
+#' @export
+setMethod(
+  f = "[[",
+  signature = signature(x="LatentNeuroVec", i="numeric"),
+  definition = function(x, i, ...) {
+    if (length(i) != 1) {
+      stop("[[ can only extract a single time point")
+    }
+    
+    # Get the full 4D array for just this time point
+    result <- x[, , , i, drop = FALSE]
+    
+    # Create a SparseNeuroVol from the 3D result
+    dims_3d <- dim(x)[1:3]
+    space_3d <- NeuroSpace(dim = dims_3d, 
+                           spacing = spacing(space(x))[1:3],
+                           origin = origin(space(x))[1:3],
+                           trans = trans(space(x)))
+    
+    # Find non-zero voxels
+    vol_3d <- drop(result)
+    non_zero_idx <- which(vol_3d != 0)
+    
+    if (length(non_zero_idx) > 0) {
+      SparseNeuroVol(data = vol_3d[non_zero_idx],
+                     space = space_3d,
+                     indices = non_zero_idx)
+    } else {
+      # Return empty SparseNeuroVol
+      SparseNeuroVol(data = numeric(0),
+                     space = space_3d,
+                     indices = integer(0))
+    }
+  }
+)
+
+#' @export
+#' @rdname series-methods  
+#' @importFrom neuroim2 series lookup
 setMethod(
   f = "series",
-  signature = signature(x="LatentNeuroVec", i="integer"),
-  definition = function(x, i, j, k, drop=TRUE) {
+  signature = c(x="LatentNeuroVec", i="integer"),
+  definition = function(x, i, ...) {
+    # Extract optional arguments if present
+    dots <- list(...)
+    j <- NULL
+    k <- NULL
+    drop <- TRUE
+    
+    if ("j" %in% names(dots)) j <- dots$j
+    if ("k" %in% names(dots)) k <- dots$k  
+    if ("drop" %in% names(dots)) drop <- dots$drop
+    # Check if j and k were provided
+    has_j <- !missing(j)
+    has_k <- !missing(k)
     nTime  <- dim(x)[4]
     nels3d <- prod(dim(x)[1:3])
 
@@ -1654,7 +1821,7 @@ setMethod(
     t_loadings <- t(x@loadings)
 
     # CASE A: user gave only i -> interpret as multiple 3D voxel indices
-    if (missing(j) && missing(k)) {
+    if (!has_j && !has_k) {
       if (any(i < 1 | i > nels3d)) {
         stop("Some voxel index in 'i' is out of range [1..(X*Y*Z)].")
       }
@@ -1676,7 +1843,11 @@ setMethod(
       }
 
       # Use tcrossprod: basis (nTime x k) %*% loadings[valid_mask_indices, k]^T => (nTime x length(valid_mask_indices))
-      valid_vox_series <- tcrossprod(x@basis, x@loadings[valid_mask_indices, , drop = FALSE])
+      # Ensure both are Matrix objects for tcrossprod
+      b1 <- x@basis
+      b2 <- x@loadings[valid_mask_indices, , drop = FALSE]
+      # Already using matrix multiplication, no need to convert
+      valid_vox_series <- b1 %*% t(b2)
 
       # Add offset (only for the valid mask indices)
       # Need to transpose offset subset to broadcast correctly with sweep
@@ -1711,7 +1882,11 @@ setMethod(
       }
 
       # Use tcrossprod: basis (nTime x k) %*% loadings[mr, k]^T => (nTime x 1)
-      out_vec <- tcrossprod(x@basis, x@loadings[mr, , drop = FALSE])
+      # Ensure both are Matrix objects for tcrossprod
+      b1 <- x@basis
+      b2 <- x@loadings[mr, , drop = FALSE]
+      # Matrix objects already - no need to convert
+      out_vec <- b1 %*% t(b2)
       # Add the single offset value
       out_vec <- out_vec + x@offset[mr]
 
@@ -1725,12 +1900,48 @@ setMethod(
 setMethod(
   f = "series",
   signature = signature(x="LatentNeuroVec", i="numeric"),
-  definition = function(x, i, j, k, drop=TRUE) {
-    # Cast i,j,k to integer if provided
-    if (!missing(i)) i <- as.integer(i)
-    if (!missing(j)) j <- as.integer(j)
-    if (!missing(k)) k <- as.integer(k)
-    callGeneric(x, i=i, j=j, k=k, drop=drop)
+  definition = function(x, i, j, k, ..., drop=TRUE) {
+    # Cast to integer and call the integer method directly
+    i <- as.integer(i)
+    if (!missing(j)) {
+      j <- as.integer(j)
+      if (!missing(k)) {
+        k <- as.integer(k)
+        series(x, i, j, k, ..., drop=drop)
+      } else {
+        series(x, i, j, ..., drop=drop)
+      }
+    } else {
+      series(x, i, ..., drop=drop)
+    }
+  }
+)
+
+#' @export
+#' @rdname series-methods
+setMethod(
+  f = "series",
+  signature = signature(x="LatentNeuroVec"),
+  definition = function(x, i, j, k, ..., drop=TRUE) {
+    # Default method - handle when i is missing or of unknown type
+    if (missing(i)) {
+      stop("series requires at least one index argument 'i'")
+    }
+    # Convert all to integer if numeric
+    if (is.numeric(i)) i <- as.integer(i)
+    
+    # Call the appropriate method based on what arguments are provided
+    if (!missing(j)) {
+      j <- as.integer(j)
+      if (!missing(k)) {
+        k <- as.integer(k)
+        series(x, i, j, k, ..., drop=drop)
+      } else {
+        series(x, i, j, ..., drop=drop)
+      }
+    } else {
+      series(x, i, ..., drop=drop)
+    }
   }
 )
 
@@ -2155,7 +2366,11 @@ setMethod(
       
       # Calculate time point using matrix multiplication: basis_t %*% t(loadings)
       # tcrossprod is more efficient for this operation
-      values_in_mask <- as.vector(tcrossprod(basis_t, x@loadings)) + x@offset
+      # Ensure both are Matrix objects for tcrossprod
+      b1 <- basis_t
+      b2 <- x@loadings
+      # Matrix objects already - no need to convert
+      values_in_mask <- as.vector(b1 %*% t(b2)) + x@offset
       
       # Map these values back to 3D space using the mask 
       # Initialize a 3D array for this time point
