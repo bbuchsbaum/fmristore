@@ -1,0 +1,56 @@
+repos:
+  - repo: https://github.com/lorenzwalthert/precommit
+    rev: v0.4.2
+    hooks:
+      - id: style-files
+        args: [--style_pkg=styler, --style_fun=tidyverse_style]
+        exclude: |
+          (?x)^(
+          \.Rprofile|
+          renv\.lock|
+          renv/settings\.dcf|
+          deprecated/.*|
+          \.lintr
+          )$
+      - id: roxygenize
+        additional_dependencies:
+          - any::neuroim2
+          - any::hdf5r
+          - any::Matrix
+          - any::digest
+      - id: use-tidy-description
+      - id: spell-check
+        exclude: >
+          (?x)^(
+          \.github/.*|
+          data/.*|
+          (.*/|)\.Rprofile|
+          (.*/|)\.Renviron|
+          (.*/|)\.gitignore|
+          (.*/|)NAMESPACE|
+          (.*/|)WORDLIST|
+          (.*/|)\.travis\.yml|
+          (.*/|)appveyor\.yml|
+          (.*/|)\.Rbuildignore|
+          (.*/|)\.pre-commit-.*|
+          .*\.[rR]md|
+          .*\.[rR]nw|
+          .*\.Rproj|
+          .*\.png|
+          .*\.pdf|
+          .*\.RData|
+          .*\.rds|
+          .*\.Rds|
+          .*\.h5|
+          deprecated/.*
+          )$
+      - id: lintr
+        exclude: |
+          (?x)^(
+          deprecated/.*|
+          \.lintr
+          )$
+      - id: readme-rmd-rendered
+      - id: parsable-R
+      - id: no-browser-statement
+      - id: deps-in-desc 

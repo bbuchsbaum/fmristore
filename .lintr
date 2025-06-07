@@ -1,27 +1,26 @@
-linters: linters_with_defaults(
-    # Use reasonable defaults but adjust some rules
-    line_length_linter(120),  # Allow longer lines for complex code
+linters: linters_with_tags(
+    tags = c("style", "correctness", "efficiency"),
+    # Tidyverse-specific configuration
+    line_length_linter(120),  # Allow longer lines for complex scientific code
     
-    # Disable some overly strict linters for this scientific package
-    object_name_linter = NULL,      # Allow snake_case which is common in R packages
-    object_usage_linter = NULL,     # Can be too strict with complex metaprogramming
-    cyclocomp_linter = NULL,        # Some functions are inherently complex
+    # Enforce tidyverse naming conventions
+    object_name_linter(styles = c("snake_case", "symbols")),
     
-    # Keep important style and quality checks
-    assignment_linter(),
-    commas_linter(),
-    infix_spaces_linter(),
-    pipe_continuation_linter(),
-    quotes_linter(),
-    semicolon_linter(),
-    seq_linter(),
-    spaces_inside_linter(),
-    spaces_left_parentheses_linter(),
-    trailing_blank_lines_linter(),
-    trailing_whitespace_linter(),
-    T_and_F_symbol_linter()
+    # Keep some flexibility for scientific packages
+    cyclocomp_linter(complexity_limit = 20),  # Allow more complex functions
+    object_usage_linter = NULL,               # Can be too strict with metaprogramming
+    
+    # Additional tidyverse style enforcement
+    brace_linter(),
+    keyword_quote_linter(),
+    function_left_parentheses_linter(),
+    paren_body_linter(),
+    pipe_call_linter(),
+    string_boundary_linter(),
+    todo_comment_linter(),
+    undesirable_function_linter(),
+    undesirable_operator_linter()
   )
-
 exclusions: list(
   "R/zzz_example_helpers.R",     # Helper functions can have different style
   "deprecated/",                 # Don't lint deprecated code
