@@ -1,12 +1,12 @@
 # fmristore
 
 <!-- badges: start -->
-[![R-CMD-check](https://github.com/USER/fmristore/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/USER/fmristore/actions/workflows/R-CMD-check.yaml)
-[![Codecov test coverage](https://codecov.io/gh/USER/fmristore/branch/main/graph/badge.svg)](https://codecov.io/gh/USER/fmristore?branch=main)
-[![Code Style](https://github.com/USER/fmristore/actions/workflows/style.yaml/badge.svg)](https://github.com/USER/fmristore/actions/workflows/style.yaml)
-[![Lint](https://github.com/USER/fmristore/actions/workflows/lint.yaml/badge.svg)](https://github.com/USER/fmristore/actions/workflows/lint.yaml)
-[![Dependencies](https://github.com/USER/fmristore/actions/workflows/dependencies.yaml/badge.svg)](https://github.com/USER/fmristore/actions/workflows/dependencies.yaml)
-[![pkgcheck](https://github.com/USER/fmristore/actions/workflows/pkgcheck.yaml/badge.svg)](https://github.com/USER/fmristore/actions/workflows/pkgcheck.yaml)
+[![R-CMD-check](https://github.com/bbuchsbaum/fmristore/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/R-CMD-check.yaml)
+[![Codecov test coverage](https://codecov.io/gh/bbuchsbaum/fmristore/branch/main/graph/badge.svg)](https://codecov.io/gh/bbuchsbaum/fmristore?branch=main)
+[![Code Style](https://github.com/bbuchsbaum/fmristore/actions/workflows/style.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/style.yaml)
+[![Lint](https://github.com/bbuchsbaum/fmristore/actions/workflows/lint.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/lint.yaml)
+[![Dependencies](https://github.com/bbuchsbaum/fmristore/actions/workflows/dependencies.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/dependencies.yaml)
+[![pkgcheck](https://github.com/bbuchsbaum/fmristore/actions/workflows/pkgcheck.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/pkgcheck.yaml)
 <!-- badges: end -->
 
 > **Note**: Replace `USER` with your actual GitHub username in the badge URLs above.
@@ -28,7 +28,7 @@ An R package for efficient storage and retrieval of neuroimaging data using HDF5
 ```r
 # Install development version from GitHub
 # install.packages("devtools")
-devtools::install_github("USER/fmristore")
+devtools::install_github("bbuchsbaum/fmristore")
 ```
 
 ### Dependencies
@@ -158,5 +158,5 @@ citation("fmristore")
 
 ## Getting Help
 
-- [Issue tracker](https://github.com/USER/fmristore/issues) for bug reports and feature requests
-- [Discussions](https://github.com/USER/fmristore/discussions) for questions and community support 
+- [Issue tracker](https://github.com/bbuchsbaum/fmristore/issues) for bug reports and feature requests
+- [Discussions](https://github.com/bbuchsbaum/fmristore/discussions) for questions and community support 
