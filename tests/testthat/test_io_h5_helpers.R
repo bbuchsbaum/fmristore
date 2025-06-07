@@ -12,13 +12,15 @@ test_that("read_h5_mask_to_LogicalNeuroVol reads and validates masks", {
   tmp <- tempfile(fileext=".h5")
   on.exit(unlink(tmp), add=TRUE)
   h5 <- H5File$new(tmp, mode="w")
-  h5$create_dataset("mask", robj=as.integer(mask_arr))
+  # Preserve dimensions by explicitly creating array with correct dims
+  mask_int <- array(as.integer(mask_arr), dim=dim(mask_arr))
+  h5$create_dataset("mask", robj=mask_int)
   h5$create_dataset("mask_bad", robj=array(0L, dim=c(2,2,3)))
   h5$create_dataset("mask_2d", robj=array(0L, dim=c(2,2)))
 
   m <- read_h5_mask_to_LogicalNeuroVol(h5, "mask", sp)
   expect_s4_class(m, "LogicalNeuroVol")
-  expect_equal(as.logical(as.array(m)), as.logical(mask_arr))
+  expect_equal(as.logical(as.array(m@.Data)), as.logical(mask_arr))
 
   expect_error(read_h5_mask_to_LogicalNeuroVol(h5, "mask_bad", sp),
                "Mask dimensions in HDF5")
