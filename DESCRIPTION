@@ -49,6 +49,7 @@ Collate:
     'globals.R'
     'h5_utils.R'
     'h5neurovec.R'
+    'h5neurovecseq.R'
     'h5neurovol.R'
     'io_h5_generic.R'
     'io_h5_helpers.R'
