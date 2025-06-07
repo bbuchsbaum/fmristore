@@ -41,17 +41,40 @@ summary cluster time-series data from an HDF5 file.
 It performs validation, checks for the existence of the summary dataset,
 and determines `n_time` from the dataset dimensions.
 }
+\examples{
+\dontrun{
+# Note: This function is deprecated in favor of H5ClusterRunSummary()
+
+# Create temporary HDF5 file
+temp_file <- tempfile(fileext = ".h5")
+exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+
+# Create mask
+mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+
+# Create summary run object (deprecated - will show deprecation warning)
+suppressWarnings({
+  run_summary <- make_run_summary(exp_file, scan_name = "Run2_Summary", mask = mask)
+})
+
+# Clean up - note: make_run_summary returns an object that doesn't own the file handle
+unlink(temp_file)
+}
+
+}
 \seealso{
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterExperiment-class}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -63,8 +86,8 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()},
 \code{\link{show,H5ClusterRun-method}}
 }
-\concept{H5Clustered}
+\concept{H5Cluster}

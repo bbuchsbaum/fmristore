@@ -50,5 +50,5 @@ close(lvs)
 \seealso{
 \code{\link{write_labeled_vec}} for the (deprecated) writing function,
 \code{\link{LabeledVolumeSet-class}} for details on the object structure,
-\code{\link{close.LabeledVolumeSet}} for closing the file handle.
+\code{\link{close}} for closing the file handle.
 }

@@ -43,5 +43,5 @@ close(h5vec)
 }
 }
 \seealso{
-\code{\link{close.H5NeuroVec}} for closing the file handle, \code{\link[neuroim2]{NeuroVec-class}}
+\code{\link{close}} for closing the file handle, \code{\link[neuroim2]{NeuroVec-class}}
 }

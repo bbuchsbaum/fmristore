@@ -6,7 +6,7 @@
 #'   \item \code{/header/dim} => \code{[4, X, Y, Z, nVols, 1,1,1]}
 #'   \item \code{/header/pixdim} => \code{[0.0, dx, dy, dz, ...]} (Note: qfac stored in /header/qfac)
 #'   \item \code{/header/quatern_b,c,d} and \code{qoffset_x,y,z}
-#'   \item \code{/header/qfac} => Quaternion factor (±1)
+#'   \item \code{/header/qfac} => Quaternion factor (+/-1)
 #'   \item \code{/mask} => 3D dataset \code{[X, Y, Z]} (0/1) at root level
 #'   \item \code{/labels} => array of label strings at root level
 #'   \item \code{/data/<label>} => 1D array (length = number of nonzero mask voxels)
@@ -14,11 +14,11 @@
 #' }
 #'
 #' @details
-#' The 4×4 matrix in \code{trans(space(vec))} is passed to
+#' The 4x4 matrix in \code{trans(space(vec))} is passed to
 #' \code{\link[neuroim2]{matrixToQuatern}}, which returns a list containing:
 #' \itemize{
 #'   \item \code{quaternion = c(b, c, d)} (the three imaginary parts)
-#'   \item \code{qfac} (±1 sign)
+#'   \item \code{qfac} (+/-1 sign)
 #' }
 #' This function stores \code{qfac} in \code{/header/qfac} and sets \code{/header/pixdim[0]=0}.
 #' We also gather voxel spacing (dx,dy,dz) from \code{spacing(space(vec))} and
@@ -56,10 +56,38 @@
 #'
 #' @seealso
 #' \code{\link[neuroim2]{matrixToQuatern}} for how the quaternion is derived,
-#' \code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4×4,
+#' \code{\link[neuroim2]{quaternToMatrix}} for reconstructing the 4x4,
 #' \code{\link{read_labeled_vec}} for reading the file back in.
 #'
-#' @importFrom neuroim2 spacing space origin trans matrixToQuatern
+#' @examples
+#' \dontrun{
+#' # Create a simple labeled neuroimaging dataset
+#' vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(4, 4, 3, 5))
+#' 
+#' # Create mask with same spatial dimensions
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(4, 4, 3))
+#' 
+#' # Define labels for each volume
+#' labels <- c("condition_A", "condition_B", "condition_C", "condition_D", "condition_E")
+#' 
+#' # Write to temporary HDF5 file
+#' temp_file <- tempfile(fileext = ".h5")
+#' h5_handle <- write_labeled_vec(vec, mask, labels, file = temp_file)
+#' 
+#' # Close the file handle returned by write_labeled_vec
+#' h5_handle$close_all()
+#' 
+#' # Read it back
+#' labeled_data <- read_labeled_vec(temp_file)
+#' print(labeled_data@labels)
+#' 
+#' # Clean up
+#' close(labeled_data)
+#' unlink(temp_file)
+#' }
+#' 
+#' @importFrom hdf5r H5File h5file is.h5file
+#' @importFrom neuroim2 spacing space origin trans matrixToQuatern DenseNeuroVol
 #' @importFrom hdf5r H5T_STRING H5S
 #' @importFrom lifecycle deprecate_warn
 #' @export
@@ -121,13 +149,13 @@ write_labeled_vec <- function(vec,
   # Get dimensions (already validated above)
   X <- nd[1]; Y <- nd[2]; Z <- nd[3]
 
-  # Extract 4×4 transformation matrix from NeuroSpace
-  tmat <- trans(space(vec))          # e.g. a 4×4
+  # Extract 4x4 transformation matrix from NeuroSpace
+  tmat <- trans(space(vec))          # e.g. a 4x4
   # Convert to quaternion + qfac - Harden error message
   q <- tryCatch(
       matrixToQuatern(tmat),
       error = function(e) {
-          stop("Invalid NeuroSpace in 'vec' – cannot convert transformation matrix to quaternion: ", e$message)
+          stop("Invalid NeuroSpace in 'vec' - cannot convert transformation matrix to quaternion: ", e$message)
       }
   )
 
@@ -291,10 +319,6 @@ write_labeled_vec <- function(vec,
 #' object is no longer needed to release system resources. This can be done by calling
 #' \code{close(your_labeled_volume_set_object)}.
 #'
-#' A finalizer is registered on the HDF5 handle as a backup so the handle will
-#' be closed if the object is garbage collected. Explicitly calling
-#' \code{close()} remains best practice.
-#'
 #' Failure to close the handle may lead to issues such as reaching file handle
 #' limits or problems with subsequent access to the file.
 #'
@@ -304,7 +328,7 @@ write_labeled_vec <- function(vec,
 #' @seealso
 #' \code{\link{write_labeled_vec}} for the (deprecated) writing function,
 #' \code{\link{LabeledVolumeSet-class}} for details on the object structure,
-#' \code{\link{close.LabeledVolumeSet}} for closing the file handle.
+#' \code{\link{close}} for closing the file handle.
 #'
 #' @examples
 #' \dontrun{
@@ -316,23 +340,21 @@ write_labeled_vec <- function(vec,
 #' # Important: Close the handle when done
 #' close(lvs)
 #' }
+#' @importFrom hdf5r H5File h5file is.h5file
 #' @export
 read_labeled_vec <- function(file_path) {
   # --- 1. Handle File Source ---
   # Call simplified open_h5 (no auto_close)
-  fh <- open_h5(file_path, mode = "r")
+  fh <- open_h5(file_path, mode = "r") 
   h5obj <- fh$h5
+  # CRITICAL: Remove on.exit/defer call for h5obj. 
+  # Closing is now the responsibility of the user via the close() method 
+  # if fh$owns is TRUE.
+  # Example removed call: 
+  # if (fh$owns) on.exit(safe_h5_close(h5obj), add = TRUE)
 
-
-
-  # If we opened the file from a path, register a closing handler
-  # in case an error occurs before the LabeledVolumeSet object is
-  # successfully returned. The handler is cleared on success.
-  if (fh$owns) {
-    on.exit(safe_h5_close(h5obj), add = TRUE)
-  }
-
-
+  hdr_grp <- NULL # Initialize for finally block
+  hdr_values <- list()
 
   # Helper to read dataset from header group if present
   .rd_hdr <- function(nm) {
@@ -374,9 +396,17 @@ read_labeled_vec <- function(file_path) {
 
   # read /mask => 3D from root level
   mask_arr <- h5_read(h5obj, "/mask", missing_ok = FALSE)
-  # Ensure mask_arr is 3D
-  if (length(dim(mask_arr)) != 3) {
-      stop("Read /mask dataset is not 3-dimensional.")
+  
+  # Check if dimensions were dropped (hdf5r might drop singleton dimensions)
+  mask_dims <- dim(mask_arr)
+  if (is.null(mask_dims)) {
+      # If dim is NULL, it's a vector - reshape to expected 3D
+      mask_arr <- array(mask_arr, dim = c(X, Y, Z))
+  } else if (length(mask_dims) == 2 && Z == 1) {
+      # If 2D and Z should be 1, add the third dimension
+      mask_arr <- array(mask_arr, dim = c(mask_dims, 1))
+  } else if (length(mask_dims) != 3) {
+      stop("Read /mask dataset has unexpected dimensions: ", paste(mask_dims, collapse = "x"))
   }
   if (!all(dim(mask_arr) == c(X,Y,Z))) {
       stop("Dimensions of /mask [", paste(dim(mask_arr), collapse=","),
@@ -513,10 +543,6 @@ read_labeled_vec <- function(file_path) {
   # If file was opened internally, the defer handler takes care of closing.
   # If user provided handle, they manage its lifecycle.
 
-  if (fh$owns) {
-    on.exit(NULL, add = FALSE)  # clear handler on success
-  }
-
   return(lvol)
 }
 
@@ -644,6 +670,7 @@ setMethod(
 )
 
 #' @export
+#' @rdname extract-methods
 setMethod(
   f = "[[",
   signature = signature(x="LabeledVolumeSet", i="numeric"),
@@ -675,6 +702,7 @@ setMethod(
 # The next method is the one for character indexing `[[`, which should remain.
 
 #' @export
+#' @rdname names-methods
 setMethod(
   f = "names",
   signature = signature(x = "LabeledVolumeSet"),
@@ -689,7 +717,7 @@ setMethod(
 #' number of volumes, label previews, spacing, origin, orientation (if known),
 #' and storage paths.
 #'
-#' @param object A \code{\link{LabeledVolumeSet}} instance
+#' @param object A \code{\link{LabeledVolumeSet-class}} instance
 #' @importFrom crayon bold blue silver yellow green italic
 #' @importFrom methods show
 #' @export
@@ -720,27 +748,27 @@ setMethod(
     nd3  <- dim(sp)
     nvol <- length(object@labels)
 
-    cat(crayon::bold("\n╔═ Volume Info "), crayon::silver("───────────────────────────"), "\n", sep="")
-    cat("║ ", crayon::yellow("3D Dimensions"), " : ", paste(nd3, collapse=" × "), "\n", sep="")
-    cat("║ ", crayon::yellow("Total Volumes"), " : ", nvol, "\n", sep="")
+    cat(crayon::bold("\n+= Volume Info "), crayon::silver("---------------------------"), "\n", sep="")
+    cat("| ", crayon::yellow("3D Dimensions"), " : ", paste(nd3, collapse=" x "), "\n", sep="")
+    cat("| ", crayon::yellow("Total Volumes"), " : ", nvol, "\n", sep="")
 
     lbl_preview <- object@labels[1:min(3, nvol)]
-    cat("║ ", crayon::yellow("Labels"), "        : ",
+    cat("| ", crayon::yellow("Labels"), "        : ",
         paste(lbl_preview, collapse=", "),
         if (nvol > 3) crayon::silver(paste0(" ... (", nvol - 3, " more)")), "\n", sep="")
 
-    cat(crayon::bold("\n╠═ Spatial Info "), crayon::silver("───────────────────────────"), "\n", sep="")
-    cat("║ ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" × "), "\n", sep="")
-    cat("║ ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse=" × "), "\n", sep="")
+    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep="")
+    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" x "), "\n", sep="")
+    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse=" x "), "\n", sep="")
 
-    if (sp@axes@ndim >= 3) {
-      cat("║ ", crayon::yellow("Orientation"), "   : ",
+    if (length(sp@axes@ndim) == 1 && sp@axes@ndim >= 3) {
+      cat("| ", crayon::yellow("Orientation"), "   : ",
           paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
     } else {
-      cat("║ ", crayon::yellow("Orientation"), "   : Unknown / Not specified\n")
+      cat("| ", crayon::yellow("Orientation"), "   : Unknown / Not specified\n")
     }
 
-    cat(crayon::bold("\n╚═ Storage Info "), crayon::silver("──────────────────────────"), "\n", sep="")
+    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep="")
     cat("  ", crayon::yellow("HDF5 File"), "    : ", file_status, "\n", sep="")
     cat("  ", crayon::yellow("Data Path"), "    : /data/<label>\n", sep="")
     cat("  ", crayon::yellow("Mask Path"), "    : /mask\n", sep="")
@@ -754,6 +782,7 @@ setMethod(
 
 # Define the method for character index `i`
 #' @export
+#' @rdname extract-methods
 setMethod(
   f = "[[",
   signature = signature(x = "LabeledVolumeSet", i = "character"),

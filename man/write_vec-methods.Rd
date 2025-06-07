@@ -7,15 +7,13 @@
 \S4method{write_vec}{LatentNeuroVec,character,missing,missing}(x, file_name, compression = 9, nbit = FALSE)
 }
 \arguments{
-\item{x}{A \code{\link[neuroim2]{LatentNeuroVec-class}} to write.}
+\item{x}{A \code{LatentNeuroVec} to write.}
 
 \item{file_name}{\code{character} file path to the output HDF5.}
 
 \item{compression}{\code{integer} in [1..9] specifying compression level (default: 9).}
 
 \item{nbit}{\code{logical}; if TRUE, uses N-bit compression (default: FALSE).}
-
-\item{chunk_dim}{Optional numeric vector specifying chunk dimensions.}
 }
 \value{
 Invisible \code{NULL}, called for side effects (writes to disk).
@@ -35,6 +33,7 @@ This function saves:
 all inside an HDF5 file for future loading.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     requireNamespace("Matrix", quietly = TRUE) && 
@@ -71,6 +70,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       unlink(temp_h5_file)
     }
   })
+}
 }
 
 }

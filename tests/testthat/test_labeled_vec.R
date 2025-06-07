@@ -3,6 +3,7 @@
 library(testthat)
 library(hdf5r)
 library(neuroim2)
+library(fmristore)
 
 # -------------------------------------------------------------------------
 # helper: build a tiny 4-D NeuroVec + mask for round-trip tests

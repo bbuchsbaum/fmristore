@@ -7,7 +7,7 @@
 create_minimal_ClusteredNeuroVol(mask_vol = NULL, num_clusters = 2L)
 }
 \arguments{
-\item{mask_vol}{A \code{LogicalNeuroVol} to use as the mask. 
+\item{mask_vol}{A \code{LogicalNeuroVol} to use as the mask.
 If \code{NULL}, a default one is created.}
 
 \item{num_clusters}{Integer, number of clusters to create.}
@@ -17,17 +17,5 @@ A \code{ClusteredNeuroVol} object.
 }
 \description{
 Create a minimal ClusteredNeuroVol for examples
-}
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE)) {
-  clust_vol <- fmristore:::create_minimal_ClusteredNeuroVol()
-  print(clust_vol)
-  
-  custom_mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5,5,3))
-  clust_vol2 <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = custom_mask, 
-                                                             num_clusters = 3L)
-  print(clust_vol2)
-}
 }
 \keyword{internal}

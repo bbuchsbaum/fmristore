@@ -10,7 +10,6 @@ populate_H5ClusterRunSummary_in_h5file(
   mask_vol,
   cluster_map_vol,
   n_time,
-  summary_stat_names = c("mean"),
   compress = FALSE
 )
 }
@@ -25,9 +24,6 @@ populate_H5ClusterRunSummary_in_h5file(
 within the mask. Its space must match \code{mask_vol}.}
 
 \item{n_time}{Integer, the number of time points for the summary data.}
-
-\item{summary_stat_names}{A character vector of summary statistics to generate (e.g., "mean", "median").
-For each stat, a dataset \code{summary_stats/<stat_name>/cluster_<id>} will be created.}
 
 \item{compress}{Logical, whether to compress HDF5 datasets.}
 }

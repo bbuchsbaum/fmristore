@@ -1,6 +1,9 @@
 # ------------------------------------------------------------------------------
 # test_latent_vec_concat.R - Test suite for concat() method on LatentNeuroVec
 # ------------------------------------------------------------------------------
+library(neuroim2)
+library(fmristore)
+
 context("LatentNeuroVec :: concat()")
 
 # Helper to create test objects with configurable time points

@@ -32,6 +32,7 @@ representing the underlying HDF5 file containing the brain image data.}
 }
 
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5NeuroVol", where = "package:fmristore") && # Check if constructor is available
@@ -43,18 +44,18 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   h5_vol <- NULL
   tryCatch({
     temp_h5_path <- fmristore:::create_minimal_h5_for_H5NeuroVol(dims = c(5L, 5L, 3L))
-    
+
     # Create an H5NeuroVol object using the constructor
     # The constructor defaults to dataset_name = "data/elements" if not specified
     # and if a NeuroSpace is not given, it reads it from /space in the HDF5 file.
-    h5_vol <- fmristore::H5NeuroVol(file_name = temp_h5_path) 
-    
+    h5_vol <- fmristore::H5NeuroVol(file_name = temp_h5_path)
+
     print(h5_vol)
-    
+
     # Access a subset of the data
     subset_data <- h5_vol[1:2, 1:2, 1]
     print(subset_data)
-    
+
   }, error = function(e) {
     message("H5NeuroVol example failed: ", e$message)
   }, finally = {
@@ -69,6 +70,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping H5NeuroVol example: fmristore, neuroim2, hdf5r, or helper not available.")
+}
 }
 
 }

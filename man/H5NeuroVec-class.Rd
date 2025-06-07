@@ -32,27 +32,28 @@ representing the underlying HDF5 file containing the 4D brain image data.}
 }
 
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5NeuroVec", where = "package:fmristore") && 
-    !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) { 
+    exists("H5NeuroVec", where = "package:fmristore") &&
+    !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) {
 
   # Setup: Create a temporary HDF5 file using a helper
   temp_h5_path <- NULL
   h5_vec <- NULL
   tryCatch({
     temp_h5_path <- fmristore:::create_minimal_h5_for_H5NeuroVec(dims = c(5L, 5L, 3L, 4L))
-    
+
     # Create an H5NeuroVec object using the constructor
     # Constructor defaults: dataset_name = "data/elements", space from HDF5 /space group
-    h5_vec <- fmristore::H5NeuroVec(file_name = temp_h5_path) 
-    
+    h5_vec <- fmristore::H5NeuroVec(file_name = temp_h5_path)
+
     print(h5_vec)
-    
+
     # Access a subset of the data
     subset_data <- h5_vec[1:2, 1:2, 1, 1:2]
     print(subset_data)
-    
+
   }, error = function(e) {
     message("H5NeuroVec example failed: ", e$message)
   }, finally = {
@@ -67,6 +68,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping H5NeuroVec example: fmristore, neuroim2, hdf5r, or helper not available.")
+}
 }
 
 }

@@ -11,26 +11,7 @@ create_minimal_LatentNeuroVec(
   n_mask_voxels = NULL
 )
 }
-\arguments{
-\item{space_dims}{3D spatial dimensions for the underlying space, e.g., c(10L, 10L, 3L).}
-
-\item{n_time}{Number of time points (columns in basis).}
-
-\item{n_comp}{Number of components (rows in basis, columns in loadings).}
-
-\item{n_mask_voxels}{Number of voxels to include in the mask. If NULL, ~20% of space_dims.}
-}
-\value{
-A \code{LatentNeuroVec} object.
-}
 \description{
 Create a minimal LatentNeuroVec for examples
-}
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE)) {
-  lnv <- fmristore:::create_minimal_LatentNeuroVec()
-  print(lnv)
-}
 }
 \keyword{internal}

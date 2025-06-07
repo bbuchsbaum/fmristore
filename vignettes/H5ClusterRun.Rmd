@@ -1,0 +1,318 @@
+---
+title: "Understanding H5ClusterRun and H5ClusterRunSummary"
+author: "fmristore Package"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Understanding H5ClusterRun and H5ClusterRunSummary}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.width = 7,
+  fig.height = 5
+)
+```
+
+```{r setup}
+library(fmristore)
+library(neuroim2)
+```
+
+## Overview
+
+When working with clustered fMRI data, you have two storage options:
+
+1. **H5ClusterRun**: Stores complete time series for every voxel
+2. **H5ClusterRunSummary**: Stores only averaged time series per cluster
+
+This vignette explains when to use each and how they work.
+
+## The Data Organization
+
+Imagine your brain is divided into regions (clusters):
+
+```{r visualize-concept, echo=FALSE, fig.height=3}
+# Simple visualization of clustered brain
+plot(1:10, 1:10, type = "n", axes = FALSE, 
+     xlab = "", ylab = "", main = "Brain Clusters")
+rect(1, 1, 4, 4, col = "lightblue", border = "black", lwd = 2)
+rect(5, 1, 8, 4, col = "lightgreen", border = "black", lwd = 2)
+rect(2, 5, 6, 8, col = "lightcoral", border = "black", lwd = 2)
+text(2.5, 2.5, "Cluster 1\n(Visual)", cex = 0.8)
+text(6.5, 2.5, "Cluster 2\n(Motor)", cex = 0.8)
+text(4, 6.5, "Cluster 3\n(Default)", cex = 0.8)
+```
+
+## H5ClusterRun: Full Voxel Data
+
+### When to Use
+
+Use `H5ClusterRun` when you need:
+- Voxel-level precision
+- Spatial patterns within clusters
+- Individual voxel time series
+
+### Example: Creating Full Data
+
+```{r create-full-run}
+# Setup: Small brain with 3 clusters
+brain_dims <- c(10, 10, 3)
+mask_array <- array(TRUE, brain_dims)
+mask_array[1:2, 1:2, ] <- FALSE  # Some non-brain voxels
+
+mask <- LogicalNeuroVol(mask_array, NeuroSpace(brain_dims))
+n_voxels <- sum(mask)
+
+# Create 3 clusters
+cluster_assignments <- rep(1:3, length.out = n_voxels)
+clusters <- ClusteredNeuroVol(mask, cluster_assignments)
+
+print(table(clusters@clusters))
+```
+
+### Generate Time Series Data
+
+```{r generate-full-data}
+n_timepoints <- 50
+
+# Create data for each cluster
+cluster_data <- list()
+
+# Cluster 1: Sine wave pattern
+n_vox_c1 <- sum(clusters@clusters == 1)
+base_signal_c1 <- sin(seq(0, 4*pi, length.out = n_timepoints))
+cluster_data[["cluster_1"]] <- matrix(
+  rep(base_signal_c1, each = n_vox_c1) + rnorm(n_vox_c1 * n_timepoints, sd = 0.2),
+  nrow = n_vox_c1, 
+  ncol = n_timepoints
+)
+
+# Cluster 2: Square wave pattern  
+n_vox_c2 <- sum(clusters@clusters == 2)
+base_signal_c2 <- rep(c(-1, 1), length.out = n_timepoints)
+cluster_data[["cluster_2"]] <- matrix(
+  rep(base_signal_c2, each = n_vox_c2) + rnorm(n_vox_c2 * n_timepoints, sd = 0.2),
+  nrow = n_vox_c2,
+  ncol = n_timepoints
+)
+
+# Cluster 3: Random noise
+n_vox_c3 <- sum(clusters@clusters == 3)
+cluster_data[["cluster_3"]] <- matrix(
+  rnorm(n_vox_c3 * n_timepoints),
+  nrow = n_vox_c3,
+  ncol = n_timepoints
+)
+```
+
+### Save and Access Full Data
+
+```{r save-full-run}
+# Prepare run data
+full_run_data <- list(
+  scan_name = "task_run",
+  type = "full",
+  data = cluster_data,
+  metadata = list(TR = 2.0, task = "visual")
+)
+
+# Write to HDF5
+h5_file <- tempfile(fileext = ".h5")
+write_clustered_experiment_h5(
+  filepath = h5_file,
+  mask = mask,
+  clusters = clusters,
+  runs_data = list(full_run_data),
+  overwrite = TRUE,
+  verbose = FALSE
+)
+
+# Load and explore
+experiment <- H5ClusterExperiment(h5_file)
+full_run <- experiment@runs[["task_run"]]
+
+print(full_run)
+print(paste("Dimensions:", paste(dim(full_run), collapse = " x ")))
+```
+
+### Extract Voxel Time Series
+
+```{r extract-voxels}
+# Get time series for specific voxels
+voxel_indices <- c(1, 5, 10)
+voxel_ts <- series(full_run, i = voxel_indices)
+
+# Plot the time series
+matplot(voxel_ts, type = "l", lty = 1,
+        main = "Individual Voxel Time Series",
+        xlab = "Time", ylab = "Signal")
+legend("topright", legend = paste("Voxel", voxel_indices), 
+       col = 1:3, lty = 1)
+```
+
+## H5ClusterRunSummary: Averaged Data
+
+### When to Use
+
+Use `H5ClusterRunSummary` when you need:
+- Regional averages only
+- Reduced storage space
+- Faster processing
+- Network-level analyses
+
+### Example: Creating Summary Data
+
+```{r create-summary-run}
+# Create averaged time series per cluster
+summary_data <- matrix(
+  c(base_signal_c1,    # Cluster 1 average
+    base_signal_c2,    # Cluster 2 average  
+    rnorm(n_timepoints)),  # Cluster 3 average
+  nrow = n_timepoints,
+  ncol = 3
+)
+
+# Add some noise
+summary_data <- summary_data + rnorm(length(summary_data), sd = 0.1)
+
+# Prepare summary run data
+summary_run_data <- list(
+  scan_name = "rest_run",
+  type = "summary",
+  data = summary_data,
+  metadata = list(TR = 2.0, task = "rest")
+)
+```
+
+### Save and Access Summary Data
+
+```{r save-summary-run}
+# Write both full and summary to same file
+write_clustered_experiment_h5(
+  filepath = h5_file,
+  mask = mask,
+  clusters = clusters,
+  runs_data = list(full_run_data, summary_run_data),
+  overwrite = TRUE,
+  verbose = FALSE
+)
+
+# Load and access summary run
+experiment <- H5ClusterExperiment(h5_file)
+summary_run <- experiment@runs[["rest_run"]]
+
+print(summary_run)
+
+# Get the summary matrix
+summary_matrix <- as.matrix(summary_run)
+print(paste("Summary dimensions:", paste(dim(summary_matrix), collapse = " x ")))
+```
+
+### Visualize Summary Data
+
+```{r plot-summary}
+# Plot cluster averages
+matplot(summary_matrix, type = "l", lty = 1, lwd = 2,
+        main = "Cluster Average Time Series",
+        xlab = "Time", ylab = "Average Signal",
+        col = c("blue", "green", "red"))
+legend("topright", legend = paste("Cluster", 1:3), 
+       col = c("blue", "green", "red"), lty = 1, lwd = 2)
+```
+
+## Comparing Storage Efficiency
+
+```{r compare-storage}
+# Check dimensions
+full_voxels <- sum(sapply(cluster_data, nrow))
+full_elements <- full_voxels * n_timepoints
+summary_elements <- prod(dim(summary_matrix))
+
+cat("Full run storage:\n")
+cat("  Voxels:", full_voxels, "\n")
+cat("  Total values:", full_elements, "\n\n")
+
+cat("Summary run storage:\n")
+cat("  Clusters:", ncol(summary_matrix), "\n")  
+cat("  Total values:", summary_elements, "\n\n")
+
+cat("Compression ratio:", round(full_elements / summary_elements, 1), ":1\n")
+```
+
+## Practical Guidelines
+
+### Choose H5ClusterRun when:
+
+1. **Analyzing spatial patterns**
+   ```{r spatial-pattern, eval=FALSE}
+   # Example: Find peak voxel in each cluster
+   peak_voxels <- lapply(1:3, function(cluster_id) {
+     voxels_in_cluster <- which(clusters@clusters == cluster_id)
+     cluster_ts <- series(full_run, i = voxels_in_cluster)
+     variances <- apply(cluster_ts, 2, var)
+     voxels_in_cluster[which.max(variances)]
+   })
+   ```
+
+2. **Voxel-wise statistics needed**
+   ```{r voxel-stats, eval=FALSE}
+   # Example: Compute voxel-wise correlation with task
+   task_regressor <- sin(seq(0, 4*pi, length.out = n_timepoints))
+   all_voxel_ts <- series(full_run, i = 1:n_voxels)
+   correlations <- cor(task_regressor, all_voxel_ts)
+   ```
+
+### Choose H5ClusterRunSummary when:
+
+1. **Connectivity analysis**
+   ```{r connectivity, eval=FALSE}
+   # Example: Cluster-to-cluster correlation
+   cluster_connectivity <- cor(summary_matrix)
+   ```
+
+2. **Group comparisons**
+   ```{r group-compare, eval=FALSE}
+   # Example: Compare cluster means across conditions
+   rest_means <- colMeans(as.matrix(experiment@runs[["rest_run"]]))
+   task_means <- colMeans(as.matrix(experiment@runs[["task_run"]]))
+   ```
+
+## Memory Considerations
+
+```{r memory-usage}
+# Estimate memory usage
+full_memory_mb <- object.size(cluster_data) / 1024^2
+summary_memory_mb <- object.size(summary_matrix) / 1024^2
+
+cat("Memory usage:\n")
+cat("  Full run:", format(full_memory_mb, digits = 3), "MB\n")
+cat("  Summary run:", format(summary_memory_mb, digits = 3), "MB\n")
+cat("  Savings:", format(full_memory_mb - summary_memory_mb, digits = 3), "MB\n")
+```
+
+## Clean Up
+
+```{r cleanup}
+close(experiment)
+unlink(h5_file)
+```
+
+## Key Takeaways
+
+1. **H5ClusterRun** = Full resolution, larger storage
+2. **H5ClusterRunSummary** = Regional averages, compact storage
+3. Both can coexist in the same H5ClusterExperiment
+4. Choose based on your analysis needs
+5. Summary runs are perfect for connectivity and network analyses
+6. Full runs are essential for voxel-level statistics
+
+## Next Steps
+
+- See `vignette("H5ClusterExperiment")` for working with multiple runs
+- Explore connectivity analyses with summary data
+- Learn about mixed designs (some runs full, some summary)

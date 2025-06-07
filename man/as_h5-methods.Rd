@@ -6,6 +6,7 @@
 \alias{as_h5,LatentNeuroVec-method}
 \alias{as_h5,LabeledVolumeSet-method}
 \alias{as_h5,list-method}
+\alias{as_h5,NeuroVecSeq-method}
 \title{Generic function to convert R objects to HDF5 format}
 \usage{
 as_h5(object, file, ...)
@@ -43,13 +44,42 @@ as_h5(object, file, ...)
   compression = 4,
   chunk_size = 1024
 )
+
+\S4method{as_h5}{NeuroVecSeq}(object, file = NULL, ...)
 }
 \arguments{
 \item{object}{The R object to convert to HDF5 (e.g., a \code{NeuroVol} or \code{NeuroVec}).}
 
 \item{file}{The path to the HDF5 file to create or modify.}
 
-\item{...}{Additional arguments specific to the particular method (e.g., \code{dataset_name}).}
+\item{...}{Additional arguments specific to the particular method (see Details).}
+
+\item{data_type}{For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). 
+Default "FLOAT"}
+
+\item{chunk_dim}{For NeuroVec method: Chunk dimensions. Default depends on input dimensions}
+
+\item{compression}{For all methods: Integer compression level [0..9]. Default varies by method}
+
+\item{mask}{For LabeledVolumeSet method: The mask to use (LogicalNeuroVol)}
+
+\item{labels}{For LabeledVolumeSet method: Character vector of labels}
+
+\item{dtype}{For LabeledVolumeSet method: HDF5 data type for values. Default H5T_NATIVE_DOUBLE}
+
+\item{chunk_size}{For LabeledVolumeSet/list methods: Integer chunk size for HDF5. Default 1024}
+
+\item{header_values}{For LabeledVolumeSet method: List of additional header values}
+
+\item{scan_names}{For list method: Character vector of scan names}
+
+\item{clusters}{For list method: ClusteredNeuroVol with cluster IDs}
+
+\item{scan_metadata}{For list method: List of metadata lists, one per scan}
+
+\item{cluster_metadata}{For list method: Optional data.frame with cluster descriptions}
+
+\item{summary_only}{For list method: If TRUE, save summary data only}
 }
 \value{
 An object representing the HDF5 storage, typically of a class
@@ -110,28 +140,44 @@ providing a standardized interface for serialization to HDF5.
     }
     Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusterExperiment).
   }
+  \item{\code{signature(object = "NeuroVecSeq")}}{
+    Writes a sequence of NeuroVec objects (multiple 4D scans) to a single HDF5 file.
+    All NeuroVec objects must have the same spatial dimensions.
+    Additional parameters:
+    \describe{
+      \item{\code{scan_names}}{Optional character vector of scan names. 
+        If NULL, uses "scan_1", "scan_2", etc.}
+      \item{\code{data_type}}{Character string: "FLOAT" (default), "DOUBLE", or "INT"}
+      \item{\code{chunk_dim}}{Numeric vector specifying chunk sizes. 
+        If NULL, uses time-optimized chunking}
+      \item{\code{compression}}{Integer [0..9], default 6}
+      \item{\code{scan_metadata}}{Optional named list of metadata lists, one per scan}
+    }
+    Returns the file path of the created HDF5 file.
+  }
 }
 }
 
 \examples{
+\dontrun{
 # Example 1: NeuroVec (DenseNeuroVec) to HDF5
 # Ensure helper function is available and as_h5 exists
 # if (!is.null(fmristore:::create_minimal_DenseNeuroVec) &&
 #     exists("as_h5", where = "package:fmristore")) {
-  
+
 dvec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(3L,3L,2L,4L))
 temp_h5_file <- tempfile(fileext = ".h5")
 h5_obj <- NULL
-  
+
 tryCatch({
     # Convert DenseNeuroVec to an HDF5 file and get an H5NeuroVec object back
-    h5_obj <- as_h5(dvec, file = temp_h5_file, 
+    h5_obj <- as_h5(dvec, file = temp_h5_file,
                     data_type = "FLOAT",
                     chunk_dim = c(2, 2, 2, 4),
                     compression = 4)
-    
+
     print(h5_obj) # Should be an H5NeuroVec
-    
+
 }, error = function(e) {
     message("as_h5 NeuroVec example failed: ", e$message)
 }, finally = {
@@ -145,7 +191,7 @@ tryCatch({
 # Example 2: LatentNeuroVec to HDF5
 # if (!is.null(fmristore:::create_minimal_LatentNeuroVec) &&
 #     exists("as_h5", where = "package:fmristore")) {
-  
+
 lnv <- fmristore:::create_minimal_LatentNeuroVec(
     space_dims = c(4L, 4L, 2L),
     n_time = 6L,
@@ -153,16 +199,16 @@ lnv <- fmristore:::create_minimal_LatentNeuroVec(
 )
 temp_h5_file_lnv <- tempfile(fileext = ".h5") # Use a different temp file name
 h5_obj_lnv <- NULL # Use a different object name
-  
+
 tryCatch({
     # Convert LatentNeuroVec to HDF5
     h5_obj_lnv <- as_h5(lnv, file = temp_h5_file_lnv, compression = 4)
-    
+
     # File should exist and h5_obj_lnv should be a valid H5File object
     if (file.exists(temp_h5_file_lnv)) {
       print("LatentNeuroVec HDF5 file created successfully: ", temp_h5_file_lnv)
     }
-    
+
 }, error = function(e) {
     message("as_h5 LatentNeuroVec example failed: ", e$message)
 }, finally = {
@@ -177,19 +223,19 @@ tryCatch({
 
 # Example 3: Clustered dataset (list) to HDF5
 # (This requires more complex setup, so we use a simplified theoretical example)
-\donttest{
-  # Removed: if (requireNamespace("neuroim2", quietly = TRUE) && ... 
-  
+\dontrun{
+  # Removed: if (requireNamespace("neuroim2", quietly = TRUE) && ...
+
   # In practice, you would:
   # 1. Create a list of NeuroVec/DenseNeuroVec objects (scan data)
   # 2. Create a LogicalNeuroVol mask
   # 3. Create a ClusteredNeuroVol defining clusters
   # 4. Define scan names and metadata
   # 5. Call as_h5() with these components
-  
+
   # Note: This example is simplified for documentation and won't execute
   # as the actual clustered dataset structure is more complex
-  
+
   message("Example usage for clustered dataset (as_h5 for list method):")
   message("  # vecs_list <- ... list of NeuroVec objects ...")
   message("  # mask_obj <- fmristore:::create_minimal_LogicalNeuroVol(...)")
@@ -201,9 +247,10 @@ tryCatch({
   message("  #                       scan_metadata = scan_meta)")
   message("  # print(h5_clust_obj)")
   message("  # if (!is.null(h5_clust_obj)) try(close(h5_clust_obj), silent=TRUE)")
-  message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) ",
-          "unlink(attr(h5_clust_obj, \"filepath\"))")
+  message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) ")
+  message("  #     unlink(attr(h5_clust_obj, \"filepath\"))")
 
+}
 }
 
 }

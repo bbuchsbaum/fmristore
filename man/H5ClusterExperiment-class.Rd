@@ -23,6 +23,7 @@ This class facilitates managing multiple runs that share the same mask and clust
 }}
 
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -33,14 +34,14 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   tryCatch({
     # 1. Create an HDF5 file for an experiment containing runs
     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
-    
+
     # 2. Load the experiment using the constructor
     exp <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # 3. Show the experiment object
     print(exp)
     print(names(runs(exp))) # Show the names of the runs it loaded
-    
+
   }, error = function(e) {
     message("H5ClusterExperiment example failed: ", e$message)
   }, finally = {
@@ -54,6 +55,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
 } else {
   message("Skipping H5ClusterExperiment example: dependencies or helper not available.")
 }
+}
 
 }
 \seealso{
@@ -61,15 +63,17 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
 
 \code{\link{H5ClusterRun-class}}, \code{\link{H5ClusterRunSummary-class}}
 
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -82,19 +86,21 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()},
 \code{\link{show,H5ClusterRun-method}}
 
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -107,8 +113,8 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()},
 \code{\link{show,H5ClusterRun-method}}
 }
-\concept{H5Clustered}
+\concept{H5Cluster}

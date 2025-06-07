@@ -8,10 +8,19 @@ Authors@R:
            role = c("aut", "cre"),
            email = "brad.buchsbaum@gmail.com",
            comment = c(ORCID = "0000-0002-5891-3515"))
-Description: Provides efficient storage of fMRI data in HDF5 format.
+Author: Bradley Buchsbaum [aut, cre]
+Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
+Description: Provides efficient storage and retrieval of functional magnetic resonance 
+    imaging (fMRI) data using HDF5 format. The package offers S4 classes and methods 
+    for working with dense and sparse representations of 4D neuroimaging data, latent 
+    space decompositions, and spatially clustered voxel time series. It includes 
+    memory-efficient access patterns for large datasets and integrates with the 
+    neuroim2 package for standard neuroimaging data structures.
 License: GPL (>= 3)
+URL: https://github.com/bbuchsbaum/fmristore, https://bbuchsbaum.github.io/fmristore/
+BugReports: https://github.com/bbuchsbaum/fmristore/issues
 Encoding: UTF-8
-LazyData: true
+LazyData: false
 RoxygenNote: 7.3.2.9000
 Imports: 
     assertthat,
@@ -22,9 +31,8 @@ Imports:
     Matrix,
     methods,
     neuroim2,
-    purrr,
     withr
-Suggests: 
+Suggests:
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
@@ -37,6 +45,8 @@ Collate:
     'cluster_array.R'
     'cluster_experiment.R'
     'constructors.R'
+    'fmristore-package.R'
+    'globals.R'
     'h5_utils.R'
     'h5neurovec.R'
     'h5neurovol.R'
@@ -45,4 +55,5 @@ Collate:
     'io_write_h5.R'
     'labeled_vec.R'
     'latent_vec.R'
+    'neurovecseq_h5.R'
     'zzz_example_helpers.R'

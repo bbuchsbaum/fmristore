@@ -7,7 +7,7 @@
 \S4method{show}{LabeledVolumeSet}(object)
 }
 \arguments{
-\item{object}{A \code{\link{LabeledVolumeSet}} instance}
+\item{object}{A \code{\link{LabeledVolumeSet-class}} instance}
 }
 \description{
 Displays essential info about a \code{LabeledVolumeSet}, including spatial dims,

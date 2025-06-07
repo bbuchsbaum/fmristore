@@ -9,8 +9,10 @@
 \alias{linear_access,H5NeuroVec,numeric-method}
 \alias{linear_access,H5NeuroVec,integer-method}
 \alias{linear_access,H5NeuroVol,numeric-method}
+\alias{linear_access,H5NeuroVol,integer-method}
 \alias{linear_access,LabeledVolumeSet,numeric-method}
 \alias{linear_access,LatentNeuroVec,numeric-method}
+\alias{linear_access,LatentNeuroVec,integer-method}
 \title{Linear Access to Neuroimaging Data (Methods for neuroim2 Generic)}
 \usage{
 linear_access(x, i, ...)
@@ -25,9 +27,13 @@ linear_access(x, i, ...)
 
 \S4method{linear_access}{H5NeuroVol,numeric}(x, i)
 
+\S4method{linear_access}{H5NeuroVol,integer}(x, i)
+
 \S4method{linear_access}{LabeledVolumeSet,numeric}(x, i)
 
 \S4method{linear_access}{LatentNeuroVec,numeric}(x, i)
+
+\S4method{linear_access}{LatentNeuroVec,integer}(x, i)
 }
 \arguments{
 \item{x}{An \code{H5ClusterRun} object.}
@@ -57,6 +63,7 @@ It reconstructs voxel values on the fly from the HDF5 file based on their cluste
 Values for voxels outside the mask are returned as 0.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -90,8 +97,8 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       # Example: Access first 5 linear indices and last 5
       indices_to_access <- c(1:5, (total_elements-4):total_elements)
       # Ensure indices are within bounds if total_elements is small
-      indices_to_access <- indices_to_access[indices_to_access <= total_elements &
-                                             indices_to_access > 0]
+      indices_to_access <- indices_to_access[indices_to_access <= total_elements & 
+                                              indices_to_access > 0]
       indices_to_access <- unique(indices_to_access)
       
       if (length(indices_to_access) > 0) {
@@ -120,20 +127,23 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   message("Skipping linear_access H5ClusterRun example: dependencies/helpers not available.")
 }
 }
+}
 \seealso{
 \code{neuroim2::\link[neuroim2]{linear_access}}, specific methods like
-  \code{\link{linear_access,H5ClusterRun-method}}.
+  \code{\link{linear_access,H5ClusterRun,numeric-method}}.
 
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterExperiment-class}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -145,20 +155,22 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()},
 \code{\link{show,H5ClusterRun-method}}
 
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterExperiment-class}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -170,9 +182,9 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()},
 \code{\link{show,H5ClusterRun-method}}
 }
-\concept{H5Clustered}
+\concept{H5Cluster}
 \keyword{internal}

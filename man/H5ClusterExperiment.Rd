@@ -37,10 +37,11 @@ from the HDF5 file. If provided, its length should match the number of scans.}
 cluster metadata read from `/clusters/cluster_meta` in the HDF5 file.}
 
 \item{summary_preference}{(Optional) Character string controlling which run type to load.
-If \code{NULL} (default), the constructor examines \code{/scans@summary_only} to choose a default:
-\code{"require"} if the attribute is \code{TRUE}, \code{"ignore"} if \code{FALSE},
-otherwise \code{"prefer"}. Explicit values can be \code{"require"} (only load summary runs, error if missing),
-\code{"prefer"} (load summary if available, else full), or \code{"ignore"} (load full runs only).
+If \code{NULL} (default), the constructor reads the \code{/scans@summary_only}
+attribute to choose a default: \code{"require"} if \code{summary_only=TRUE},
+\code{"ignore"} if \code{summary_only=FALSE}, otherwise \code{"prefer"}.
+Explicit values can be "require" (only load summary runs, error if missing),
+"prefer" (load summary if available, else full), or "ignore" (load full runs only).
 This influences whether \code{make_run_summary} or \code{make_run_full} is called.
 *Note: This parameter requires careful implementation based on HDF5 content checks.*}
 
@@ -62,16 +63,46 @@ identifying available scans, and creating the appropriate run objects
 the available data within the HDF5 file structure (following the
 ClusteredTimeSeriesSpec).
 }
+\examples{
+\dontrun{
+# Create temporary HDF5 file with minimal experiment structure
+temp_file <- tempfile(fileext = ".h5")
+exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+
+# Create H5ClusterExperiment object
+experiment <- H5ClusterExperiment(exp_file)
+
+# Access scan names
+print(scan_names(experiment))
+
+# Get number of scans
+print(n_scans(experiment))
+
+# Access runs
+print(names(experiment@runs))
+
+# Extract data for specific voxels (first 5 mask indices)
+voxel_data <- series_concat(experiment, mask_idx = 1:5)
+print(dim(voxel_data))
+
+# Clean up
+close(experiment)
+unlink(temp_file)
+}
+
+}
 \seealso{
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment-class}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -84,8 +115,8 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()},
 \code{\link{show,H5ClusterRun-method}}
 }
-\concept{H5Clustered}
+\concept{H5Cluster}

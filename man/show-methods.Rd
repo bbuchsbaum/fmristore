@@ -23,16 +23,18 @@
 Display a concise summary for H5Cluster objects
 }
 \seealso{
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterExperiment-class}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -45,19 +47,21 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()}
 
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterExperiment-class}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{clusters}()},
 \code{\link{dim}()},
@@ -70,7 +74,7 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()}
 }
-\concept{H5Clustered}
+\concept{H5Cluster}

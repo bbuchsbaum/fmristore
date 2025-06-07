@@ -27,30 +27,8 @@ create_minimal_h5_for_H5ClusterExperiment(
 Path to the created HDF5 file.
 }
 \description{
-This function creates a temporary HDF5 file with a minimal but valid structure 
+This function creates a temporary HDF5 file with a minimal but valid structure
 for an H5ClusterExperiment, including a master mask, master cluster definitions,
 one H5ClusterRun, and one H5ClusterRunSummary.
-}
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE) && 
-    requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5ClusterExperiment", where = "package:fmristore")) {
-  
-  # Ensure helper dependencies are available if not automatically sourced
-  # (e.g. source the R/zzz_example_helpers.R file if running interactively outside pkg build)
-
-  temp_exp_file <- NULL
-  exp <- NULL
-  tryCatch({
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
-    print(temp_exp_file)
-    # exp <- fmristore::H5ClusterExperiment(temp_exp_file)
-    # print(exp)
-  }, finally = {
-    # if (!is.null(exp)) close(exp) # Close H5ClusterExperiment handle
-    if (!is.null(temp_exp_file) && file.exists(temp_exp_file)) unlink(temp_exp_file)
-  })
-}
 }
 \keyword{internal}

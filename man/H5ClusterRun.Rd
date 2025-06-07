@@ -4,14 +4,7 @@
 \alias{H5ClusterRun}
 \title{Constructor for H5ClusterRun Objects}
 \usage{
-H5ClusterRun(
-  file,
-  scan_name,
-  mask,
-  clusters,
-  n_time = NULL,
-  compress = FALSE
-)
+H5ClusterRun(file, scan_name, mask, clusters, n_time = NULL, compress = FALSE)
 }
 \arguments{
 \item{file}{Character string path to the HDF5 file.}
@@ -41,4 +34,27 @@ This function handles file opening/closing and reads necessary metadata like
 Diagnostic messages (such as when \code{n_time} is inferred from a dataset) are
 printed only when the option \code{fmristore.verbose} is set to \code{TRUE} via
 \code{options(fmristore.verbose = TRUE)}.
+}
+\examples{
+\dontrun{
+# Create temporary HDF5 file with minimal experiment structure
+temp_file <- tempfile(fileext = ".h5")
+exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+
+# Create mask and clusters
+mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+clusters <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 3)
+
+# Create H5ClusterRun object
+run <- H5ClusterRun(exp_file, scan_name = "Run1_Full", mask = mask, clusters = clusters)
+
+# Access properties
+print(run@n_time)
+print(dim(mask))
+
+# Clean up
+close(run)
+unlink(temp_file)
+}
+
 }

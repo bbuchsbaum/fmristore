@@ -16,6 +16,7 @@ A data frame or other structure containing metadata for each cluster
 This generic returns any available metadata associated with clusters in an object.
 }
 \examples{
+\dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -28,13 +29,13 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Create a minimal H5ClusterExperiment
     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Get the cluster metadata
     c_meta <- cluster_metadata(exp_obj)
     print(c_meta)
-    # The helper currently doesn't add rich cluster_metadata, 
+    # The helper currently doesn't add rich cluster_metadata,
     # so this is likely an empty data.frame or one with default cluster names/IDs.
-    
+
   }, error = function(e) {
     message("cluster_metadata example failed: ", e$message)
   }, finally = {
@@ -45,6 +46,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   })
 } else {
   message("Skipping cluster_metadata example: dependencies or helper not available.")
+}
 }
 
 }

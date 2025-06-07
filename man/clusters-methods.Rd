@@ -29,27 +29,28 @@ Get the cluster map object
 Get the clusters object via generic
 }
 \examples{
+\dontrun{
 # For H5ClusterExperiment:
 if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
-      master_mask_dims = c(4L,4L,3L), 
+      master_mask_dims = c(4L,4L,3L),
       num_master_clusters = 2L
     )
     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
-    
+
     # Get the master cluster map from the experiment
     cluster_vol <- clusters(exp_obj)
     print(cluster_vol)
     # if (requireNamespace("neuroim2", quietly=TRUE)) print(is(cluster_vol, "ClusteredNeuroVol"))
-    
+
     # Individual runs also have cluster information, potentially accessible via their own methods
     # run1 <- runs(exp_obj)[["Run1_Full"]]
     # run1_clusters <- clusters(run1) # Assuming a method for H5ClusterRun
     # print(run1_clusters)
-    
+
   }, error = function(e) {
     message("clusters example for H5ClusterExperiment failed: ", e$message)
   }, finally = {
@@ -61,19 +62,22 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 } else {
   message("Skipping clusters example for H5ClusterExperiment: helper not available.")
 }
+}
 
 }
 \seealso{
-Other H5Clustered: 
+Other H5Cluster: 
 \code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusteredArray-class}},
 \code{\link{H5ClusterExperiment}},
 \code{\link{H5ClusterExperiment-class}},
 \code{\link{H5ClusterRun-class}},
 \code{\link{H5ClusterRunSummary-class}},
+\code{\link{H5ClusteredArray-class}},
 \code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
+\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
+\code{\link{close}()},
 \code{\link{cluster_metadata,H5ClusterExperiment-method}},
 \code{\link{dim}()},
 \code{\link{h5file,H5ClusteredArray-method}},
@@ -85,8 +89,8 @@ Other H5Clustered:
 \code{\link{n_scans,H5ClusterExperiment-method}},
 \code{\link{scan_metadata,H5ClusterExperiment-method}},
 \code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series # Keep @name if you want the generic itself to be findable by ?series}},
+\code{\link{series}()},
 \code{\link{series_concat}()},
 \code{\link{show,H5ClusterRun-method}}
 }
-\concept{H5Clustered}
+\concept{H5Cluster}

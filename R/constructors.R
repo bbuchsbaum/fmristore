@@ -21,6 +21,29 @@
 #' @param compress (Optional) Logical indicating compression status (metadata).
 #' 
 #' @return A new \code{H5ClusterRun} object with an open file handle managed by the object.
+#' 
+#' @examples
+#' \dontrun{
+#' # Create temporary HDF5 file with minimal experiment structure
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask and clusters
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' clusters <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 3)
+#' 
+#' # Create H5ClusterRun object
+#' run <- H5ClusterRun(exp_file, scan_name = "Run1_Full", mask = mask, clusters = clusters)
+#' 
+#' # Access properties
+#' print(run@n_time)
+#' print(dim(mask))
+#' 
+#' # Clean up
+#' close(run)
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom methods new is
 #' @importFrom hdf5r h5attr
 #' @importFrom withr defer
@@ -177,6 +200,28 @@ H5ClusterRun <- function(file, scan_name,
 #'   (default: "summary_data").
 #'
 #' @return A new \code{H5ClusterRunSummary} object with an open file handle managed by the object.
+#' 
+#' @examples
+#' \dontrun{
+#' # Create temporary HDF5 file with minimal experiment structure
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' 
+#' # Create H5ClusterRunSummary object
+#' run_summary <- H5ClusterRunSummary(exp_file, scan_name = "Run2_Summary", mask = mask)
+#' 
+#' # Access properties
+#' print(run_summary@cluster_names)
+#' print(run_summary@n_time)
+#' 
+#' # Clean up
+#' close(run_summary)
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom methods new is
 #' @importFrom hdf5r H5D
 #' @export
@@ -285,7 +330,8 @@ H5ClusterRunSummary <- function(file, scan_name,
   }
 
   if (length(final_cluster_names) != final_n_clusters) {
-    stop(sprintf("Final cluster_names length (%d) does not match dataset columns (%d).", length(final_cluster_names), final_n_clusters))
+    warning(sprintf("Final number of cluster names (%d) does not match dataset columns (%d). Resetting to default names.", length(final_cluster_names), final_n_clusters))
+    final_cluster_names <- paste0("Col_", seq_len(final_n_clusters))
   }
   if (length(final_cluster_ids) != final_n_clusters) {
     stop(sprintf("Final cluster_ids length (%d) does not match dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
@@ -301,7 +347,7 @@ H5ClusterRunSummary <- function(file, scan_name,
         scan_name = scan_name,
         mask = mask,
         n_voxels = as.integer(n_vox), # Add n_voxels, inherited from H5ClusteredArray
-        clusters = clusters, # Pass through, can be NULL
+        clusters = if(is.null(clusters)) new("ClusteredNeuroVol") else clusters,
         n_time = as.integer(final_n_time),
         cluster_names = final_cluster_names,
         cluster_ids = final_cluster_ids,

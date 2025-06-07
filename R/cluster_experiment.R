@@ -49,7 +49,11 @@ NULL
       coords_matrix <- vox_coords_dset$read()
       # Ensure master_space@dim is valid and has 3 dimensions for this calculation
       if (length(master_space@dim) < 3) stop("Master space dimensions are less than 3.")
-      file_voxel_indices <- coords_matrix[,1] + (coords_matrix[,2]-1)*master_space@dim[1] + (coords_matrix[,3]-1)*master_space@dim[1]*master_space@dim[2]
+      # Convert array indices (1-based) to linear indices
+      # coords_matrix contains 1-based indices from which(..., arr.ind = TRUE)
+      file_voxel_indices <- coords_matrix[,1] + 
+                           (coords_matrix[,2] - 1) * master_space@dim[1] + 
+                           (coords_matrix[,3] - 1) * master_space@dim[1] * master_space@dim[2]
     } else if (h5_handle$exists("/mask")) {
       warning("Dataset '/voxel_coords' not found, validating user mask against HDF5 '/mask' data. Consider adding /voxel_coords for efficiency.")
       mask_dset_val <- h5_handle[["/mask"]]
@@ -63,7 +67,8 @@ NULL
   })
 
   provided_voxel_indices <- which(user_mask@.Data)
-  if (!identical(sort(provided_voxel_indices), sort(file_voxel_indices))) {
+  # Convert to same type for comparison (file_voxel_indices might be numeric due to calculations)
+  if (!identical(sort(as.integer(provided_voxel_indices)), sort(as.integer(file_voxel_indices)))) {
     # Comparing sorted indices because order might not be guaranteed identical even if sets are same
     stop("User-provided mask's pattern of TRUE voxels does not match the pattern derived from the HDF5 file ('/voxel_coords' or '/mask'). User mask override rejected.")
   }
@@ -264,7 +269,35 @@ setMethod("matrix_concat",
 #'   *Note:* For most operations, the handle needs to remain open.
 #'
 #' @return A new \code{H5ClusterExperiment} object.
-#' @importFrom hdf5r H5File list.groups H5A H5D h5attr h5attr_names
+#' 
+#' @examples
+#' \dontrun{
+#' # Create temporary HDF5 file with minimal experiment structure
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create H5ClusterExperiment object
+#' experiment <- H5ClusterExperiment(exp_file)
+#' 
+#' # Access scan names
+#' print(scan_names(experiment))
+#' 
+#' # Get number of scans
+#' print(n_scans(experiment))
+#' 
+#' # Access runs
+#' print(names(experiment@runs))
+#' 
+#' # Extract data for specific voxels (first 5 mask indices)
+#' voxel_data <- series_concat(experiment, mask_idx = 1:5)
+#' print(dim(voxel_data))
+#' 
+#' # Clean up
+#' close(experiment)
+#' unlink(temp_file)
+#' }
+#' 
+#' @importFrom hdf5r H5File list.groups H5A H5D h5attr h5attr_names list.datasets
 #' @importFrom methods new is
 #' @export
 #' @family H5Cluster
@@ -289,21 +322,22 @@ H5ClusterExperiment <- function(file,
   opened_datasets <- list() 
   on.exit({
     # Close datasets first
-    lapply(opened_datasets, function(ds)
-      if (!is.null(ds) && is(ds, "H5D") && ds$is_valid) close_h5_safely(ds))
+    lapply(opened_datasets, function(ds) if (!is.null(ds) && is(ds, "H5D") && ds$is_valid) close_h5_safely(ds))
     # Then close groups
-    lapply(opened_groups, function(grp)
-      if (!is.null(grp) && is(grp, "H5Group") && grp$is_valid) close_h5_safely(grp))
-    # File handle closure is handled via defer() below when keep_handle_open is FALSE
+    lapply(opened_groups, function(grp) if (!is.null(grp) && is(grp, "H5Group") && grp$is_valid) close_h5_safely(grp))
+    # Finally, close file if opened here and not keeping open
+    if (opened_here && !keep_handle_open && !is.null(h5obj) && h5obj$is_valid) {
+         close_h5_safely(h5obj)
+    }
     # TODO: Add finalizer registration if keep_handle_open is TRUE
   }, add = TRUE)
 
   # --- 1. Handle File Source and Read Header/Create Space ---
   fh <- open_h5(file_source, mode = "r")
-  opened_here <- fh$owns       # track whether this call opened the file
   h5obj <- fh$h5
-  # Defer closing the file when keep_handle_open is FALSE.
-  # Note: keep_handle_open is TRUE by default, so this usually won't close the file.
+  # Defer closing the file only if we opened it and the user doesn't want to keep it open.
+  # Note: keep_handle_open is TRUE by default, so defer usually won't close it here.
+  # The H5ClusterExperiment object's finalizer handles closing if keep_handle_open=TRUE.
   defer({
       if (fh$owns && !keep_handle_open && h5obj$is_valid) {
           message("[H5ClusterExperiment] Closing HDF5 file handle opened by constructor.")
@@ -494,6 +528,21 @@ H5ClusterExperiment <- function(file,
 
   for (sname in scan_names) {
     scan_path <- file.path(scans_group_path, sname)
+    
+    # Read class attribute to determine scan type
+    scan_class <- NULL
+    scan_grp <- NULL
+    tryCatch({
+      scan_grp <- h5obj[[scan_path]]
+      if ("class" %in% h5attr_names(scan_grp)) {
+        scan_class <- h5attr(scan_grp, "class")
+      }
+    }, error = function(e) {
+      # Ignore errors, will fall back to data existence checks
+    }, finally = {
+      if (!is.null(scan_grp) && scan_grp$is_valid) try(scan_grp$close(), silent = TRUE)
+    })
+    
     has_full_data = h5obj$exists(file.path(scan_path, "clusters"))
     has_summary_data = h5obj$exists(file.path(scan_path, "clusters_summary")) # Check group first
     summary_dset_name <- "summary_data" # Default, could be made configurable
@@ -520,14 +569,43 @@ H5ClusterExperiment <- function(file,
     found_full <- found_full || has_full_data
     found_summary <- found_summary || summary_dset_exists
     
+    # Determine scan type based on class attribute first, then fall back to data existence
     create_summary <- FALSE
-    if (summary_preference == "require") {
-        if (!summary_dset_exists) stop(sprintf("Summary data required but not found for scan '%s' at %s", sname, file.path(summary_group_path, summary_dset_name)))
+    if (!is.null(scan_class)) {
+      # Use class attribute if available
+      if (scan_class == "H5ClusterRunSummary") {
         create_summary <- TRUE
-    } else if (summary_preference == "prefer") {
-        create_summary <- summary_dset_exists
-    } else { # ignore
+        if (!summary_dset_exists) {
+          stop(sprintf("Scan '%s' has class='H5ClusterRunSummary' but summary data not found at %s", 
+                       sname, file.path(summary_group_path, summary_dset_name)))
+        }
+      } else if (scan_class == "H5ClusterRun") {
         create_summary <- FALSE
+        if (!has_full_data) {
+          stop(sprintf("Scan '%s' has class='H5ClusterRun' but full data not found under %s", 
+                       sname, file.path(scan_path, "clusters")))
+        }
+      } else {
+        # Unknown class, fall back to preference logic
+        if (summary_preference == "require") {
+            if (!summary_dset_exists) stop(sprintf("Summary data required but not found for scan '%s' at %s", sname, file.path(summary_group_path, summary_dset_name)))
+            create_summary <- TRUE
+        } else if (summary_preference == "prefer") {
+            create_summary <- summary_dset_exists
+        } else { # ignore
+            create_summary <- FALSE
+        }
+      }
+    } else {
+      # No class attribute, use preference logic
+      if (summary_preference == "require") {
+          if (!summary_dset_exists) stop(sprintf("Summary data required but not found for scan '%s' at %s", sname, file.path(summary_group_path, summary_dset_name)))
+          create_summary <- TRUE
+      } else if (summary_preference == "prefer") {
+          create_summary <- summary_dset_exists
+      } else { # ignore
+          create_summary <- FALSE
+      }
     }
 
     # --- Load Scan-Specific Metadata ---
@@ -688,8 +766,7 @@ H5ClusterExperiment <- function(file,
                  cluster_metadata = cluster_metadata)
 
   # --- Add Finalizer if needed (Checklist Item 4.3) ---
-  # Removed finalizer logic for simplicity. File closing is handled by defer()
-  # when keep_handle_open = FALSE. User manages the handle if keep_handle_open = TRUE.
+  # Removed finalizer logic for simplicity. User manages handle if keep_handle_open=TRUE.
   # if (opened_here && keep_handle_open) {
   #   message("Registering finalizer to close HDF5 handle when experiment object is garbage collected.")
   #   reg.finalizer(exp_obj, function(e) {
@@ -708,6 +785,11 @@ H5ClusterExperiment <- function(file,
   #     try(h5obj$close_all(), silent = TRUE)
   # } # else: handle was passed in open, user manages its lifecycle
   # --- End Finalizer ---
+
+  # If file was opened here and we are NOT keeping it open, close it now.
+  if (opened_here && !keep_handle_open) {
+      try(h5obj$close_all(), silent = TRUE)
+  }
 
   return(exp_obj)
 }
@@ -853,33 +935,17 @@ setMethod("show", "H5ClusterExperiment", function(object) {
   }
 })
 
-
-# TODO: Add show method for H5ClusterExperiment
-
-#' Close an H5ClusterExperiment
-#'
-#' Manually close the shared HDF5 file handle used by all runs in the
-#' experiment. The handle is retrieved from the first run and closed using
-#' \code{safe_h5_close}. Optionally, internal references to the handle can be
-#' invalidated after closing.
-#'
-#' @param con An \code{H5ClusterExperiment} object.
-#' @param invalidate Logical. If \code{TRUE}, each run's \code{obj} slot is set
-#'   to \code{NULL} after closing. Defaults to \code{FALSE}.
-#' @param ... Additional arguments (ignored).
-#' @return Invisibly returns \code{NULL}.
+#' Close the HDF5 file handle
+#' @param con H5ClusterExperiment object
+#' @param ... Additional arguments (ignored)
+#' @return NULL invisibly
 #' @rdname close
 #' @export
-setMethod("close", "H5ClusterExperiment", function(con, invalidate = FALSE, ...) {
-  if (length(con@runs) > 0) {
-    shared <- con@runs[[1]]@obj
-    safe_h5_close(shared)
-    if (isTRUE(invalidate)) {
-      for (i in seq_along(con@runs)) {
-        slot(con@runs[[i]], "obj") <- NULL
-      }
-    }
+#' @family H5Cluster
+setMethod("close", "H5ClusterExperiment", function(con, ...) {
+  # All runs share the same H5File handle, so we only need to close it once
+  if (length(con@runs) > 0 && !is.null(con@runs[[1]]@obj)) {
+    safe_h5_close(con@runs[[1]]@obj)
   }
   invisible(NULL)
-})
-
+}) 

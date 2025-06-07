@@ -18,17 +18,4 @@ Path to the created HDF5 file.
 This function creates a temporary HDF5 file with the minimal structure
 expected by the \code{H5NeuroVol} constructor.
 }
-\examples{
-# Not typically called directly by users, used in other examples via fmristore:::
-if (requireNamespace("neuroim2", quietly = TRUE) && 
-    requireNamespace("hdf5r", quietly = TRUE)) {
-  temp_file <- fmristore:::create_minimal_h5_for_H5NeuroVol()
-  print(temp_file)
-  # Example usage:
-  # h5vol <- H5NeuroVol(temp_file)
-  # print(h5vol)
-  # close(h5vol)
-  if (file.exists(temp_file)) unlink(temp_file)
-}
-}
 \keyword{internal}

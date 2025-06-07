@@ -1,5 +1,6 @@
 #' @include all_class.R
-#' @import neuroim2
+#' @importFrom hdf5r H5File h5file is.h5file
+#' @importFrom neuroim2 NeuroSpace space
 #' @importFrom withr defer
 #' @importFrom methods new is
 #' @importFrom lifecycle deprecate_warn
@@ -36,7 +37,8 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
 #'
 #' @param x An object inheriting from `H5ClusteredArray`.
 #' @param mask_indices An integer vector of voxel indices relative to the mask (1 to `x@n_voxels`).
-#' @param time_indices An integer vector specifying which time points to retrieve. If `NULL`, all time points are retrieved.
+#' @param time_indices An integer vector specifying which time points to retrieve. 
+#'   If `NULL`, all time points are retrieved.
 #' @param n_time The total number of time points for the specific run/scan being accessed.
 #'
 #' @return A numeric matrix of shape `[length(mask_indices), length(time_indices)]`
@@ -105,23 +107,21 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             }
             row_offsets_in_dataset <- as.integer(row_offsets_in_dataset)
 
-            cluster_data_subset <- h5_read_subset(
-                x@obj,
-                dset_path,
-                list(row_offsets_in_dataset, time_indices)
-            )
-            # Accessing obj slot from H5ClusteredArray
-            assert_h5_path(x@obj, dset_path,
-                           sprintf("Dataset for cluster %d", cid))
-            ds <- x@obj[[dset_path]]
-            # Simplified on.exit handling: rely on hdf5r GC or explicit closure later
-            # on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) ds$close(), add = TRUE, after = FALSE)
-
-            cluster_data_subset <- ds[row_offsets_in_dataset, time_indices, drop = FALSE]
-
-            # Close dataset handle immediately after reading
-            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-                 close_h5_safely(ds)
+            # If time_indices spans all time points, we can read without column subsetting
+            if (identical(time_indices, seq_len(full_time_length))) {
+                # Read only rows, all columns
+                cluster_data_subset <- h5_read_subset(
+                    x@obj,
+                    dset_path,
+                    list(row_offsets_in_dataset)
+                )
+            } else {
+                # Read specific rows and columns
+                cluster_data_subset <- h5_read_subset(
+                    x@obj,
+                    dset_path,
+                    list(row_offsets_in_dataset, time_indices)
+                )
             }
 
             expected_rows <- length(row_indices_in_result)
@@ -135,9 +135,6 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
             result_mat[row_indices_in_result, ] <- cluster_data_subset
 
         }, error = function(e) {
-            if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
-                close_h5_safely(ds)
-            }
             stop(sprintf("[.get_cluster_timeseries] Failed processing cluster %d at path '%s'. Original error: %s", cid, dset_path, e$message))
         })
     } # End loop over clusters
@@ -279,19 +276,34 @@ setMethod(".dataset_path", "H5ClusterRun",
 #' @return An array or vector containing the subset of data.
 #' @export
 #' @family H5Cluster
-#' @rdname sub-H5ClusteredRunFull-ANY-ANY-ANY-method
 setMethod("[",
   signature(x = "H5ClusterRun", i = "ANY", j = "ANY", drop = "ANY"),
   function(x, i, j, k, l, ..., drop = TRUE)
       .subset_h5crunfull(x, i, j, k, l, drop))
 
 
+#' Extract data from H5ClusterRun with missing j parameter
+#' 
+#' @description
+#' Extracts data from an \code{H5ClusterRun} object when only the first index is provided.
+#' Can handle mask indices, coordinate matrices, or pass through to coordinate-based indexing.
+#' 
+#' @param x An \code{H5ClusterRun} object
+#' @param i Row index (x-coordinate), mask indices, or coordinate matrix
+#' @param j Missing (not provided)
+#' @param k Slice index (z-coordinate) - optional, passed via ...
+#' @param l Time index - optional, passed via ...
+#' @param ... Additional arguments
+#' @param drop Logical. If \code{TRUE}, the result is coerced to the lowest possible dimension
+#' 
+#' @return An array or vector containing the subset of data
+#' 
 #' @export
 #' @family H5Cluster
-#' @rdname sub-H5ClusteredRunFull-ANY-ANY-ANY-method
+#' @rdname extract-methods
 setMethod("[",
   signature(x = "H5ClusterRun", i = "ANY", j = "missing", drop = "ANY"),
-  definition = function(x, i, j, k, l, ..., drop = TRUE) {
+  definition = function(x, i, j, ..., drop = TRUE) {
        # Handle cases: x[mask_indices], x[coords_matrix], x[i,j,k] (falls through if l missing)
        # Let the main helper sort it out.
       .subset_h5crunfull(x, i = i, j = NULL, k = NULL, l = NULL, drop = drop)
@@ -442,6 +454,7 @@ setMethod(
 #' @return A numeric vector of values corresponding to the provided linear indices.
 #'
 #' @examples
+#' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'     requireNamespace("hdf5r", quietly = TRUE) &&
 #'     exists("H5ClusterExperiment", where = "package:fmristore") &&
@@ -475,8 +488,8 @@ setMethod(
 #'       # Example: Access first 5 linear indices and last 5
 #'       indices_to_access <- c(1:5, (total_elements-4):total_elements)
 #'       # Ensure indices are within bounds if total_elements is small
-#'       indices_to_access <- indices_to_access[indices_to_access <= total_elements &
-#'                                             indices_to_access > 0]
+#'       indices_to_access <- indices_to_access[indices_to_access <= total_elements & 
+#'                                               indices_to_access > 0]
 #'       indices_to_access <- unique(indices_to_access)
 #'       
 #'       if (length(indices_to_access) > 0) {
@@ -503,6 +516,7 @@ setMethod(
 #'   })
 #' } else {
 #'   message("Skipping linear_access H5ClusterRun example: dependencies/helpers not available.")
+#' }
 #' }
 setMethod(
   f = "linear_access",
@@ -564,37 +578,37 @@ setMethod(
   signature = "H5ClusterRun",
   definition = function(object) {
     cat("\n", crayon::bold(crayon::blue("H5ClusterRun")), "\n", sep = "")
-    cat(crayon::silver("────────────────────────────────────────\n"))
+    cat(crayon::silver("----------------------------------------\n"))
     cat(crayon::bold(crayon::yellow("Run Info")), "\n")
-    cat(crayon::silver(" • "), crayon::green("Scan Name:"), object@scan_name, "\n")
-    cat(crayon::silver(" • "), crayon::green("Time points:"), object@n_time, "\n")
+    cat(crayon::silver(" * "), crayon::green("Scan Name:"), object@scan_name, "\n")
+    cat(crayon::silver(" * "), crayon::green("Time points:"), object@n_time, "\n")
     cat(crayon::bold("\nShared Info (from H5ClusteredArray)"), "\n")
-    cat(crayon::silver(" • "), crayon::green("Active voxels in mask:"), object@n_voxels, "\n")
+    cat(crayon::silver(" * "), crayon::green("Active voxels in mask:"), object@n_voxels, "\n")
     if (!is.null(object@clusters) && length(object@clusters@clusters) > 0) {
         cluster_ids <- unique(object@clusters@clusters)
         n_clusters  <- length(cluster_ids)
-        cat(crayon::silver(" • "), crayon::green("Number of clusters:"), n_clusters, "\n")
+        cat(crayon::silver(" * "), crayon::green("Number of clusters:"), n_clusters, "\n")
     } else {
-        cat(crayon::silver(" • "), crayon::green("Number of clusters:"), "(NA)", "\n")
+        cat(crayon::silver(" * "), crayon::green("Number of clusters:"), "(NA)", "\n")
     }
     cat(crayon::bold("\nStorage: HDF5 File"), "\n")
     if (!is.null(object@obj) && inherits(object@obj, "H5File") && object@obj$is_valid) {
-      cat(crayon::silver(" • "), "Path: ",
+      cat(crayon::silver(" * "), "Path: ",
           crayon::magenta(object@obj$get_filename()), "\n", sep="")
       # Check if the specific run path exists
       scan_clusters_path <- tryCatch(.dataset_path(object, 1), # Use helper for base path logic
                                       error = function(e) NULL)
       if (!is.null(scan_clusters_path)) {
           scan_clusters_path <- dirname(scan_clusters_path) # Get parent dir /scans/../clusters
-           cat(crayon::silver(" • "), "Run clusters path: ",
+           cat(crayon::silver(" * "), "Run clusters path: ",
                crayon::magenta(scan_clusters_path), " (",
                ifelse(object@obj$exists(scan_clusters_path), crayon::green("exists"), crayon::red("missing")), ")\n", sep="")
       } else {
-           cat(crayon::silver(" • "), "Run clusters path: unable to determine\n")
+           cat(crayon::silver(" * "), "Run clusters path: unable to determine\n")
       }
 
     } else {
-      cat(crayon::silver(" • "), "HDF5 file is ",
+      cat(crayon::silver(" * "), "HDF5 file is ",
           crayon::red("INVALID or CLOSED"), "\n", sep="")
     }
     cat("\n")
@@ -621,6 +635,28 @@ setMethod(
 #' @param compress (Optional) Logical indicating compression status (metadata).
 #'
 #' @return A new `H5ClusterRun` object.
+#' 
+#' @examples
+#' \dontrun{
+#' # Note: This function is deprecated in favor of H5ClusterRun()
+#' 
+#' # Create temporary HDF5 file
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask and clusters
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' clusters <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 3)
+#' 
+#' # Create run object (deprecated - will show deprecation warning)
+#' suppressWarnings({
+#'   run <- make_run_full(exp_file, scan_name = "Run1_Full", mask = mask, clusters = clusters)
+#' })
+#' 
+#' # Clean up - note: make_run_full returns an object that doesn't own the file handle
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom hdf5r H5File h5attr h5attr_names H5A 
 #' @importFrom methods new is
 #' @export
@@ -859,6 +895,7 @@ setMethod(
 
 #' @export
 #' @family H5Cluster
+#' @rdname extract-methods
 setMethod("[",
   signature(x = "H5ClusterRunSummary", i = "ANY", j = "ANY", drop = "ANY"),
   function(x, i, j, k, l, ..., drop = TRUE) {
@@ -868,6 +905,7 @@ setMethod("[",
 
 #' @export
 #' @family H5Cluster
+#' @rdname extract-methods
 setMethod("[",
   signature(x = "H5ClusterRunSummary", i = "ANY", j = "missing", drop = "ANY"),
   definition = function(x, i, ..., drop = TRUE) {
@@ -918,6 +956,27 @@ setMethod(
 #'   (default: "summary_data").
 #'
 #' @return A new `H5ClusterRunSummary` object.
+#' 
+#' @examples
+#' \dontrun{
+#' # Note: This function is deprecated in favor of H5ClusterRunSummary()
+#' 
+#' # Create temporary HDF5 file
+#' temp_file <- tempfile(fileext = ".h5")
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' 
+#' # Create mask
+#' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
+#' 
+#' # Create summary run object (deprecated - will show deprecation warning)
+#' suppressWarnings({
+#'   run_summary <- make_run_summary(exp_file, scan_name = "Run2_Summary", mask = mask)
+#' })
+#' 
+#' # Clean up - note: make_run_summary returns an object that doesn't own the file handle
+#' unlink(temp_file)
+#' }
+#' 
 #' @importFrom hdf5r H5File H5D
 #' @importFrom methods new is
 #' @importFrom lifecycle deprecate_warn
@@ -1082,7 +1141,7 @@ make_run_summary <- function(file_source, scan_name,
                  obj           = h5obj,
                  scan_name     = scan_name,
                  mask          = mask,
-                 clusters      = clusters,
+                 clusters      = if(is.null(clusters)) new("ClusteredNeuroVol") else clusters,
                  n_voxels      = as.integer(n_vox),
                  n_time        = n_time,
                  cluster_names = as.character(final_cluster_names),
@@ -1097,14 +1156,11 @@ make_run_summary <- function(file_source, scan_name,
   return(run_obj)
 }
 
-#' Show Methods for H5Cluster Objects
-#'
-#' Display concise summaries for objects in the H5Cluster family,
-#' including \code{H5ClusterRun}, \code{H5ClusterRunSummary},
-#' \code{H5ClusterExperiment}, and \code{LatentNeuroVec}.
-#'
-#' @param object An object from the H5Cluster family
-#' @importFrom cli cli_h1 cli_h2 cli_li col_blue col_green col_yellow col_silver col_red col_magenta symbol cli_text cli_alert_info
+#' Show Method for H5ClusterRunSummary
+#' @param object An H5ClusterRunSummary object
+#' @importFrom cli cli_h1 cli_h2 cli_li col_blue col_green col_yellow col_silver 
+#' @importFrom cli col_red col_magenta symbol cli_text cli_alert_info
+#' @importFrom utils head
 #' @importFrom methods show
 #' @export
 #' @family H5Cluster

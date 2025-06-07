@@ -41,4 +41,23 @@ for on-demand access.
 4. Tags file attribute "rtype" => "DenseNeuroVec"
 5. Returns \code{H5NeuroVec}
 }
+\examples{
+\dontrun{
+# Create a simple 4D neuroimaging vector
+vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(3, 3, 2, 5))
+
+# Convert to HDF5 format in a temporary file
+temp_file <- tempfile(fileext = ".h5")
+h5_vec <- to_nih5_vec(vec, file_name = temp_file)
+
+# Access the data
+print(dim(h5_vec))
+print(class(h5_vec))
+
+# Clean up
+close(h5_vec)
+unlink(temp_file)
+}
+
+}
 \keyword{internal}

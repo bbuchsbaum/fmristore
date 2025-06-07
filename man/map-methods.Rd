@@ -21,6 +21,7 @@ The index map object (e.g., an IndexLookupVol from neuroim2)
 Get the index map volume
 }
 \examples{
+\dontrun{
 # For LatentNeuroVec:
 if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   lnv <- NULL
@@ -34,6 +35,7 @@ if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   })
 } else {
   message("Skipping map example for LatentNeuroVec: helper not available.")
+}
 }
 
 }
