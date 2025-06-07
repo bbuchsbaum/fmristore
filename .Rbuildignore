@@ -21,3 +21,8 @@
 ^docs$
 ^pkgdown$
 ^\.github$
+^codecov\.yml$
+^\.pre-commit-config\.yaml$
+^\.styler\.R$
+^README\.md$
+^DEVELOPMENT\.md$
