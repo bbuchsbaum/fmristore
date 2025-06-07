@@ -1626,8 +1626,12 @@ setMethod(
     # Pre-calculate transposed loadings (k x nVox_in_mask)
     t_loadings <- t(x@loadings)
 
+    # treat NULL/zero-length j,k same as missing (generic may supply NULL)
+    j_missing <- missing(j) || is.null(j) || length(j) == 0L
+    k_missing <- missing(k) || is.null(k) || length(k) == 0L
+
     # CASE A: user gave only i -> interpret as multiple 3D voxel indices
-    if (missing(j) && missing(k)) {
+    if (j_missing && k_missing) {
       if (any(i < 1 | i > nels3d)) {
         stop("Some voxel index in 'i' is out of range [1..(X*Y*Z)].")
       }
@@ -1699,11 +1703,26 @@ setMethod(
   f = "series",
   signature = signature(x="LatentNeuroVec", i="numeric"),
   definition = function(x, i, j, k, drop=TRUE) {
-    # Cast i,j,k to integer if provided
+    # Cast to integer when supplied. Preserve missing/NULL for j,k
     if (!missing(i)) i <- as.integer(i)
-    if (!missing(j)) j <- as.integer(j)
-    if (!missing(k)) k <- as.integer(k)
-    callGeneric(x, i=i, j=j, k=k, drop=drop)
+
+    if (missing(j) || is.null(j) || length(j) == 0L) {
+      j_call <- NULL
+    } else {
+      j_call <- as.integer(j)
+    }
+
+    if (missing(k) || is.null(k) || length(k) == 0L) {
+      k_call <- NULL
+    } else {
+      k_call <- as.integer(k)
+    }
+
+    if (is.null(j_call) && is.null(k_call)) {
+      callGeneric(x, i=i, drop=drop)
+    } else {
+      callGeneric(x, i=i, j=j_call, k=k_call, drop=drop)
+    }
   }
 )
 
