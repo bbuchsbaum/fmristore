@@ -11,9 +11,9 @@ test_that("writer + reader round-trip", {
   tf <- tempfile(fileext = ".h5")
   on.exit(unlink(tf), add = TRUE)
 
-  msp <- NeuroSpace(c(4,4,2), c(1,1,1))
+  msp <- NeuroSpace(c(4, 4, 2), c(1, 1, 1))
   # Create dummy mask and clusters
-  mask <- LogicalNeuroVol(array(c(rep(FALSE, 16*1), rep(TRUE, 16*1)), dim(msp)), msp)
+  mask <- LogicalNeuroVol(array(c(rep(FALSE, 16 * 1), rep(TRUE, 16 * 1)), dim(msp)), msp)
   expect_equal(sum(mask), 16)
   set.seed(1)
   clus <- ClusteredNeuroVol(mask, sample(1:3, sum(mask), TRUE))
@@ -42,30 +42,30 @@ test_that("writer + reader round-trip", {
   summ_mat  <- matrix(rnorm(n_time2 * 3), n_time2, 3)
 
   # Create cluster metadata data.frame
-  clus_meta_df <- data.frame(cluster_id=1:3,
-                             desc=paste("Cluster", 1:3),
-                             size=c(n_vox_c1, n_vox_c2, n_vox_c3))
+  clus_meta_df <- data.frame(cluster_id = 1:3,
+    desc = paste("Cluster", 1:3),
+    size = c(n_vox_c1, n_vox_c2, n_vox_c3))
 
   # Create the runs_data list for the writer
   runs <- list(
     list(scan_name = "run1",
-         type = "full",
-         data = full_data_list,
-         metadata = list(TR = 2.0, Task = "RestingState", SubjectID = "Sub01")),
+      type = "full",
+      data = full_data_list,
+      metadata = list(TR = 2.0, Task = "RestingState", SubjectID = "Sub01")),
     list(scan_name = "run2",
-         type = "summary",
-         data = summ_mat,
-         metadata = list(TR = 2.5, Task = "FingerTapping", SubjectID = "Sub01"))
+      type = "summary",
+      data = summ_mat,
+      metadata = list(TR = 2.5, Task = "FingerTapping", SubjectID = "Sub01"))
   )
 
   # Write the file
   write_clustered_experiment_h5(tf, mask, clus, runs,
-         cluster_metadata = clus_meta_df, overwrite = TRUE, verbose = FALSE)
+    cluster_metadata = clus_meta_df, overwrite = TRUE, verbose = FALSE)
 
   # --- Test Reading ---
   # Can we open it?
   exp <- H5ClusterExperiment(tf, keep_handle_open = TRUE)
-  on.exit(try(exp$h5file$close_all(), silent=TRUE), add = TRUE) # Ensure cleanup
+  on.exit(try(exp$h5file$close_all(), silent = TRUE), add = TRUE) # Ensure cleanup
 
   expect_s4_class(exp, "H5ClusterExperiment")
   expect_equal(n_scans(exp), 2)
@@ -89,8 +89,8 @@ test_that("writer + reader round-trip", {
   expect_setequal(names(exp@cluster_metadata), names(clus_meta_df))
   expect_equal(nrow(exp@cluster_metadata), nrow(clus_meta_df))
   # Check content after sorting by cluster_id to ensure alignment
-  clus_meta_read_sorted <- exp@cluster_metadata[order(exp@cluster_metadata$cluster_id),]
-  clus_meta_orig_sorted <- clus_meta_df[order(clus_meta_df$cluster_id),]
+  clus_meta_read_sorted <- exp@cluster_metadata[order(exp@cluster_metadata$cluster_id), ]
+  clus_meta_orig_sorted <- clus_meta_df[order(clus_meta_df$cluster_id), ]
   expect_equal(clus_meta_read_sorted$cluster_id, clus_meta_orig_sorted$cluster_id)
   expect_equal(clus_meta_read_sorted$desc, clus_meta_orig_sorted$desc)
   expect_equal(clus_meta_read_sorted$size, clus_meta_orig_sorted$size)
@@ -107,7 +107,7 @@ test_that("writer + reader round-trip", {
   expect_true(identical(clusters(exp), clusters(exp@runs[[1]])))
   # Summary run might have NULL clusters slot if not explicitly loaded, check object identity if non-NULL
   if (!is.null(clusters(exp@runs[[2]]))) {
-      expect_true(identical(clusters(exp), clusters(exp@runs[[2]])))
+    expect_true(identical(clusters(exp), clusters(exp@runs[[2]])))
   }
   expect_true(identical(h5file(exp), h5file(exp@runs[[1]])))
   expect_true(identical(h5file(exp), h5file(exp@runs[[2]])))
@@ -120,16 +120,16 @@ test_that("writer + reader round-trip", {
   expected_full_t_vox <- matrix(NA_real_, nrow = n_time1, ncol = total_n_vox)
   mask_indices_global <- which(as.array(mask))
 
-  for(cid_str in names(cluster_counts)) {
-      cid <- as.integer(cid_str)
-      current_run_data <- full_data_list[[paste0("cluster_", cid)]]
-      if (!is.null(current_run_data)) {
-          # Find which mask indices belong to this cluster
-          vox_in_cluster_mask_indices <- which(clus@clusters == cid)
-          # These indices correspond to columns in the final concatenated matrix
-          expect_equal(nrow(current_run_data), length(vox_in_cluster_mask_indices)) # sanity check
-          expected_full_t_vox[, vox_in_cluster_mask_indices] <- t(current_run_data)
-      }
+  for (cid_str in names(cluster_counts)) {
+    cid <- as.integer(cid_str)
+    current_run_data <- full_data_list[[paste0("cluster_", cid)]]
+    if (!is.null(current_run_data)) {
+      # Find which mask indices belong to this cluster
+      vox_in_cluster_mask_indices <- which(clus@clusters == cid)
+      # These indices correspond to columns in the final concatenated matrix
+      expect_equal(nrow(current_run_data), length(vox_in_cluster_mask_indices)) # sanity check
+      expected_full_t_vox[, vox_in_cluster_mask_indices] <- t(current_run_data)
+    }
   }
 
   # Call series_concat for the first run (which is the full run)
@@ -154,22 +154,22 @@ test_that("writer + reader round-trip", {
 
 test_that("writer errors if mask or clusters are NULL", {
   # Create minimal valid mask/clusters
-  msp <- NeuroSpace(c(2,2,2), c(1,1,1))
-  mask_val <- LogicalNeuroVol(array(TRUE, dim=c(2,2,2)), msp)
+  msp <- NeuroSpace(c(2, 2, 2), c(1, 1, 1))
+  mask_val <- LogicalNeuroVol(array(TRUE, dim = c(2, 2, 2)), msp)
   clus_val <- ClusteredNeuroVol(mask_val, 1:8)
-  runs_val <- list(list(scan_name="s1", type="summary", data=matrix(1:10, 5, 2)))
+  runs_val <- list(list(scan_name = "s1", type = "summary", data = matrix(1:10, 5, 2)))
   tf <- tempfile(fileext = ".h5")
-  on.exit(unlink(tf), add=TRUE)
+  on.exit(unlink(tf), add = TRUE)
 
-  expect_error(write_clustered_experiment_h5(tf, mask=NULL, clusters=clus_val, runs_data=runs_val), ".*must be.*LogicalNeuroVol.*")
-  expect_error(write_clustered_experiment_h5(tf, mask=mask_val, clusters=NULL, runs_data=runs_val), ".*must be.*ClusteredNeuroVol.*")
+  expect_error(write_clustered_experiment_h5(tf, mask = NULL, clusters = clus_val, runs_data = runs_val), ".*must be.*LogicalNeuroVol.*")
+  expect_error(write_clustered_experiment_h5(tf, mask = mask_val, clusters = NULL, runs_data = runs_val), ".*must be.*ClusteredNeuroVol.*")
 })
 
 test_that("reader default path (mask=NULL, clusters=NULL) works", {
   tf <- tempfile(fileext = ".h5")
   on.exit(unlink(tf), add = TRUE)
-  msp <- NeuroSpace(c(2,2,1), c(1,1,1))
-  mask <- LogicalNeuroVol(array(c(FALSE, TRUE, TRUE, FALSE), dim = c(2,2,1)), msp)
+  msp <- NeuroSpace(c(2, 2, 1), c(1, 1, 1))
+  mask <- LogicalNeuroVol(array(c(FALSE, TRUE, TRUE, FALSE), dim = c(2, 2, 1)), msp)
   clus <- ClusteredNeuroVol(mask, 1:2)
   runs <- list(list(scan_name = "run1", type = "summary", data = matrix(1:10, 5, 2)))
   write_clustered_experiment_h5(tf, mask, clus, runs, overwrite = TRUE, verbose = FALSE)
@@ -187,34 +187,34 @@ test_that("reader default path (mask=NULL, clusters=NULL) works", {
 test_that("reader validation works for provided mask and clusters", {
   tf <- tempfile(fileext = ".h5")
   on.exit(unlink(tf), add = TRUE)
-  msp <- NeuroSpace(c(2,2,2), c(1,1,1))
-  mask_orig <- LogicalNeuroVol(array(c(rep(FALSE,4), rep(TRUE,4)), dim = c(2,2,2)), msp)
+  msp <- NeuroSpace(c(2, 2, 2), c(1, 1, 1))
+  mask_orig <- LogicalNeuroVol(array(c(rep(FALSE, 4), rep(TRUE, 4)), dim = c(2, 2, 2)), msp)
   # Ensure we have both clusters represented
   cluster_ids <- c(1, 1, 2, 2)  # Guarantees both clusters are present
   clus_orig <- ClusteredNeuroVol(mask_orig, cluster_ids)
   runs <- list(list(scan_name = "run1", type = "summary", data = matrix(1:10, 5, 2)))
   # Write cluster metadata as well
-  clus_meta_df <- data.frame(cluster_id=1:2, desc=c("One", "Two"))
-  write_clustered_experiment_h5(tf, mask_orig, clus_orig, runs, cluster_metadata=clus_meta_df, overwrite = TRUE, verbose = FALSE)
+  clus_meta_df <- data.frame(cluster_id = 1:2, desc = c("One", "Two"))
+  write_clustered_experiment_h5(tf, mask_orig, clus_orig, runs, cluster_metadata = clus_meta_df, overwrite = TRUE, verbose = FALSE)
 
   # 1. Provide valid mask and clusters - should succeed
-  expect_message(exp_valid <- H5ClusterExperiment(tf, mask = mask_orig, clusters = clus_orig), ".*validation successful.*", all=TRUE)
+  expect_message(exp_valid <- H5ClusterExperiment(tf, mask = mask_orig, clusters = clus_orig), ".*validation successful.*", all = TRUE)
   expect_s4_class(exp_valid, "H5ClusterExperiment")
   expect_true(identical(mask(exp_valid), mask_orig)) # Checks space and data
   expect_true(identical(clusters(exp_valid), clus_orig)) # Checks space and data
 
   # 2. Provide mask with different space - currently only warns, doesn't fail
-  mask_bad_space <- LogicalNeuroVol(mask_orig@.Data, NeuroSpace(dim=c(2,2,2), spacing=c(2,2,2)))
+  mask_bad_space <- LogicalNeuroVol(mask_orig@.Data, NeuroSpace(dim = c(2, 2, 2), spacing = c(2, 2, 2)))
   expect_warning(H5ClusterExperiment(tf, mask = mask_bad_space), ".*NeuroSpace object does not match.*")
 
   # 3. Provide mask with different voxel pattern - should fail
   mask_bad_pattern <- mask_orig
-  mask_bad_pattern[1,1,1] <- TRUE # Original was FALSE, this adds an extra TRUE voxel
+  mask_bad_pattern[1, 1, 1] <- TRUE # Original was FALSE, this adds an extra TRUE voxel
   # This will fail at the count check before pattern check
   expect_error(H5ClusterExperiment(tf, mask = mask_bad_pattern), ".*TRUE voxel count.*does not match.*")
 
   # 4. Provide mask with wrong sum (caught by length check against cluster_map)
-  mask_bad_sum <- LogicalNeuroVol(array(TRUE, dim=c(2,2,2)), NeuroSpace(c(2,2,2), c(1,1,1))) # sum=8, but cluster_map length=4
+  mask_bad_sum <- LogicalNeuroVol(array(TRUE, dim = c(2, 2, 2)), NeuroSpace(c(2, 2, 2), c(1, 1, 1))) # sum=8, but cluster_map length=4
   expect_error(H5ClusterExperiment(tf, mask = mask_bad_sum), ".*TRUE voxel count.*does not match length.*cluster_map.*")
 
   # 5. Provide clusters with different space - should fail
@@ -233,9 +233,14 @@ test_that("reader validation works for provided mask and clusters", {
 test_that("summary_preference defaults based on /scans attribute", {
   tf1 <- tempfile(fileext = ".h5")
   tf2 <- tempfile(fileext = ".h5")
-  on.exit({unlink(tf1); unlink(tf2)}, add = TRUE)
+  on.exit(
+    {
+      unlink(tf1)
+      unlink(tf2)
+    },
+    add = TRUE)
 
-  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2,2,2))
+  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2, 2, 2))
   clus <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 2)
 
   runs_sum <- list(list(scan_name = "s1", type = "summary", data = matrix(1:4, 2, 2)))
@@ -255,7 +260,7 @@ test_that("warning for mismatched summary_only attribute", {
   tf <- tempfile(fileext = ".h5")
   on.exit(unlink(tf), add = TRUE)
 
-  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2,2,2))
+  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2, 2, 2))
   clus <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 2)
 
   runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:4, 2, 2))))
@@ -275,22 +280,22 @@ test_that("dataset cluster_meta is read as data.frame", {
   tf <- tempfile(fileext = ".h5")
   on.exit(unlink(tf), add = TRUE)
 
-  msp <- NeuroSpace(c(2,2,1), c(1,1,1))
-  mask <- LogicalNeuroVol(array(TRUE, dim = c(2,2,1)), msp)
-  clus <- ClusteredNeuroVol(mask, c(1L,2L,1L,2L))
+  msp <- NeuroSpace(c(2, 2, 1), c(1, 1, 1))
+  mask <- LogicalNeuroVol(array(TRUE, dim = c(2, 2, 1)), msp)
+  clus <- ClusteredNeuroVol(mask, c(1L, 2L, 1L, 2L))
 
   full_data_list <- list(
-    cluster_1 = matrix(rnorm(2*3), 2, 3),
-    cluster_2 = matrix(rnorm(2*3), 2, 3)
+    cluster_1 = matrix(rnorm(2 * 3), 2, 3),
+    cluster_2 = matrix(rnorm(2 * 3), 2, 3)
   )
   runs <- list(list(scan_name = "run1", type = "full", data = full_data_list))
-  meta_df <- data.frame(cluster_id=c(1L,2L), desc=c("A","B"))
+  meta_df <- data.frame(cluster_id = c(1L, 2L), desc = c("A", "B"))
 
   write_clustered_experiment_h5(tf, mask, clus, runs,
-                                cluster_metadata = meta_df,
-                                overwrite = TRUE, verbose = FALSE)
+    cluster_metadata = meta_df,
+    overwrite = TRUE, verbose = FALSE)
 
-  h5f <- H5File$new(tf, mode="r+")
+  h5f <- H5File$new(tf, mode = "r+")
   meta_grp <- h5f[["/clusters/cluster_meta"]]
   meta_list <- lapply(names(meta_grp), function(nm) meta_grp[[nm]][])
   names(meta_list) <- names(meta_grp)

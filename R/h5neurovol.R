@@ -12,7 +12,7 @@ NULL
 #' @description
 #' Constructs an \code{\link{H5NeuroVol}} object representing a 3D brain volume
 #' stored in an HDF5 file. The HDF5 file is opened in read-only mode.
-#' 
+#'
 #' @details
 #' This constructor is typically used for reading existing HDF5 files that conform
 #' to the H5NeuroVol specification.
@@ -57,7 +57,7 @@ H5NeuroVol <- function(file_name) {
 
 
   # Check the "rtype" attribute
-  rtype <- try(hdf5r::h5attr(h5obj, which="rtype"), silent=TRUE)
+  rtype <- try(hdf5r::h5attr(h5obj, which = "rtype"), silent = TRUE)
   if (!is.character(rtype) || rtype != "DenseNeuroVol") {
     stop("Invalid HDF5 file for H5NeuroVol: ", file_name)
   }
@@ -66,7 +66,7 @@ H5NeuroVol <- function(file_name) {
   if (length(h5obj[["space/dim"]][]) != 3) {
     stop(
       "Cannot create H5NeuroVol: file must have 3 dimensions; found: ",
-      paste(h5obj[["space/dim"]][], collapse=" ")
+      paste(h5obj[["space/dim"]][], collapse = " ")
     )
   }
 
@@ -74,11 +74,11 @@ H5NeuroVol <- function(file_name) {
   sp <- NeuroSpace(
     dim    = h5obj[["space/dim"]][],
     origin = h5obj[["space/origin"]][],
-    trans  = h5obj[["space/trans"]][,]
+    trans  = h5obj[["space/trans"]][, ]
   )
 
   on.exit(NULL)
-  new("H5NeuroVol", space=sp, h5obj=h5obj)
+  new("H5NeuroVol", space = sp, h5obj = h5obj)
 }
 
 #' Convert a NeuroVol to HDF5 Format (as_h5 Method)
@@ -103,105 +103,106 @@ setMethod(
   f = "as_h5",
   signature = signature(object = "NeuroVol"),
   definition = function(object, file = NULL, data_type = "FLOAT",
-                         chunk_dim = NULL, compression = 6) { 
-    
-    # --- Determine output file path --- 
+                        chunk_dim = NULL, compression = 6) {
+    # --- Determine output file path ---
     out_file <- file
     if (is.null(out_file)) {
-        out_file <- tempfile(fileext = ".h5")
-        message("Output file not specified, using temp file: ", out_file)
+      out_file <- tempfile(fileext = ".h5")
+      message("Output file not specified, using temp file: ", out_file)
     }
-    
-    # --- Map data_type string to HDF5 type object --- 
+
+    # --- Map data_type string to HDF5 type object ---
     h5dtype_obj <- switch(toupper(data_type),
-                           "FLOAT"   = hdf5r::h5types$H5T_NATIVE_FLOAT,
-                           "DOUBLE"  = hdf5r::h5types$H5T_NATIVE_DOUBLE,
-                           "INT"     = hdf5r::h5types$H5T_NATIVE_INT32,
-                           "INTEGER" = hdf5r::h5types$H5T_NATIVE_INT32,
-                           "SHORT"   = hdf5r::h5types$H5T_NATIVE_INT16,
-                           "CHAR"    = hdf5r::h5types$H5T_NATIVE_CHAR,
-                           "UINT8"   = hdf5r::h5types$H5T_NATIVE_UCHAR,
-                           stop("Unsupported data_type: ", data_type)
-                          )
-    
-    # --- Write Phase: Open, Write, Explicitly Close --- 
-    fh_write <- NULL 
+      "FLOAT"   = hdf5r::h5types$H5T_NATIVE_FLOAT,
+      "DOUBLE"  = hdf5r::h5types$H5T_NATIVE_DOUBLE,
+      "INT"     = hdf5r::h5types$H5T_NATIVE_INT32,
+      "INTEGER" = hdf5r::h5types$H5T_NATIVE_INT32,
+      "SHORT"   = hdf5r::h5types$H5T_NATIVE_INT16,
+      "CHAR"    = hdf5r::h5types$H5T_NATIVE_CHAR,
+      "UINT8"   = hdf5r::h5types$H5T_NATIVE_UCHAR,
+      stop("Unsupported data_type: ", data_type)
+    )
+
+    # --- Write Phase: Open, Write, Explicitly Close ---
+    fh_write <- NULL
     h5_write_obj <- NULL
     write_success <- FALSE
     tryCatch({
-        fh_write <- open_h5(out_file, mode = "w")
-        h5_write_obj <- fh_write$h5
-        
-        # Write Root Attribute
-        hdf5r::h5attr(h5_write_obj, "rtype") <- "DenseNeuroVol"
-        
-        # Write Space Group 
-        sp <- space(object)
-        sp_dims <- dim(sp)
-        if (length(sp_dims) != 3) stop("Input NeuroVol must be 3-dimensional.")
-        
-        current_trans <- trans(sp)
-        
-        h5_write(h5_write_obj, "/space/dim", as.integer(sp_dims), overwrite = TRUE)
-        h5_write(h5_write_obj, "/space/origin", as.double(origin(sp)), overwrite = TRUE)
-        h5_write(h5_write_obj, "/space/spacing", as.double(spacing(sp)), overwrite = TRUE)
-        h5_write(h5_write_obj, "/space/trans", current_trans, overwrite = TRUE) 
-        
-        # Write Data Group
-        data_arr <- as.array(object) 
-        final_chunk_dim <- chunk_dim
-        if (is.null(final_chunk_dim) && compression > 0) {
-             final_chunk_dim <- pmin(sp_dims, c(32L, 32L, 32L))
-        }
-        h5_write(h5_write_obj, "/data/elements", data_arr,
-                 dtype = h5dtype_obj,
-                 chunk_dims = final_chunk_dim, 
-                 compression = compression,
-                 overwrite = TRUE)
-        
-        write_success <- TRUE # Mark success if we reached here
-        message("Successfully wrote NeuroVol to: ", out_file)
-        
+      fh_write <- open_h5(out_file, mode = "w")
+      h5_write_obj <- fh_write$h5
+
+      # Write Root Attribute
+      hdf5r::h5attr(h5_write_obj, "rtype") <- "DenseNeuroVol"
+
+      # Write Space Group
+      sp <- space(object)
+      sp_dims <- dim(sp)
+      if (length(sp_dims) != 3) stop("Input NeuroVol must be 3-dimensional.")
+
+      current_trans <- trans(sp)
+
+      h5_write(h5_write_obj, "/space/dim", as.integer(sp_dims), overwrite = TRUE)
+      h5_write(h5_write_obj, "/space/origin", as.double(origin(sp)), overwrite = TRUE)
+      h5_write(h5_write_obj, "/space/spacing", as.double(spacing(sp)), overwrite = TRUE)
+      h5_write(h5_write_obj, "/space/trans", current_trans, overwrite = TRUE)
+
+      # Write Data Group
+      data_arr <- as.array(object)
+      final_chunk_dim <- chunk_dim
+      if (is.null(final_chunk_dim) && compression > 0) {
+        final_chunk_dim <- pmin(sp_dims, c(32L, 32L, 32L))
+      }
+      h5_write(h5_write_obj, "/data/elements", data_arr,
+        dtype = h5dtype_obj,
+        chunk_dims = final_chunk_dim,
+        compression = compression,
+        overwrite = TRUE)
+
+      write_success <- TRUE # Mark success if we reached here
+      message("Successfully wrote NeuroVol to: ", out_file)
+
     }, error = function(e) {
-        # Error occurred during writing
-        stop("Failed during HDF5 write phase for ", out_file, ": ", e$message)
+      # Error occurred during writing
+      stop("Failed during HDF5 write phase for ", out_file, ": ", e$message)
     }, finally = {
-        # Always attempt to close the write handle
-        if (!is.null(fh_write) && fh_write$owns) {
-             safe_h5_close(h5_write_obj)
-        }
+      # Always attempt to close the write handle
+      if (!is.null(fh_write) && fh_write$owns) {
+        safe_h5_close(h5_write_obj)
+      }
     })
-    
+
     # If writing didn't complete successfully, stop before reopening
     if (!write_success) {
-        stop("HDF5 write failed for ", out_file, ", cannot create H5NeuroVol object.")
+      stop("HDF5 write failed for ", out_file, ", cannot create H5NeuroVol object.")
     }
-    
-    # --- Reopen in Read Mode and Return H5NeuroVol --- 
+
+    # --- Reopen in Read Mode and Return H5NeuroVol ---
     h5_read_obj <- NULL
-    tryCatch({
+    tryCatch(
+      {
         # Write handle is now closed. Reopen the file in read mode.
         h5_read_obj <- hdf5r::H5File$new(out_file, mode = "r")
-        
+
         # Read space info for the new object
         trans_data <- h5_read_obj[["/space/trans"]]$read()
-       
+
         sp_read <- NeuroSpace(
-            dim    = h5_read_obj[["/space/dim"]]$read(),
-            spacing= h5_read_obj[["/space/spacing"]]$read(),   
-            origin = h5_read_obj[["/space/origin"]]$read(), 
-            trans  = trans_data
+          dim    = h5_read_obj[["/space/dim"]]$read(),
+          spacing = h5_read_obj[["/space/spacing"]]$read(),
+          origin = h5_read_obj[["/space/origin"]]$read(),
+          trans  = trans_data
         )
-      
-        
+
+
         # Return the H5NeuroVol with the NEW, OPEN, read-mode handle
-        new("H5NeuroVol", space=sp_read, h5obj=h5_read_obj)
-        
-    }, error = function(e) {
+        new("H5NeuroVol", space = sp_read, h5obj = h5_read_obj)
+
+      },
+      error = function(e) {
         # If reopening or reading space fails, ensure the read handle is closed if it opened
         if (!is.null(h5_read_obj) && h5_read_obj$is_valid) safe_h5_close(h5_read_obj)
         stop("Failed to reopen/read HDF5 file ", out_file, " to create H5NeuroVol: ", e$message)
-    })
+      })
   }
 )
 
@@ -210,9 +211,8 @@ setMethod(
 #' @rdname linear_access-methods
 setMethod(
   f = "linear_access",
-  signature = signature(x="H5NeuroVol", i="numeric"),
+  signature = signature(x = "H5NeuroVol", i = "numeric"),
   definition = function(x, i) {
-
     # 1) Check range
     n_vox <- prod(dim(x))  # total number of voxels in 3D
     if (any(i < 1 | i > n_vox)) {
@@ -229,29 +229,32 @@ setMethod(
     coords <- arrayInd(i, dim(x))  # Nx3
 
     # 4) bounding box
-    minx <- min(coords[,1]); maxx <- max(coords[,1])
-    miny <- min(coords[,2]); maxy <- max(coords[,2])
-    minz <- min(coords[,3]); maxz <- max(coords[,3])
+    minx <- min(coords[, 1])
+    maxx <- max(coords[, 1])
+    miny <- min(coords[, 2])
+    maxy <- max(coords[, 2])
+    minz <- min(coords[, 3])
+    maxz <- max(coords[, 3])
 
     # 5) Read that bounding box from the dataset
     subvol <- with_h5_dataset(x@h5obj, "data/elements", function(ds) {
-        if (is.null(ds)) stop("Could not open dataset '/data/elements' for linear_access")
-        ds[minx:maxx, miny:maxy, minz:maxz, drop = FALSE]
+      if (is.null(ds)) stop("Could not open dataset '/data/elements' for linear_access")
+      ds[minx:maxx, miny:maxy, minz:maxz, drop = FALSE]
     })
     # shape => (maxx - minx + 1) x (maxy - miny + 1) x (maxz - minz + 1)
 
     # 6) Offset coords to index subvol
-    off_coords <- cbind(coords[,1] - minx + 1,
-                        coords[,2] - miny + 1,
-                        coords[,3] - minz + 1)
+    off_coords <- cbind(coords[, 1] - minx + 1,
+      coords[, 2] - miny + 1,
+      coords[, 3] - minz + 1)
 
     # 7) Gather values
     n <- nrow(coords)
     out_vals <- numeric(n)
     for (k in seq_len(n)) {
-      out_vals[k] <- subvol[ off_coords[k,1],
-                             off_coords[k,2],
-                             off_coords[k,3] ]
+      out_vals[k] <- subvol[off_coords[k, 1],
+        off_coords[k, 2],
+        off_coords[k, 3]]
     }
     out_vals
   }
@@ -261,7 +264,7 @@ setMethod(
 #' @rdname linear_access-methods
 setMethod(
   f = "linear_access",
-  signature = signature(x="H5NeuroVol", i="integer"),
+  signature = signature(x = "H5NeuroVol", i = "integer"),
   definition = function(x, i) {
     callGeneric(x, as.numeric(i))  # passes off to the numeric method above
   }
@@ -288,13 +291,12 @@ setMethod(
 #' @export
 setMethod(
   f = "[",
-  signature = signature(x="H5NeuroVol"),
-  definition = function(x, i, j, k, ..., drop=TRUE) {
-
+  signature = signature(x = "H5NeuroVol"),
+  definition = function(x, i, j, k, ..., drop = TRUE) {
     # 1) Determine dimension of the underlying volume
     dimx <- dim(x)  # c(X, Y, Z)
     if (length(dimx) != 3) {
-      stop("H5NeuroVol is not 3D? Found dim=", paste(dimx, collapse="x"))
+      stop("H5NeuroVol is not 3D? Found dim=", paste(dimx, collapse = "x"))
     }
 
     # 2) If i, j, k are missing, default them
@@ -314,33 +316,36 @@ setMethod(
     k <- as.numeric(k)
 
     # 3) If any index has length=0 => return an empty array right away
-    if (length(i)==0 || length(j)==0 || length(k)==0) {
+    if (length(i) == 0 || length(j) == 0 || length(k) == 0) {
       outdim <- c(length(i), length(j), length(k))
-      empty_arr <- array(numeric(0), dim=outdim)
+      empty_arr <- array(numeric(0), dim = outdim)
       if (drop) empty_arr <- drop(empty_arr)
       return(empty_arr)
     }
 
     # 4) Check out-of-range
-    if (min(i)<1 || max(i)>dimx[1]) {
+    if (min(i) < 1 || max(i) > dimx[1]) {
       stop("Subscript 'i' out of range for dimension 1")
     }
-    if (min(j)<1 || max(j)>dimx[2]) {
+    if (min(j) < 1 || max(j) > dimx[2]) {
       stop("Subscript 'j' out of range for dimension 2")
     }
-    if (min(k)<1 || max(k)>dimx[3]) {
+    if (min(k) < 1 || max(k) > dimx[3]) {
       stop("Subscript 'k' out of range for dimension 3")
     }
 
     # 5) Determine bounding box
-    minI <- floor(min(i)); maxI <- ceiling(max(i))
-    minJ <- floor(min(j)); maxJ <- ceiling(max(j))
-    minK <- floor(min(k)); maxK <- ceiling(max(k))
+    minI <- floor(min(i))
+    maxI <- ceiling(max(i))
+    minJ <- floor(min(j))
+    maxJ <- ceiling(max(j))
+    minK <- floor(min(k))
+    maxK <- ceiling(max(k))
 
     # 6) Read the bounding box from the dataset
     subvol <- with_h5_dataset(x@h5obj, "data/elements", function(ds) {
-        if (is.null(ds)) stop("Could not open dataset '/data/elements'")
-        ds[minI:maxI, minJ:maxJ, minK:maxK, drop = FALSE]
+      if (is.null(ds)) stop("Could not open dataset '/data/elements'")
+      ds[minI:maxI, minJ:maxJ, minK:maxK, drop = FALSE]
     })
     # shape => c((maxI-minI+1), (maxJ-minJ+1), (maxK-minK+1))
 
@@ -361,9 +366,9 @@ setMethod(
 
     # Build a systematic index
     N  <- length(i) * length(j) * length(k)
-    ix_i <- rep(seq_along(i), times = length(j)*length(k))
-    ix_j <- rep(rep(seq_along(j), each=length(i)), times=length(k))
-    ix_k <- rep(seq_along(k), each = length(i)*length(j))
+    ix_i <- rep(seq_along(i), times = length(j) * length(k))
+    ix_j <- rep(rep(seq_along(j), each = length(i)), times = length(k))
+    ix_k <- rep(seq_along(k), each = length(i) * length(j))
 
     loc_i <- i_off[ix_i]
     loc_j <- j_off[ix_j]
@@ -371,11 +376,11 @@ setMethod(
 
     # local 3D => linear index in subvol
     sub_lin_idx <- loc_i +
-      (loc_j-1)* subdimI +
-      (loc_k-1)* subdimI * subdimJ
+      (loc_j - 1) * subdimI +
+      (loc_k - 1) * subdimI * subdimJ
 
     out_vals <- subvol_vec[sub_lin_idx]
-    arr_out  <- array(out_vals, dim=out_dim)
+    arr_out  <- array(out_vals, dim = out_dim)
 
     # 8) drop dims if requested
     if (drop) {
@@ -402,10 +407,10 @@ setAs(
 )
 
 #' Show Method for H5NeuroVol
-#' 
+#'
 #' Displays a summary of the H5NeuroVol object, including dimensions,
 #' spacing, origin, and HDF5 file information, without reading voxel data.
-#' 
+#'
 #' @param object The H5NeuroVol object to display.
 #' @importFrom crayon bold blue silver yellow green italic
 #' @export
@@ -415,22 +420,22 @@ setMethod(
   definition = function(object) {
     cat("\n", crayon::bold(crayon::blue("H5NeuroVol Object")), "\n")
     cat(crayon::silver("===================\n"))
-    
+
     # Display spatial info from the space slot
     sp <- object@space
     dims <- dim(sp)
     spacing_str <- paste(round(neuroim2::spacing(sp), 2), collapse = " x ")
     origin_str <- paste(round(neuroim2::origin(sp), 2), collapse = " x ")
-    
+
     cat(crayon::yellow("Dimensions:"), crayon::green(paste(dims, collapse = " x ")), "\n")
     cat(crayon::yellow("Spacing:"), crayon::green(spacing_str), "\n")
     cat(crayon::yellow("Origin:"), crayon::green(origin_str), "\n")
-    
+
     # Display HDF5 file info
     h5f <- object@h5obj
     file_status <- "<Invalid Handle>"
     file_path <- "<unknown>"
-    
+
     if (!is.null(h5f) && inherits(h5f, "H5File")) {
       is_valid <- tryCatch(h5f$is_valid, error = function(e) FALSE)
       if (is_valid) {
@@ -442,9 +447,9 @@ setMethod(
         file_status <- paste(crayon::red("CLOSED handle"), "for file:", crayon::italic(file_path))
       }
     } else {
-       file_status <- crayon::red("INVALID H5File object slot")
+      file_status <- crayon::red("INVALID H5File object slot")
     }
-    
+
     cat(crayon::yellow("HDF5 Source:"), file_status, "\n")
     cat(crayon::silver("===================\n"))
     cat("Access data using standard array indexing (e.g., object[1:10, 1:10, 1])\n")

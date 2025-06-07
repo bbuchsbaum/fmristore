@@ -36,9 +36,9 @@ setOldClass("H5File")
 #' @examples
 #' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
-#'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5NeuroVol", where = "package:fmristore") && # Check if constructor is available
-#'     !is.null(fmristore:::create_minimal_h5_for_H5NeuroVol)) { # Check helper
+#'   requireNamespace("hdf5r", quietly = TRUE) &&
+#'   exists("H5NeuroVol", where = "package:fmristore") && # Check if constructor is available
+#'   !is.null(fmristore:::create_minimal_h5_for_H5NeuroVol)) { # Check helper
 #'
 #'   # Setup: Create a temporary HDF5 file using a helper
 #'   # The helper creates a dataset named "data/elements" by default.
@@ -81,13 +81,13 @@ setOldClass("H5File")
 #' @importMethodsFrom neuroim2 [
 #' @importMethodsFrom neuroim2 linear_access
 setClass("H5NeuroVol",
-         slots = c(
-           h5obj = "H5File"  # underlying HDF5 file handle
-         ),
-         prototype = list(
-           h5obj = NULL # Default to NULL, needs explicit file handle
-         ),
-         contains = c("NeuroVol", "ArrayLike3D"))
+  slots = c(
+    h5obj = "H5File"  # underlying HDF5 file handle
+  ),
+  prototype = list(
+    h5obj = NULL # Default to NULL, needs explicit file handle
+  ),
+  contains = c("NeuroVol", "ArrayLike3D"))
 
 #' H5NeuroVec Class
 #'
@@ -120,10 +120,9 @@ setClass("H5NeuroVol",
 #' @examples
 #' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
-#'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5NeuroVec", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) {
-#'
+#'   requireNamespace("hdf5r", quietly = TRUE) &&
+#'   exists("H5NeuroVec", where = "package:fmristore") &&
+#'   !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) {
 #'   # Setup: Create a temporary HDF5 file using a helper
 #'   temp_h5_path <- NULL
 #'   h5_vec <- NULL
@@ -160,13 +159,13 @@ setClass("H5NeuroVol",
 #' @export
 #' @rdname H5NeuroVec-class
 setClass("H5NeuroVec",
-         slots = c(
-           obj = "H5File"  # underlying HDF5 file handle
-         ),
-         prototype = list(
-           obj = NULL # Default to NULL
-         ),
-         contains = c("NeuroVec", "ArrayLike4D"))
+  slots = c(
+    obj = "H5File"  # underlying HDF5 file handle
+  ),
+  prototype = list(
+    obj = NULL # Default to NULL
+  ),
+  contains = c("NeuroVec", "ArrayLike4D"))
 
 #' H5Format Class
 #'
@@ -179,7 +178,7 @@ setClass("H5NeuroVec",
 #' @keywords internal
 #' @noRd
 setClass("H5Format",
-         contains = c("FileFormat"))
+  contains = c("FileFormat"))
 
 #' H5NeuroVecSource Class
 #'
@@ -193,10 +192,10 @@ setClass("H5Format",
 #' @keywords internal
 #' @noRd
 setClass("H5NeuroVecSource",
-         representation(file_name = "character"),
-         prototype = list(
-           file_name = character() # Default to empty character vector
-         ))
+  representation(file_name = "character"),
+  prototype = list(
+    file_name = character() # Default to empty character vector
+))
 
 #' LatentNeuroVec Class
 #'
@@ -244,9 +243,8 @@ setClass("H5NeuroVecSource",
 #' @examples
 #' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
-#'     requireNamespace("Matrix", quietly = TRUE) &&
-#'     !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'
+#'   requireNamespace("Matrix", quietly = TRUE) &&
+#'   !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
 #'   # Create a LatentNeuroVec object using the helper
 #'   # The helper creates a mask, basis, and loadings internally.
 #'   # It uses new("LatentNeuroVec", ...) after creating constituent parts if not directly calling
@@ -254,28 +252,30 @@ setClass("H5NeuroVecSource",
 #'   # Our helper fmristore:::create_minimal_LatentNeuroVec returns a LatentNeuroVec.
 #'
 #'   latent_vec <- NULL
-#'   tryCatch({
-#'     latent_vec <- fmristore:::create_minimal_LatentNeuroVec(
-#'       space_dims = c(5L, 5L, 3L),
-#'       n_time = 8L,
-#'       n_comp = 2L
-#'     )
+#'   tryCatch(
+#'     {
+#'       latent_vec <- fmristore:::create_minimal_LatentNeuroVec(
+#'         space_dims = c(5L, 5L, 3L),
+#'         n_time = 8L,
+#'         n_comp = 2L
+#'       )
 #'
-#'     print(latent_vec)
+#'       print(latent_vec)
 #'
-#'     # Access slots (example)
-#'     # print(dim(latent_vec@basis))
-#'     # print(dim(latent_vec@loadings))
+#'       # Access slots (example)
+#'       # print(dim(latent_vec@basis))
+#'       # print(dim(latent_vec@loadings))
 #'
-#'     # Example of accessing data (reconstruction for a voxel would be more complex)
-#'     # This class is more about representation; direct element access is usually via methods.
-#'     # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
-#'     # For a simple demonstration, we can show its dimensions:
-#'     print(dim(latent_vec)) # from NeuroVec inheritance
+#'       # Example of accessing data (reconstruction for a voxel would be more complex)
+#'       # This class is more about representation; direct element access is usually via methods.
+#'       # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
+#'       # For a simple demonstration, we can show its dimensions:
+#'       print(dim(latent_vec)) # from NeuroVec inheritance
 #'
-#'   }, error = function(e) {
-#'     message("LatentNeuroVec example failed: ", e$message)
-#'   })
+#'     },
+#'     error = function(e) {
+#'       message("LatentNeuroVec example failed: ", e$message)
+#'     })
 #'
 #' } else {
 #'   message("Skipping LatentNeuroVec example: neuroim2, Matrix, or helper not available.")
@@ -285,15 +285,15 @@ setClass("H5NeuroVecSource",
 #' @export
 #' @rdname LatentNeuroVec-class
 setClass("LatentNeuroVec",
-         slots = c(
-           basis = "Matrix",
-           loadings = "Matrix",
-           offset = "numeric",
-           map = "IndexLookupVol",
-           label = "character"
-         ),
+  slots = c(
+    basis = "Matrix",
+    loadings = "Matrix",
+    offset = "numeric",
+    map = "IndexLookupVol",
+    label = "character"
+  ),
 
-         contains = c("NeuroVec", "AbstractSparseNeuroVec"))
+  contains = c("NeuroVec", "AbstractSparseNeuroVec"))
 
 #' LatentNeuroVecSource Class
 #'
@@ -307,10 +307,10 @@ setClass("LatentNeuroVec",
 #' @keywords internal
 #' @noRd
 setClass("LatentNeuroVecSource",
-         representation(file_name="character"),
-         prototype = list(
-           file_name = character() # Default to empty character vector
-         ))
+  representation(file_name = "character"),
+  prototype = list(
+    file_name = character() # Default to empty character vector
+))
 
 
 #' LabeledVolumeSet Class
@@ -337,10 +337,9 @@ setClass("LatentNeuroVecSource",
 #' @examples
 #' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
-#'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("read_labeled_vec", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_LabeledVolumeSet)) {
-#'
+#'   requireNamespace("hdf5r", quietly = TRUE) &&
+#'   exists("read_labeled_vec", where = "package:fmristore") &&
+#'   !is.null(fmristore:::create_minimal_h5_for_LabeledVolumeSet)) {
 #'   # Setup: Create a temporary HDF5 file suitable for read_labeled_vec
 #'   temp_h5_path <- NULL
 #'   lvs <- NULL
@@ -380,13 +379,13 @@ setClass("LatentNeuroVecSource",
 #'
 #' @export
 setClass("LabeledVolumeSet",
-         slots = c(
-           obj      = "H5File",          # pointer to open file
-           mask     = "LogicalNeuroVol", # 3D mask
-           labels   = "character",       # volume (sub-volume) names
-           load_env = "environment"     # environment for lazy loading
-         ),
-         contains = c("NeuroVec"))  # extends NeuroVec
+  slots = c(
+    obj      = "H5File",          # pointer to open file
+    mask     = "LogicalNeuroVol", # 3D mask
+    labels   = "character",       # volume (sub-volume) names
+    load_env = "environment"     # environment for lazy loading
+  ),
+  contains = c("NeuroVec"))  # extends NeuroVec
 
 #' H5ClusteredArray (Virtual Base Class)
 #'
@@ -416,49 +415,49 @@ setClass("LabeledVolumeSet",
 #'
 #' @export
 setClass("H5ClusteredArray",
-         slots = c(
-           obj      = "H5File",
-           mask     = "LogicalNeuroVol",
-           clusters = "ClusteredNeuroVol",
-           n_voxels = "integer"
-         ),
-         prototype = list(
-            obj      = NULL,
-            mask     = new("LogicalNeuroVol"),
-            clusters = new("ClusteredNeuroVol"),
-            n_voxels = NA_integer_
-         ),
-         validity = function(object) {
-            errors <- character()
-            # Check 1: n_voxels should match sum(mask), if mask is valid
-            mask_space_valid <- !is.null(object@mask) &&
-                                 is(object@mask, "LogicalNeuroVol") &&
-                                 validObject(object@mask@space, test=TRUE)
+  slots = c(
+    obj      = "H5File",
+    mask     = "LogicalNeuroVol",
+    clusters = "ClusteredNeuroVol",
+    n_voxels = "integer"
+  ),
+  prototype = list(
+    obj      = NULL,
+    mask     = new("LogicalNeuroVol"),
+    clusters = new("ClusteredNeuroVol"),
+    n_voxels = NA_integer_
+  ),
+  validity = function(object) {
+    errors <- character()
+    # Check 1: n_voxels should match sum(mask), if mask is valid
+    mask_space_valid <- !is.null(object@mask) &&
+      is(object@mask, "LogicalNeuroVol") &&
+      validObject(object@mask@space, test = TRUE)
 
-            if (mask_space_valid) {
-                expected_nvox <- sum(object@mask)
-                if (!is.na(object@n_voxels) && object@n_voxels != expected_nvox) {
-                   errors <- c(errors,
-                               sprintf("Slot 'n_voxels' (%d) does not match sum(mask) (%d).",
-                                       object@n_voxels, expected_nvox))
-                }
-                # Check 2: length of cluster vector should match n_voxels (which should match sum(mask))
-                if (!is.null(object@clusters) && is(object@clusters, "ClusteredNeuroVol") && length(object@clusters@clusters) > 0) {
-                   if (length(object@clusters@clusters) != expected_nvox) {
-                      errors <- c(errors,
-                                  sprintf("Length of clusters@clusters (%d) does not match sum(mask) (%d).",
-                                          length(object@clusters@clusters), expected_nvox))
-                   }
-                }
-            }
-            # Check 3: Basic type check for H5File handle
-            if (!is.null(object@obj) && !inherits(object@obj, "H5File")) {
-                errors <- c(errors, "Slot 'obj' must be an H5File object or NULL.")
-            }
+    if (mask_space_valid) {
+      expected_nvox <- sum(object@mask)
+      if (!is.na(object@n_voxels) && object@n_voxels != expected_nvox) {
+        errors <- c(errors,
+          sprintf("Slot 'n_voxels' (%d) does not match sum(mask) (%d).",
+            object@n_voxels, expected_nvox))
+      }
+      # Check 2: length of cluster vector should match n_voxels (which should match sum(mask))
+      if (!is.null(object@clusters) && is(object@clusters, "ClusteredNeuroVol") && length(object@clusters@clusters) > 0) {
+        if (length(object@clusters@clusters) != expected_nvox) {
+          errors <- c(errors,
+            sprintf("Length of clusters@clusters (%d) does not match sum(mask) (%d).",
+              length(object@clusters@clusters), expected_nvox))
+        }
+      }
+    }
+    # Check 3: Basic type check for H5File handle
+    if (!is.null(object@obj) && !inherits(object@obj, "H5File")) {
+      errors <- c(errors, "Slot 'obj' must be an H5File object or NULL.")
+    }
 
-            if (length(errors) == 0) TRUE else errors
-         },
-         contains = "VIRTUAL")
+    if (length(errors) == 0) TRUE else errors
+  },
+  contains = "VIRTUAL")
 
 #' H5ClusterRun Class
 #'
@@ -476,18 +475,18 @@ setClass("H5ClusteredArray",
 #' @family H5Cluster
 #' @export
 setClass("H5ClusterRun",
-         slots = c(
-             scan_name = "character",
-             n_time    = "integer",
-             compress  = "logical" # Primarily for metadata/write path
-         ),
-         prototype = list(
-            scan_name = character(),
-            n_time = NA_integer_,
-            compress = FALSE
-            # Inherits prototype for obj, mask, clusters, n_voxels
-         ),
-         contains = "H5ClusteredArray")
+  slots = c(
+    scan_name = "character",
+    n_time    = "integer",
+    compress  = "logical" # Primarily for metadata/write path
+  ),
+  prototype = list(
+    scan_name = character(),
+    n_time = NA_integer_,
+    compress = FALSE
+    # Inherits prototype for obj, mask, clusters, n_voxels
+  ),
+  contains = "H5ClusteredArray")
 
 #' H5ClusterRunSummary Class
 #'
@@ -509,21 +508,21 @@ setClass("H5ClusterRun",
 #' @family H5Cluster
 #' @export
 setClass("H5ClusterRunSummary",
-         slots = c(
-            scan_name     = "character",
-            n_time        = "integer",
-            cluster_names = "character",
-            cluster_ids   = "integer",
-            summary_dset  = "character"
-         ),
-         prototype = list(
-            scan_name     = character(),
-            n_time        = NA_integer_,
-            cluster_names = character(),
-            cluster_ids   = integer(),
-            summary_dset  = "summary_data"
-         ),
-         contains = "H5ClusteredArray")
+  slots = c(
+    scan_name     = "character",
+    n_time        = "integer",
+    cluster_names = "character",
+    cluster_ids   = "integer",
+    summary_dset  = "character"
+  ),
+  prototype = list(
+    scan_name     = character(),
+    n_time        = NA_integer_,
+    cluster_names = character(),
+    cluster_ids   = integer(),
+    summary_dset  = "summary_data"
+  ),
+  contains = "H5ClusteredArray")
 
 #' H5ClusterExperiment Class
 #'
@@ -543,78 +542,78 @@ setClass("H5ClusterRunSummary",
 #' @family H5Cluster
 #' @export
 setClass("H5ClusterExperiment",
-         slots = c(
-             runs             = "list",
-             scan_metadata    = "list",
-             cluster_metadata = "data.frame"
-         ),
-         prototype = list(
-             runs             = list(),
-             scan_metadata    = list(),
-             cluster_metadata = data.frame()
-         ),
-         validity = function(object) {
-            errors <- character()
-            n_runs <- length(object@runs)
+  slots = c(
+    runs             = "list",
+    scan_metadata    = "list",
+    cluster_metadata = "data.frame"
+  ),
+  prototype = list(
+    runs             = list(),
+    scan_metadata    = list(),
+    cluster_metadata = data.frame()
+  ),
+  validity = function(object) {
+    errors <- character()
+    n_runs <- length(object@runs)
 
-            # Check 1: All elements in 'runs' list must inherit from H5ClusteredArray
-            if (n_runs > 0) {
-                is_valid_run <- vapply(object@runs, inherits, logical(1),
-                                       what = "H5ClusteredArray")
-                if (!all(is_valid_run)) {
-                    invalid_indices <- which(!is_valid_run)
-                    errors <- c(errors,
-                                paste0("Elements at indices ",
-                                       paste(invalid_indices, collapse=", "),
-                                       " in the 'runs' list do not inherit from H5ClusteredArray."))
-                    # Stop further checks if basic type is wrong
-                    return(errors)
-                }
-            }
+    # Check 1: All elements in 'runs' list must inherit from H5ClusteredArray
+    if (n_runs > 0) {
+      is_valid_run <- vapply(object@runs, inherits, logical(1),
+        what = "H5ClusteredArray")
+      if (!all(is_valid_run)) {
+        invalid_indices <- which(!is_valid_run)
+        errors <- c(errors,
+          paste0("Elements at indices ",
+            paste(invalid_indices, collapse = ", "),
+            " in the 'runs' list do not inherit from H5ClusteredArray."))
+        # Stop further checks if basic type is wrong
+        return(errors)
+      }
+    }
 
-            # Check 2: Ensure scan_metadata has same length as runs if not empty
-            if (length(object@scan_metadata) > 0 && length(object@scan_metadata) != n_runs) {
-                 errors <- c(errors,
-                           sprintf("Length of 'scan_metadata' (%d) does not match length of 'runs' list (%d).",
-                                   length(object@scan_metadata), n_runs))
-            }
+    # Check 2: Ensure scan_metadata has same length as runs if not empty
+    if (length(object@scan_metadata) > 0 && length(object@scan_metadata) != n_runs) {
+      errors <- c(errors,
+        sprintf("Length of 'scan_metadata' (%d) does not match length of 'runs' list (%d).",
+          length(object@scan_metadata), n_runs))
+    }
 
-            # Check 3: If multiple runs, verify they share the same H5File, mask, and clusters
-            if (n_runs > 1) {
-                first_run <- object@runs[[1]]
-                # Check H5 File (using filename as a robust check)
-                first_filename <- tryCatch(first_run@obj$get_filename(), error=function(e) NA_character_)
-                if(is.na(first_filename)) {
-                    errors <- c(errors, "Could not get HDF5 filename from the first run object.")
-                }
+    # Check 3: If multiple runs, verify they share the same H5File, mask, and clusters
+    if (n_runs > 1) {
+      first_run <- object@runs[[1]]
+      # Check H5 File (using filename as a robust check)
+      first_filename <- tryCatch(first_run@obj$get_filename(), error = function(e) NA_character_)
+      if (is.na(first_filename)) {
+        errors <- c(errors, "Could not get HDF5 filename from the first run object.")
+      }
 
-                for (i in 2:n_runs) {
-                    current_run <- object@runs[[i]]
-                    # Check H5 File consistency
-                    current_filename <- tryCatch(current_run@obj$get_filename(), error=function(e) NA_character_)
-                    if (is.na(current_filename) || !identical(first_filename, current_filename)) {
-                        errors <- c(errors,
-                                   sprintf("Run %d uses a different HDF5 file ('%s') than Run 1 ('%s').",
-                                           i, current_filename, first_filename))
-                    }
-                    # Check mask consistency (using identical to check for same object in memory)
-                    if (!identical(first_run@mask, current_run@mask)) {
-                        errors <- c(errors, sprintf("Run %d has a different mask object than Run 1.", i))
-                    }
-                    # Check clusters consistency (using identical)
-                    # Need to handle NULL case for H5ClusterRunSummary
-                    if (!identical(first_run@clusters, current_run@clusters)) {
-                         # Allow comparison if both are NULL (summary runs might have NULL clusters)
-                         if (!(is.null(first_run@clusters) && is.null(current_run@clusters))) {
-                            errors <- c(errors, sprintf("Run %d has a different clusters object than Run 1.", i))
-                         }
-                    }
-                }
-            }
+      for (i in 2:n_runs) {
+        current_run <- object@runs[[i]]
+        # Check H5 File consistency
+        current_filename <- tryCatch(current_run@obj$get_filename(), error = function(e) NA_character_)
+        if (is.na(current_filename) || !identical(first_filename, current_filename)) {
+          errors <- c(errors,
+            sprintf("Run %d uses a different HDF5 file ('%s') than Run 1 ('%s').",
+              i, current_filename, first_filename))
+        }
+        # Check mask consistency (using identical to check for same object in memory)
+        if (!identical(first_run@mask, current_run@mask)) {
+          errors <- c(errors, sprintf("Run %d has a different mask object than Run 1.", i))
+        }
+        # Check clusters consistency (using identical)
+        # Need to handle NULL case for H5ClusterRunSummary
+        if (!identical(first_run@clusters, current_run@clusters)) {
+          # Allow comparison if both are NULL (summary runs might have NULL clusters)
+          if (!(is.null(first_run@clusters) && is.null(current_run@clusters))) {
+            errors <- c(errors, sprintf("Run %d has a different clusters object than Run 1.", i))
+          }
+        }
+      }
+    }
 
-            if (length(errors) == 0) TRUE else errors
-         }
-         # Does not contain H5ClusteredArray
+    if (length(errors) == 0) TRUE else errors
+  }
+  # Does not contain H5ClusteredArray
 )
 
 #' @seealso \code{\link{H5ClusterRun-class}}, \code{\link{H5ClusterRunSummary-class}}
@@ -623,9 +622,9 @@ setClass("H5ClusterExperiment",
 #' @examples
 #' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
-#'     requireNamespace("hdf5r", quietly = TRUE) &&
-#'     exists("H5ClusterExperiment", where = "package:fmristore") &&
-#'     !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
+#'   requireNamespace("hdf5r", quietly = TRUE) &&
+#'   exists("H5ClusterExperiment", where = "package:fmristore") &&
+#'   !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 #'
 #'   temp_exp_file <- NULL
 #'   exp <- NULL
@@ -657,76 +656,76 @@ setClass("H5ClusterExperiment",
 #'
 #' @export
 setClass("H5ClusterExperiment",
-         slots = c(
-             runs             = "list",
-             scan_metadata    = "list",
-             cluster_metadata = "data.frame"
-         ),
-         prototype = list(
-             runs             = list(),
-             scan_metadata    = list(),
-             cluster_metadata = data.frame()
-         ),
-         validity = function(object) {
-            errors <- character()
-            n_runs <- length(object@runs)
+  slots = c(
+    runs             = "list",
+    scan_metadata    = "list",
+    cluster_metadata = "data.frame"
+  ),
+  prototype = list(
+    runs             = list(),
+    scan_metadata    = list(),
+    cluster_metadata = data.frame()
+  ),
+  validity = function(object) {
+    errors <- character()
+    n_runs <- length(object@runs)
 
-            # Check 1: All elements in 'runs' list must inherit from H5ClusteredArray
-            if (n_runs > 0) {
-                is_valid_run <- vapply(object@runs, inherits, logical(1),
-                                       what = "H5ClusteredArray")
-                if (!all(is_valid_run)) {
-                    invalid_indices <- which(!is_valid_run)
-                    errors <- c(errors,
-                                paste0("Elements at indices ",
-                                       paste(invalid_indices, collapse=", "),
-                                       " in the 'runs' list do not inherit from H5ClusteredArray."))
-                    # Stop further checks if basic type is wrong
-                    return(errors)
-                }
-            }
+    # Check 1: All elements in 'runs' list must inherit from H5ClusteredArray
+    if (n_runs > 0) {
+      is_valid_run <- vapply(object@runs, inherits, logical(1),
+        what = "H5ClusteredArray")
+      if (!all(is_valid_run)) {
+        invalid_indices <- which(!is_valid_run)
+        errors <- c(errors,
+          paste0("Elements at indices ",
+            paste(invalid_indices, collapse = ", "),
+            " in the 'runs' list do not inherit from H5ClusteredArray."))
+        # Stop further checks if basic type is wrong
+        return(errors)
+      }
+    }
 
-            # Check 2: Ensure scan_metadata has same length as runs if not empty
-            if (length(object@scan_metadata) > 0 && length(object@scan_metadata) != n_runs) {
-                 errors <- c(errors,
-                           sprintf("Length of 'scan_metadata' (%d) does not match length of 'runs' list (%d).",
-                                   length(object@scan_metadata), n_runs))
-            }
+    # Check 2: Ensure scan_metadata has same length as runs if not empty
+    if (length(object@scan_metadata) > 0 && length(object@scan_metadata) != n_runs) {
+      errors <- c(errors,
+        sprintf("Length of 'scan_metadata' (%d) does not match length of 'runs' list (%d).",
+          length(object@scan_metadata), n_runs))
+    }
 
-            # Check 3: If multiple runs, verify they share the same H5File, mask, and clusters
-            if (n_runs > 1) {
-                first_run <- object@runs[[1]]
-                # Check H5 File (using filename as a robust check)
-                first_filename <- tryCatch(first_run@obj$get_filename(), error=function(e) NA_character_)
-                if(is.na(first_filename)) {
-                    errors <- c(errors, "Could not get HDF5 filename from the first run object.")
-                }
+    # Check 3: If multiple runs, verify they share the same H5File, mask, and clusters
+    if (n_runs > 1) {
+      first_run <- object@runs[[1]]
+      # Check H5 File (using filename as a robust check)
+      first_filename <- tryCatch(first_run@obj$get_filename(), error = function(e) NA_character_)
+      if (is.na(first_filename)) {
+        errors <- c(errors, "Could not get HDF5 filename from the first run object.")
+      }
 
-                for (i in 2:n_runs) {
-                    current_run <- object@runs[[i]]
-                    # Check H5 File consistency
-                    current_filename <- tryCatch(current_run@obj$get_filename(), error=function(e) NA_character_)
-                    if (is.na(current_filename) || !identical(first_filename, current_filename)) {
-                        errors <- c(errors,
-                                   sprintf("Run %d uses a different HDF5 file ('%s') than Run 1 ('%s').",
-                                           i, current_filename, first_filename))
-                    }
-                    # Check mask consistency (using identical to check for same object in memory)
-                    if (!identical(first_run@mask, current_run@mask)) {
-                        errors <- c(errors, sprintf("Run %d has a different mask object than Run 1.", i))
-                    }
-                    # Check clusters consistency (using identical)
-                    # Need to handle NULL case for H5ClusterRunSummary
-                    if (!identical(first_run@clusters, current_run@clusters)) {
-                         # Allow comparison if both are NULL (summary runs might have NULL clusters)
-                         if (!(is.null(first_run@clusters) && is.null(current_run@clusters))) {
-                            errors <- c(errors, sprintf("Run %d has a different clusters object than Run 1.", i))
-                         }
-                    }
-                }
-            }
+      for (i in 2:n_runs) {
+        current_run <- object@runs[[i]]
+        # Check H5 File consistency
+        current_filename <- tryCatch(current_run@obj$get_filename(), error = function(e) NA_character_)
+        if (is.na(current_filename) || !identical(first_filename, current_filename)) {
+          errors <- c(errors,
+            sprintf("Run %d uses a different HDF5 file ('%s') than Run 1 ('%s').",
+              i, current_filename, first_filename))
+        }
+        # Check mask consistency (using identical to check for same object in memory)
+        if (!identical(first_run@mask, current_run@mask)) {
+          errors <- c(errors, sprintf("Run %d has a different mask object than Run 1.", i))
+        }
+        # Check clusters consistency (using identical)
+        # Need to handle NULL case for H5ClusterRunSummary
+        if (!identical(first_run@clusters, current_run@clusters)) {
+          # Allow comparison if both are NULL (summary runs might have NULL clusters)
+          if (!(is.null(first_run@clusters) && is.null(current_run@clusters))) {
+            errors <- c(errors, sprintf("Run %d has a different clusters object than Run 1.", i))
+          }
+        }
+      }
+    }
 
-            if (length(errors) == 0) TRUE else errors
-         }
-         # Does not contain H5ClusteredArray
+    if (length(errors) == 0) TRUE else errors
+  }
+  # Does not contain H5ClusteredArray
 )

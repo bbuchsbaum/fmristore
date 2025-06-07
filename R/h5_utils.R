@@ -19,32 +19,34 @@ open_h5 <- function(src, mode = "r") {
   if (inherits(src, "H5File")) {
     # If it's already an H5File object, check if it's open
     if (!src$is_valid) {
-        stop("open_h5: provided H5File object is not valid (likely closed).")
+      stop("open_h5: provided H5File object is not valid (likely closed).")
     }
     # User owns this handle, we didn't open it
     return(list(h5 = src, owns = FALSE))
   }
 
-  if (!is.character(src) || length(src) != 1L || !nzchar(src)){
-     stop("open_h5: 'src' must be a single, non-empty character string (file path) or an H5File object.")
+  if (!is.character(src) || length(src) != 1L || !nzchar(src)) {
+    stop("open_h5: 'src' must be a single, non-empty character string (file path) or an H5File object.")
   }
 
   # Only check for existence if opening in read-only mode.
   # Modes 'w', 'w+', 'a' are expected to create the file if it doesn't exist.
   if (mode == "r" && !file.exists(src)) {
-      stop("open_h5: file path does not exist: ", src)
+    stop("open_h5: file path does not exist: ", src)
   }
 
   # Attempt to open the file
-  h5 <- tryCatch({
+  h5 <- tryCatch(
+    {
       hdf5r::H5File$new(src, mode = mode)
-  }, error = function(e) {
+    },
+    error = function(e) {
       stop("open_h5: failed to open HDF5 file '", src, "' in mode '", mode, "'. Original error: ", conditionMessage(e))
-  })
+    })
 
   # We opened it, so we 'own' it (caller is responsible for closing)
   return(list(h5 = h5, owns = TRUE))
-} 
+}
 
 #' Helper function to ensure a valid LogicalNeuroVol mask is available.
 #' Reads from HDF5 if mask is NULL, otherwise validates the provided mask.
@@ -75,14 +77,14 @@ ensure_mask <- function(mask, h5, space, path = "/mask") {
 
   # Check spatial dimensions against the provided space using helper
   check_same_dims(m, space, dims_to_compare = 1:3,
-                  msg = "Mask dimensions do not match space dimensions")
+    msg = "Mask dimensions do not match space dimensions")
 
   # Ensure the mask's space matches the provided space object exactly
   if (!identical(space(m), space)) {
-      warning("Mask's internal NeuroSpace object does not match the provided reference space. Consider updating the mask's space for consistency.")
-      # Optionally, force the space to be identical?
-      # space(m) <- space
-      # For now, just warn, as dim check passed.
+    warning("Mask's internal NeuroSpace object does not match the provided reference space. Consider updating the mask's space for consistency.")
+    # Optionally, force the space to be identical?
+    # space(m) <- space
+    # For now, just warn, as dim check passed.
   }
 
   return(m)
@@ -109,13 +111,13 @@ assert_h5_path <- function(h5, path, desc = "Path") {
 
   exists <- tryCatch(h5$exists(path), error = function(e) {
     stop(sprintf("assert_h5_path: Error checking existence of '%s': %s",
-                 path, conditionMessage(e)))
+      path, conditionMessage(e)))
   })
 
   if (!isTRUE(exists)) {
     fname <- tryCatch(h5$get_filename(), error = function(e) "<unknown>")
     stop(sprintf("%s not found at path '%s' in HDF5 file '%s'",
-                 desc, path, fname))
+      desc, path, fname))
   }
 
   invisible(TRUE)
@@ -128,7 +130,7 @@ assert_h5_path <- function(h5, path, desc = "Path") {
 #'
 #' @param h5 An open `H5File` object handle.
 #' @param path The full path to the dataset within the HDF5 file (e.g., "/data/my_dataset").
-#' @param missing_ok Logical, if `TRUE`, returns `NULL` if the dataset doesn't exist. 
+#' @param missing_ok Logical, if `TRUE`, returns `NULL` if the dataset doesn't exist.
 #'   If `FALSE` (default), stops with an error if the dataset is missing.
 #' @param read_args A list of additional arguments passed to the HDF5 dataset's `$read()` method
 #'   (e.g., for subsetting: `list(args = list(i = 1:10))`)
@@ -137,26 +139,28 @@ assert_h5_path <- function(h5, path, desc = "Path") {
 #' @keywords internal
 h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
   if (!inherits(h5, "H5File") || !h5$is_valid) {
-      stop("h5_read: 'h5' must be a valid and open H5File object.")
+    stop("h5_read: 'h5' must be a valid and open H5File object.")
   }
   if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
-      stop("h5_read: 'path' must be a single, non-empty character string.")
+    stop("h5_read: 'path' must be a single, non-empty character string.")
   }
-  
-  path_exists <- tryCatch({
+
+  path_exists <- tryCatch(
+    {
       h5$exists(path)
-  }, error = function(e) {
+    },
+    error = function(e) {
       # Handle cases where checking existence itself fails (e.g., permission issue, intermediate group missing)
       warning(sprintf("h5_read: Suppressed HDF5 error during existence check for path '%s': %s", path, conditionMessage(e)))
       FALSE
-  })
-  
+    })
+
   if (!path_exists) {
     if (missing_ok) {
       return(NULL)
     } else {
-      stop(sprintf("h5_read: Dataset or group not found at path '%s' in HDF5 file '%s'", 
-                   path, h5$get_filename()))
+      stop(sprintf("h5_read: Dataset or group not found at path '%s' in HDF5 file '%s'",
+        path, h5$get_filename()))
     }
   }
 
@@ -167,22 +171,22 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
     # Check if it's a dataset before trying to read
     obj_info <- h5$link_info(path)
     if (obj_info$type != "H5L_TYPE_HARD") {
-         # Could be a group or something else; h5[[path]] might work for groups but read() will fail.
-         # Treat non-datasets as an error unless specifically handled.
-         stop(sprintf("Object at path '%s' is not a dataset (type: %s).",
-                      path, obj_info$type))
+      # Could be a group or something else; h5[[path]] might work for groups but read() will fail.
+      # Treat non-datasets as an error unless specifically handled.
+      stop(sprintf("Object at path '%s' is not a dataset (type: %s).",
+        path, obj_info$type))
     }
-    
+
     dset <- h5[[path]] # Open the dataset
     if (is.null(read_args)) {
-        data <- dset$read()
+      data <- dset$read()
     } else {
-        # Pass arguments using do.call
-        data <- do.call(dset$read, read_args)
+      # Pass arguments using do.call
+      data <- do.call(dset$read, read_args)
     }
   }, error = function(e) {
-    stop(sprintf("h5_read: Failed to read data from path '%s'. Original error: %s", 
-                 path, conditionMessage(e)))
+    stop(sprintf("h5_read: Failed to read data from path '%s'. Original error: %s",
+      path, conditionMessage(e)))
   }, finally = {
     # Ensure dataset handle is closed
     if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
@@ -215,7 +219,7 @@ h5_read_subset <- function(h5, path, index = NULL) {
 
   if (!h5$exists(path)) {
     stop(sprintf("h5_read_subset: dataset '%s' not found in file '%s'",
-                 path, h5$get_filename()))
+      path, h5$get_filename()))
   }
 
   dset <- NULL
@@ -239,10 +243,10 @@ h5_read_subset <- function(h5, path, index = NULL) {
         if (length(dims) == 2 && length(index) == 1) {
           # For 2D datasets, if only row indices provided, select all columns
           # Use drop=FALSE to ensure matrix output
-          out <- dset[index[[1]], , drop=FALSE]
+          out <- dset[index[[1]], , drop = FALSE]
         } else if (length(dims) == 2 && length(index) == 2) {
           # For 2D datasets with row and column indices
-          out <- dset[index[[1]], index[[2]], drop=FALSE]
+          out <- dset[index[[1]], index[[2]], drop = FALSE]
         } else {
           out <- do.call(dset$read, index)
         }
@@ -252,7 +256,7 @@ h5_read_subset <- function(h5, path, index = NULL) {
     }
   }, error = function(e) {
     stop(sprintf("h5_read_subset: failed reading subset from '%s': %s",
-                 path, conditionMessage(e)))
+      path, conditionMessage(e)))
   }, finally = {
     close_h5_safely(dset)
   })
@@ -298,10 +302,9 @@ h5_write <- function(h5, path, data,
                      create_parent = TRUE,
                      write_args    = list(),
                      verbose       = getOption("h5.write.verbose", FALSE)) {
-
   # -- 1. Validate --------------------------------------------------------
   if (!inherits(h5, "H5File")) {
-    stop(sprintf("h5_write: 'h5' must be an H5File object, got class: %s", paste(class(h5), collapse=", ")))
+    stop(sprintf("h5_write: 'h5' must be an H5File object, got class: %s", paste(class(h5), collapse = ", ")))
   }
   if (!h5$is_valid) {
     stop("h5_write: H5File object is not valid (file may be closed)")
@@ -330,8 +333,10 @@ h5_write <- function(h5, path, data,
 
   dims   <- obj_dims(data)
   scalar <- length(dims) == 0L
-  if (scalar) { chunk_dims <- NULL; compression <- 0L }
-  else if (compression > 0L && is.null(chunk_dims)) {
+  if (scalar) {
+    chunk_dims <- NULL
+    compression <- 0L
+  } else if (compression > 0L && is.null(chunk_dims)) {
     ## simple heuristic: one chunk ≈ 4 MB
     dtype_size <- tryCatch(hdf5r::h5const$type_sizes[[dtype@name]], error = function(e) 8)
     nk         <- max(1L, ceiling(prod(dims) * dtype_size / (4 * 1024^2)))
@@ -340,10 +345,10 @@ h5_write <- function(h5, path, data,
 
   # -- 5. Create + write --------------------------------------------------
   dset <- h5$create_dataset(name       = path,
-                            dims       = dims,
-                            dtype      = dtype,
-                            chunk_dims = chunk_dims,
-                            gzip_level = compression)
+    dims       = dims,
+    dtype      = dtype,
+    chunk_dims = chunk_dims,
+    gzip_level = compression)
 
   if (length(write_args) == 0L) {
     dset$write(NULL, value = data)                # full write
@@ -362,7 +367,7 @@ h5_write <- function(h5, path, data,
 guess_h5_type <- function(x) {
   # For vectors/arrays, check the base type
   base_type <- typeof(x)
-  
+
   if (base_type == "character") {
     return(hdf5r::H5T_STRING$new(size = Inf))
   } else if (base_type == "integer") {
@@ -371,11 +376,11 @@ guess_h5_type <- function(x) {
     return(hdf5r::h5types$H5T_NATIVE_DOUBLE)
   } else if (base_type == "logical") {
     # Using INT8 for logical as HBOOL can be problematic sometimes
-    # return(hdf5r::h5types$H5T_NATIVE_HBOOL) 
-    return(hdf5r::h5types$H5T_NATIVE_INT8) 
+    # return(hdf5r::h5types$H5T_NATIVE_HBOOL)
+    return(hdf5r::h5types$H5T_NATIVE_INT8)
   }
   stop(sprintf("Unsupported R data type for guess_h5_type(): %s", base_type))
-} 
+}
 
 #' Safely close an HDF5 file handle
 #'
@@ -387,7 +392,7 @@ safe_h5_close <- function(h5) {
   if (inherits(h5, "H5File") && h5$is_valid) {
     try(h5$close_all(), silent = TRUE)
   }
-} 
+}
 
 # Robust dtype-to-NIfTI mapper
 #' @keywords internal
@@ -398,38 +403,38 @@ map_dtype <- function(h5t) {
   cls_obj <- tryCatch(h5t$get_class(), error = function(e) NULL)
 
   if (is.null(cls_obj) || is.na(sz)) {
-     warning("Could not reliably determine HDF5 type properties (class or size). Returning DT_UNKNOWN (0).")
-     return(c(0L, 0L)) # DT_UNKNOWN, bitpix 0
+    warning("Could not reliably determine HDF5 type properties (class or size). Returning DT_UNKNOWN (0).")
+    return(c(0L, 0L)) # DT_UNKNOWN, bitpix 0
   }
 
   # Use the H5T_CLASS object's equality comparison
   is_float <- cls_obj == hdf5r::h5const$H5T_FLOAT
   is_integer <- cls_obj == hdf5r::h5const$H5T_INTEGER
   # Close the class object handle once done
-  try(cls_obj$close(), silent=TRUE)
+  try(cls_obj$close(), silent = TRUE)
 
   is_signed <- NA # Default
   if (is_integer) {
-      # For integers, try check the sign property
-      sign_const <- tryCatch(h5t$get_sign(), error = function(e) NA_integer_) # Use tryCatch
-      if (is.na(sign_const)) {
-          # This might happen if get_sign isn't applicable or fails
-          warning("Could not determine sign for HDF5 integer type using get_sign(). Returning DT_UNKNOWN (0).")
-          return(c(0L, 0L))
-      }
-      # H5T_SGN_NONE (0) means unsigned, H5T_SGN_2 (2) means signed (2's complement)
-      is_signed <- (sign_const == hdf5r::h5const$H5T_SGN_2)
+    # For integers, try check the sign property
+    sign_const <- tryCatch(h5t$get_sign(), error = function(e) NA_integer_) # Use tryCatch
+    if (is.na(sign_const)) {
+      # This might happen if get_sign isn't applicable or fails
+      warning("Could not determine sign for HDF5 integer type using get_sign(). Returning DT_UNKNOWN (0).")
+      return(c(0L, 0L))
+    }
+    # H5T_SGN_NONE (0) means unsigned, H5T_SGN_2 (2) means signed (2's complement)
+    is_signed <- (sign_const == hdf5r::h5const$H5T_SGN_2)
   } else if (is_float) {
-      # Assume standard floats are signed
-      is_signed <- TRUE
+    # Assume standard floats are signed
+    is_signed <- TRUE
   } else {
-      # Handle other classes (String, Compound, etc.) - currently map to unknown
-      is_signed <- NA
+    # Handle other classes (String, Compound, etc.) - currently map to unknown
+    is_signed <- NA
   }
 
   if (is.na(is_signed)) {
-     warning("Unhandled HDF5 type class or failed sign detection. Returning DT_UNKNOWN (0).")
-     return(c(0L, 0L))
+    warning("Unhandled HDF5 type class or failed sign detection. Returning DT_UNKNOWN (0).")
+    return(c(0L, 0L))
   }
 
   # Construct key based on size, float status, and signedness
@@ -443,8 +448,8 @@ map_dtype <- function(h5t) {
     "2 FALSE TRUE"  = c(4L, 16L),   # DT_INT16
     "4 FALSE FALSE" = c(768L, 32L), # DT_UINT32
     "4 FALSE TRUE"  = c(8L, 32L),   # DT_INT32
-    "8 FALSE FALSE" = c(1280L, 64L),# DT_UINT64
-    "8 FALSE TRUE"  = c(1024L, 64L),# DT_INT64
+    "8 FALSE FALSE" = c(1280L, 64L), # DT_UINT64
+    "8 FALSE TRUE"  = c(1024L, 64L), # DT_INT64
     # Floats (is_float = TRUE, assumed signed = TRUE)
     "4 TRUE TRUE"   = c(16L, 32L),  # DT_FLOAT32
     "8 TRUE TRUE"   = c(64L, 64L),  # DT_FLOAT64

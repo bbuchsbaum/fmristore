@@ -3,6 +3,6 @@ utils::globalVariables(c(
   "storage_fmt",
   "shape_attr",
   "gridToIndex3DCpp",
-  "to_nih5_vol", 
+  "to_nih5_vol",
   "write_clustered_dataset"
 ))

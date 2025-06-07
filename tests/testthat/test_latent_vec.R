@@ -6,7 +6,7 @@ library(fmristore)
 
 # Helper function to create dummy data for LatentNeuroVec testing
 create_dummy_latent_data <- function(dims = c(5, 5, 3, 10), # x,y,z,t
-                                       k = 4) { # Number of components
+                                     k = 4) { # Number of components
 
   sp <- NeuroSpace(dims)
   nTime <- dims[4]
@@ -14,7 +14,7 @@ create_dummy_latent_data <- function(dims = c(5, 5, 3, 10), # x,y,z,t
 
   # Create a simple mask (e.g., roughly half the voxels)
   mask_arr <- array(FALSE, dim = dims[1:3])
-  mask_arr[1:floor(dims[1]/2), , ] <- TRUE
+  mask_arr[1:floor(dims[1] / 2), , ] <- TRUE
   mask_vol <- LogicalNeuroVol(mask_arr, drop_dim(sp))
   nVox_mask <- sum(mask_vol)
 
@@ -22,57 +22,56 @@ create_dummy_latent_data <- function(dims = c(5, 5, 3, 10), # x,y,z,t
   basis_mat <- Matrix(rnorm(nTime * k), nrow = nTime, ncol = k)
 
   # Create loadings (nVox_mask x k)
-  loadings_mat <- Matrix(rnorm(nVox_mask * k), nrow = nVox_mask, ncol = k, sparse=TRUE)
+  loadings_mat <- Matrix(rnorm(nVox_mask * k), nrow = nVox_mask, ncol = k, sparse = TRUE)
   # Ensure sparsity
-  loadings_mat[sample(length(loadings_mat), length(loadings_mat)*0.7)] <- 0
+  loadings_mat[sample(length(loadings_mat), length(loadings_mat) * 0.7)] <- 0
 
   # Create offset (nVox_mask)
-  offset_vec <- rnorm(nVox_mask, mean=5, sd=1)
+  offset_vec <- rnorm(nVox_mask, mean = 5, sd = 1)
 
   # Create the LatentNeuroVec object
   lvec <- LatentNeuroVec(basis = basis_mat,
-                         loadings = loadings_mat,
-                         space = sp,
-                         mask = mask_vol,
-                         offset = offset_vec,
-                         label = "test_scan_label")
+    loadings = loadings_mat,
+    space = sp,
+    mask = mask_vol,
+    offset = offset_vec,
+    label = "test_scan_label")
 
   return(lvec)
 }
 
 # Helper function to create basic LatentNeuroVec components
-create_test_latent_components <- function(X=10, Y=10, Z=5, T=20, K=5) {
+create_test_latent_components <- function(X = 10, Y = 10, Z = 5, T = 20, K = 5) {
   dims_4d <- c(X, Y, Z, T)
   dims_3d <- dims_4d[1:3]
   sp <- NeuroSpace(dims_4d)
 
   mask_arr <- array(FALSE, dims_3d)
-  mask_arr[2:(X-1), 2:(Y-1), 2:(Z-1)] <- TRUE # Create a smaller inner mask
+  mask_arr[2:(X - 1), 2:(Y - 1), 2:(Z - 1)] <- TRUE # Create a smaller inner mask
   mask_vol <- LogicalNeuroVol(mask_arr, NeuroSpace(dims_3d))
   nVox <- sum(mask_vol)
 
-  basis <- Matrix(rnorm(T * K), nrow=T, ncol=K)
+  basis <- Matrix(rnorm(T * K), nrow = T, ncol = K)
   # Create loadings that match mask cardinality
-  loadings <- Matrix(rnorm(nVox * K), nrow=nVox, ncol=K)
+  loadings <- Matrix(rnorm(nVox * K), nrow = nVox, ncol = K)
   offset <- rnorm(nVox)
   offset_empty <- numeric(0)
 
   list(
-    space=sp,
-    mask=mask_vol,
-    basis=basis,
-    loadings=loadings,
-    offset=offset,
-    offset_empty=offset_empty,
-    nVox=nVox,
-    K=K,
-    T=T
+    space = sp,
+    mask = mask_vol,
+    basis = basis,
+    loadings = loadings,
+    offset = offset,
+    offset_empty = offset_empty,
+    nVox = nVox,
+    K = K,
+    T = T
   )
 }
 
 
 test_that("LatentNeuroVec HDF5 round-trip works and validates", {
-
   # 1. Create original object
   lvec_orig <- create_dummy_latent_data()
 
@@ -83,7 +82,7 @@ test_that("LatentNeuroVec HDF5 round-trip works and validates", {
   # 3. Write the object - capture warnings to debug
   warnings <- capture_warnings(write_vec(lvec_orig, temp_h5))
   if (length(warnings) > 0) {
-    print(paste("Warnings during write:", paste(warnings, collapse="\n")))
+    print(paste("Warnings during write:", paste(warnings, collapse = "\n")))
   }
   expect_true(file.exists(temp_h5), info = "HDF5 file should exist after write_vec")
 
@@ -106,27 +105,27 @@ test_that("LatentNeuroVec HDF5 round-trip works and validates", {
 
   # Compare slots - use all.equal for matrices/numerics with tolerance
   expect_true(all.equal(as.matrix(lvec_loaded@basis), as.matrix(lvec_orig@basis), tolerance = tolerance),
-              info = "Basis matrices do not match.")
+    info = "Basis matrices do not match.")
   expect_true(all.equal(as.matrix(lvec_loaded@loadings), as.matrix(lvec_orig@loadings), tolerance = tolerance),
-              info = "Loadings matrices do not match.")
+    info = "Loadings matrices do not match.")
   expect_equal(lvec_loaded@offset, lvec_orig@offset, tolerance = tolerance,
-               info = "Offset vectors do not match.")
+    info = "Offset vectors do not match.")
 
   # Compare NeuroSpace (might need tolerance or specific attribute checks)
   expect_equal(space(lvec_loaded), space(lvec_orig),
-               info = "NeuroSpace objects do not match.")
+    info = "NeuroSpace objects do not match.")
 
   # Compare Mask (should be exact for logical)
   expect_equal(lvec_loaded@mask, lvec_orig@mask,
-               info = "Mask volumes do not match.")
+    info = "Mask volumes do not match.")
 
   # Compare Map indices
   expect_equal(lvec_loaded@map@indices, lvec_orig@map@indices,
-               info = "Map indices do not match.")
+    info = "Map indices do not match.")
 
   # Compare label
   expect_equal(lvec_loaded@label, lvec_orig@label,
-               info = "Labels do not match.")
+    info = "Labels do not match.")
 
   # Optional: Test data reconstruction equivalence
   # This is a stricter test
@@ -137,21 +136,20 @@ test_that("LatentNeuroVec HDF5 round-trip works and validates", {
 
 # Add test for dense round-trip
 test_that("LatentNeuroVec HDF5 dense round-trip works and validates", {
-
   # 1. Create original object with dense loadings
-  comps_dense <- create_test_latent_components(X=6, Y=6, Z=4, T=8, K=3) # Smaller dims for speed
+  comps_dense <- create_test_latent_components(X = 6, Y = 6, Z = 4, T = 8, K = 3) # Smaller dims for speed
   # Ensure loadings are dense matrix, not sparse Matrix
   lvec_orig_dense <- LatentNeuroVec(basis = comps_dense$basis,
-                                    loadings = as.matrix(comps_dense$loadings), # Force dense matrix
-                                    space = comps_dense$space,
-                                    mask = comps_dense$mask,
-                                    offset = comps_dense$offset,
-                                    label = "dense_test_label")
+    loadings = as.matrix(comps_dense$loadings), # Force dense matrix
+    space = comps_dense$space,
+    mask = comps_dense$mask,
+    offset = comps_dense$offset,
+    label = "dense_test_label")
 
   # Calculate density to ensure the writer *should* choose dense
-   density_check <- Matrix::nnzero(lvec_orig_dense@loadings) / length(lvec_orig_dense@loadings)
-   # Ensure density is >= 30% for this test case
-   expect_gte(density_check, 0.3)
+  density_check <- Matrix::nnzero(lvec_orig_dense@loadings) / length(lvec_orig_dense@loadings)
+  # Ensure density is >= 30% for this test case
+  expect_gte(density_check, 0.3)
 
   # 2. Define temp file path
   temp_h5_dense <- tempfile(fileext = ".dense.lv.h5")
@@ -160,20 +158,20 @@ test_that("LatentNeuroVec HDF5 dense round-trip works and validates", {
   # 3. Write the object
   warnings_dense <- capture_warnings(write_vec(lvec_orig_dense, temp_h5_dense))
   if (length(warnings_dense) > 0) {
-    print(paste("Warnings during DENSE write:", paste(warnings_dense, collapse="\n"))) # Distinguish warning source
+    print(paste("Warnings during DENSE write:", paste(warnings_dense, collapse = "\n"))) # Distinguish warning source
   }
   expect_true(file.exists(temp_h5_dense), info = "HDF5 file (dense) should exist after write_vec")
 
   # 4. INSPECT HDF5 structure: Verify DENSE basis was written
   h5_inspect <- NULL
   tryCatch({
-      h5_inspect <- hdf5r::H5File$new(temp_h5_dense, mode = "r")
-      expect_true(h5_inspect$exists("basis/basis_matrix"),
-                  info = "Dense basis dataset '/basis/basis_matrix' should exist.")
-      expect_false(h5_inspect$exists("basis/basis_matrix_sparse"),
-                   info = "Sparse basis group '/basis/basis_matrix_sparse' should NOT exist.")
+    h5_inspect <- hdf5r::H5File$new(temp_h5_dense, mode = "r")
+    expect_true(h5_inspect$exists("basis/basis_matrix"),
+      info = "Dense basis dataset '/basis/basis_matrix' should exist.")
+    expect_false(h5_inspect$exists("basis/basis_matrix_sparse"),
+      info = "Sparse basis group '/basis/basis_matrix_sparse' should NOT exist.")
   }, finally = {
-      if (!is.null(h5_inspect) && h5_inspect$is_valid) h5_inspect$close_all()
+    if (!is.null(h5_inspect) && h5_inspect$is_valid) h5_inspect$close_all()
   })
 
   # 5. Validate the written file
@@ -191,20 +189,20 @@ test_that("LatentNeuroVec HDF5 dense round-trip works and validates", {
   # 7. Compare original and loaded objects
   tolerance <- 1e-7
   expect_true(all.equal(as.matrix(lvec_loaded_dense@basis), as.matrix(lvec_orig_dense@basis), tolerance = tolerance),
-              info = "Basis matrices do not match (dense test).")
+    info = "Basis matrices do not match (dense test).")
   # Comparison for loadings might be tricky if sparse comes back - force both to dense
   expect_true(all.equal(as.matrix(lvec_loaded_dense@loadings), as.matrix(lvec_orig_dense@loadings), tolerance = tolerance),
-              info = "Loadings matrices do not match (dense test).")
+    info = "Loadings matrices do not match (dense test).")
   expect_equal(lvec_loaded_dense@offset, lvec_orig_dense@offset, tolerance = tolerance,
-               info = "Offset vectors do not match (dense test).")
+    info = "Offset vectors do not match (dense test).")
   expect_equal(space(lvec_loaded_dense), space(lvec_orig_dense),
-               info = "NeuroSpace objects do not match (dense test).")
+    info = "NeuroSpace objects do not match (dense test).")
   expect_equal(lvec_loaded_dense@mask, lvec_orig_dense@mask,
-               info = "Mask volumes do not match (dense test).")
+    info = "Mask volumes do not match (dense test).")
   expect_equal(lvec_loaded_dense@map@indices, lvec_orig_dense@map@indices,
-               info = "Map indices do not match (dense test).")
+    info = "Map indices do not match (dense test).")
   expect_equal(lvec_loaded_dense@label, lvec_orig_dense@label,
-               info = "Labels do not match (dense test).")
+    info = "Labels do not match (dense test).")
 
 })
 
@@ -219,93 +217,93 @@ test_that("LatentNeuroVec constructor validates dimensions correctly", {
 
   # Valid construction
   expect_no_error(
-    LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
-                   space=comps$space, mask=comps$mask, offset=comps$offset)
+    LatentNeuroVec(basis = comps$basis, loadings = comps$loadings,
+      space = comps$space, mask = comps$mask, offset = comps$offset)
   )
   expect_no_error(
-    LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
-                   space=comps$space, mask=comps$mask, offset=comps$offset_empty) # Test empty offset
+    LatentNeuroVec(basis = comps$basis, loadings = comps$loadings,
+      space = comps$space, mask = comps$mask, offset = comps$offset_empty) # Test empty offset
   )
   expect_no_error(
-    LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
-                   space=comps$space, mask=comps$mask, offset=NULL) # Test NULL offset
+    LatentNeuroVec(basis = comps$basis, loadings = comps$loadings,
+      space = comps$space, mask = comps$mask, offset = NULL) # Test NULL offset
   )
 
   # Invalid: Basis time mismatch
-  basis_bad_time <- Matrix(rnorm((comps$T + 1) * comps$K), nrow=comps$T + 1, ncol=comps$K)
-  expect_error(LatentNeuroVec(basis=basis_bad_time, loadings=comps$loadings,
-                              space=comps$space, mask=comps$mask),
-               regexp="'basis' must have \\d+ rows \\(the 4th dimension of space\\)")
+  basis_bad_time <- Matrix(rnorm((comps$T + 1) * comps$K), nrow = comps$T + 1, ncol = comps$K)
+  expect_error(LatentNeuroVec(basis = basis_bad_time, loadings = comps$loadings,
+    space = comps$space, mask = comps$mask),
+  regexp = "'basis' must have \\d+ rows \\(the 4th dimension of space\\)")
 
   # Invalid: Loadings voxels mismatch (mask cardinality)
-  loadings_bad_vox <- Matrix(rnorm((comps$nVox + 1) * comps$K), nrow=comps$nVox + 1, ncol=comps$K)
-  expect_error(LatentNeuroVec(basis=comps$basis, loadings=loadings_bad_vox,
-                              space=comps$space, mask=comps$mask),
-               regexp="'loadings' must have \\d+ rows \\(i\\.e\\. #non-zero in mask\\)")
+  loadings_bad_vox <- Matrix(rnorm((comps$nVox + 1) * comps$K), nrow = comps$nVox + 1, ncol = comps$K)
+  expect_error(LatentNeuroVec(basis = comps$basis, loadings = loadings_bad_vox,
+    space = comps$space, mask = comps$mask),
+  regexp = "'loadings' must have \\d+ rows \\(i\\.e\\. #non-zero in mask\\)")
 
   # Invalid: Component (K) mismatch
-  basis_bad_k <- Matrix(rnorm(comps$T * (comps$K + 1)), nrow=comps$T, ncol=comps$K + 1)
-  expect_error(LatentNeuroVec(basis=basis_bad_k, loadings=comps$loadings,
-                              space=comps$space, mask=comps$mask),
-               regexp="must have the same number of columns")
+  basis_bad_k <- Matrix(rnorm(comps$T * (comps$K + 1)), nrow = comps$T, ncol = comps$K + 1)
+  expect_error(LatentNeuroVec(basis = basis_bad_k, loadings = comps$loadings,
+    space = comps$space, mask = comps$mask),
+  regexp = "must have the same number of columns")
 
   # Invalid: Offset length mismatch
   offset_bad_len <- rnorm(comps$nVox + 1)
-  expect_error(LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
-                              space=comps$space, mask=comps$mask, offset=offset_bad_len),
-               regexp="'offset' length must match number of rows in 'loadings'")
+  expect_error(LatentNeuroVec(basis = comps$basis, loadings = comps$loadings,
+    space = comps$space, mask = comps$mask, offset = offset_bad_len),
+  regexp = "'offset' length must match number of rows in 'loadings'")
 
   # Invalid: Non-finite values
   basis_bad_na <- comps$basis
-  basis_bad_na[1,1] <- NA_real_
-  expect_error(LatentNeuroVec(basis=basis_bad_na, loadings=comps$loadings,
-                              space=comps$space, mask=comps$mask, offset=comps$offset),
-               regexp="basis.*finite")
+  basis_bad_na[1, 1] <- NA_real_
+  expect_error(LatentNeuroVec(basis = basis_bad_na, loadings = comps$loadings,
+    space = comps$space, mask = comps$mask, offset = comps$offset),
+  regexp = "basis.*finite")
 
   loadings_bad_inf <- comps$loadings
-  loadings_bad_inf[1,1] <- Inf
-  expect_error(LatentNeuroVec(basis=comps$basis, loadings=loadings_bad_inf,
-                              space=comps$space, mask=comps$mask, offset=comps$offset),
-               regexp="loadings.*finite")
+  loadings_bad_inf[1, 1] <- Inf
+  expect_error(LatentNeuroVec(basis = comps$basis, loadings = loadings_bad_inf,
+    space = comps$space, mask = comps$mask, offset = comps$offset),
+  regexp = "loadings.*finite")
 
   offset_bad_na2 <- comps$offset
   offset_bad_na2[1] <- NA_real_
-  expect_error(LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
-                              space=comps$space, mask=comps$mask, offset=offset_bad_na2),
-               regexp="offset.*finite")
+  expect_error(LatentNeuroVec(basis = comps$basis, loadings = comps$loadings,
+    space = comps$space, mask = comps$mask, offset = offset_bad_na2),
+  regexp = "offset.*finite")
 
   # Invalid: Mask space mismatch
   # TODO LogicalNeuroVol constructor is not working as expected
   # It silently corrects the dimensions of the mask to match the space
-  #mask_bad_space <- LogicalNeuroVol(as.logical(comps$mask), NeuroSpace(dim(comps$mask)+1))
-  #expect_error(LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
+  # mask_bad_space <- LogicalNeuroVol(as.logical(comps$mask), NeuroSpace(dim(comps$mask)+1))
+  # expect_error(LatentNeuroVec(basis=comps$basis, loadings=comps$loadings,
   #                            space=comps$space, mask=mask_bad_space),
   #             regexp="Space of provided mask does not match")
 
 })
 
 test_that("LatentNeuroVec constructor handles sparse matrix coercion with warnings", {
-  comps <- create_test_latent_components(T=10, K=2) # Smaller example
+  comps <- create_test_latent_components(T = 10, K = 2) # Smaller example
 
   # Dense basis matrix (low density - no warning expected)
-  basis_dense_low <- matrix(rnorm(10 * 2), nrow=10, ncol=2)
+  basis_dense_low <- matrix(rnorm(10 * 2), nrow = 10, ncol = 2)
   basis_dense_low[sample(20, 15)] <- 0 # Make it sparse-ish
 
   # Dense loadings matrix (high density - warning expected)
-  loadings_dense_high <- matrix(rnorm(comps$nVox * 2), nrow=comps$nVox, ncol=2)
+  loadings_dense_high <- matrix(rnorm(comps$nVox * 2), nrow = comps$nVox, ncol = 2)
 
   # Expect a message, not a warning, based on actual implementation
   expect_message(
-    LatentNeuroVec(basis=basis_dense_low, loadings=loadings_dense_high,
-                   space=comps$space, mask=comps$mask),
+    LatentNeuroVec(basis = basis_dense_low, loadings = loadings_dense_high,
+      space = comps$space, mask = comps$mask),
     regexp = "Input 'loadings' is dense.*storing as dense dgeMatrix"
   )
 
   # Check no warning for basis (low density)
   # Need to capture warnings specifically
   warnings_basis <- capture_warnings(
-      LatentNeuroVec(basis=basis_dense_low, loadings=comps$loadings, # Use sparse loadings here
-                     space=comps$space, mask=comps$mask)
+    LatentNeuroVec(basis = basis_dense_low, loadings = comps$loadings, # Use sparse loadings here
+      space = comps$space, mask = comps$mask)
   )
   expect_length(warnings_basis, 0)
 
@@ -317,7 +315,7 @@ make_small_lvec <- function() {
   # 4 x 4 x 3 volume, 5 time points, 2 components
   dims <- c(4, 4, 3, 5)
   sp   <- NeuroSpace(dims)
-  mask <- array(FALSE, dim=dims[1:3])
+  mask <- array(FALSE, dim = dims[1:3])
   mask[2:3, 2:4, ] <- TRUE                 # interior mask (18 voxels)
   mask_vol <- LogicalNeuroVol(mask, drop_dim(sp))
 
@@ -325,8 +323,8 @@ make_small_lvec <- function() {
   nt <- dims[4]
   nv <- sum(mask)
 
-  basis    <- Matrix(matrix(seq_len(nt*k), nt, k))        # deterministic numbers
-  loadings <- Matrix(matrix(seq_len(nv*k), nv, k), sparse=TRUE)
+  basis    <- Matrix(matrix(seq_len(nt * k), nt, k))        # deterministic numbers
+  loadings <- Matrix(matrix(seq_len(nv * k), nv, k), sparse = TRUE)
   offset   <- seq_len(nv)
 
   LatentNeuroVec(basis, loadings, sp, mask_vol, offset)
@@ -337,22 +335,22 @@ test_that("[] returns correct reconstructed block", {
   lvec <- make_small_lvec()
 
   # target block: voxels (x=2..3, y=2, z=1) over time 2 & 4  -> dims 2 x 1 x 1 x 2
-  cut <- lvec[2:3, 2, 1, c(2,4), drop = FALSE]
-  expect_equal(dim(cut), c(2,1,1,2))
+  cut <- lvec[2:3, 2, 1, c(2, 4), drop = FALSE]
+  expect_equal(dim(cut), c(2, 1, 1, 2))
 
   ## ground-truth reconstruction (no offset simplification)
-  B  <- as.matrix(basis(lvec))[c(2,4), ]            # 2 x k
+  B  <- as.matrix(basis(lvec))[c(2, 4), ]            # 2 x k
   # Get rows 1 and 2 from loadings, corresponding to 3D indices 6 and 7
-  L  <- as.matrix(loadings(lvec))[ c(1, 2), ]
-  off<- offset(lvec)[ c(1, 2) ]
+  L  <- as.matrix(loadings(lvec))[c(1, 2), ]
+  off <- offset(lvec)[c(1, 2)]
   # Calculate Basis * t(Loadings) and add offset per voxel (column-wise)
   expected_raw <- sweep(tcrossprod(B, L), 2, off, "+") # Result is 2x2 (time x voxel)
   # Manually construct the target array [x=2, y=1, z=1, t=2]
-  expected <- array(0, dim = c(2,1,1,2))
-  expected[1,1,1,1] <- expected_raw[1,1] # x=2, t=2 <- time=2, voxel=1
-  expected[2,1,1,1] <- expected_raw[1,2] # x=3, t=2 <- time=2, voxel=2
-  expected[1,1,1,2] <- expected_raw[2,1] # x=2, t=4 <- time=4, voxel=1
-  expected[2,1,1,2] <- expected_raw[2,2] # x=3, t=4 <- time=4, voxel=2
+  expected <- array(0, dim = c(2, 1, 1, 2))
+  expected[1, 1, 1, 1] <- expected_raw[1, 1] # x=2, t=2 <- time=2, voxel=1
+  expected[2, 1, 1, 1] <- expected_raw[1, 2] # x=3, t=2 <- time=2, voxel=2
+  expected[1, 1, 1, 2] <- expected_raw[2, 1] # x=2, t=4 <- time=4, voxel=1
+  expected[2, 1, 1, 2] <- expected_raw[2, 2] # x=3, t=4 <- time=4, voxel=2
 
   expect_equal(cut, expected, tolerance = 1e-12)
 })
@@ -398,17 +396,17 @@ context("[[ extractor returns correct SparseNeuroVol")
 
 make_tiny_lvec <- function() {
   # 3 x 3 x 2 volume, 4 time points, 2 components
-  sp   <- NeuroSpace(c(3,3,2,4))
-  mask <- array(TRUE, dim = c(3,3,2))
-  mask[1,1,] <- FALSE                      # punch out two voxels
+  sp   <- NeuroSpace(c(3, 3, 2, 4))
+  mask <- array(TRUE, dim = c(3, 3, 2))
+  mask[1, 1, ] <- FALSE                      # punch out two voxels
   mask_vol <- LogicalNeuroVol(mask, drop_dim(sp))
 
   k   <- 2
   nt  <- 4
   nv  <- sum(mask)
 
-  basis    <- Matrix(matrix(seq_len(nt*k), nt,  k))  # deterministic
-  loadings <- Matrix(matrix(seq_len(nv*k),  nv, k))  # dense
+  basis    <- Matrix(matrix(seq_len(nt * k), nt,  k))  # deterministic
+  loadings <- Matrix(matrix(seq_len(nv * k),  nv, k))  # dense
   offset   <- rep(5, nv)                             # easy to check
 
   LatentNeuroVec(basis, loadings, sp, mask_vol, offset)
@@ -428,7 +426,7 @@ test_that("[[ ... returns numerically and structurally correct volume", {
   voxval <- drop(B_row %*% t(L_mat)) + offset(lvec)  # length p (only mask voxels)
 
   expected <- array(0, dim = dim(lvec)[1:3])
-  expected[ which(mask(lvec)@.Data) ] <- voxval
+  expected[which(mask(lvec)@.Data)] <- voxval
 
   expect_equivalent(as.array(vol@data), expected, tolerance = 1e-12)
 
@@ -449,14 +447,14 @@ context("LatentNeuroVec :: matricized_access() fast-paths")
 make_lvec_for_mat_access <- function(sparse = FALSE) {
   # 3 x 3 x 2 volume  ––  4 time points  ––  3 components
   sp  <- NeuroSpace(c(3, 3, 2, 4))
-  msk <- LogicalNeuroVol(array(TRUE, dim = c(3,3,2)), drop_dim(sp))
+  msk <- LogicalNeuroVol(array(TRUE, dim = c(3, 3, 2)), drop_dim(sp))
 
   k   <- 3
   nt  <- dim(sp)[4]
   nv  <- sum(msk)
 
   B <- matrix(seq_len(nt * k),  nrow = nt, ncol = k)        # deterministic
-  L <- matrix(seq_len(nv * k)/10, nrow = nv, ncol = k)      # deterministic
+  L <- matrix(seq_len(nv * k) / 10, nrow = nv, ncol = k)      # deterministic
   off <- rep(5, nv)
 
   if (sparse) {
@@ -465,7 +463,7 @@ make_lvec_for_mat_access <- function(sparse = FALSE) {
   }
 
   LatentNeuroVec(basis = B, loadings = L, space = sp,
-                 mask  = msk, offset = off)
+    mask  = msk, offset = off)
 }
 
 ## ---------- 1.  integer path (full time-series) -------------------
@@ -479,7 +477,7 @@ test_that("matricized_access(integer) gives the expected nTime × nVoxel block",
 
   # manual reference: B %*% t(L[vox,]) + offset
   manual <- tcrossprod(as.matrix(basis(lvec)),
-                       as.matrix(loadings(lvec)[vox, , drop = FALSE]))
+    as.matrix(loadings(lvec)[vox, , drop = FALSE]))
   manual <- sweep(manual, 2, offset(lvec)[vox], "+")
 
   expect_equal(res, manual, tolerance = 1e-12)
@@ -498,7 +496,8 @@ test_that("matricized_access(matrix) (dense) returns correct dot-products", {
 
   # manual scalar per row
   manual <- apply(pair_idx, 1L, function(rc) {
-    t <- rc[1]; v <- rc[2]
+    t <- rc[1]
+    v <- rc[2]
     sum(basis(lvec)[t, ] * loadings(lvec)[v, ]) + offset(lvec)[v]
   })
 
@@ -517,7 +516,8 @@ test_that("matricized_access(matrix) works when both B and L are dgCMatrix", {
   res <- matricized_access(lvec, pair_idx)
 
   manual <- apply(pair_idx, 1L, function(rc) {
-    t <- rc[1]; v <- rc[2]
+    t <- rc[1]
+    v <- rc[2]
     sum(as.numeric(basis(lvec)[t, ]) * as.numeric(loadings(lvec)[v, ])) +
       offset(lvec)[v]
   })
@@ -559,8 +559,8 @@ test_that("matricized_access provides correct and efficient access", {
   # Create test indices: 20 random time/voxel pairs
   set.seed(456)
   n_pairs <- 20
-  idx_time <- sample(n_time, n_pairs, replace=TRUE)
-  idx_vox <- sample(n_vox, n_pairs, replace=TRUE)
+  idx_time <- sample(n_time, n_pairs, replace = TRUE)
+  idx_vox <- sample(n_vox, n_pairs, replace = TRUE)
   idx_matrix <- cbind(idx_time, idx_vox)
 
   # --- 1. Test correctness ---
@@ -570,29 +570,29 @@ test_that("matricized_access provides correct and efficient access", {
     t <- idx_time[i]
     v <- idx_vox[i]
     # Manual calculation for this time/voxel pair
-    reference_result[i] <- sum(basis_dense[t,] * loadings_dense[v,]) + offset[v]
+    reference_result[i] <- sum(basis_dense[t, ] * loadings_dense[v, ]) + offset[v]
   }
 
   # Direct call to matricized_access
   direct_result <- neuroim2::matricized_access(lvec_dense_dense, idx_matrix)
 
   # Compare results
-  expect_equal(direct_result, reference_result, tolerance=1e-12,
-              info="matricized_access should return correct values")
+  expect_equal(direct_result, reference_result, tolerance = 1e-12,
+    info = "matricized_access should return correct values")
 
   # Verify that all three matrix type combinations give same results
   expect_equal(
     neuroim2::matricized_access(lvec_dense_dense, idx_matrix),
     neuroim2::matricized_access(lvec_sparse_sparse, idx_matrix),
-    tolerance=1e-12,
-    info="matricized_access with different Matrix formats should match"
+    tolerance = 1e-12,
+    info = "matricized_access with different Matrix formats should match"
   )
 
   expect_equal(
     neuroim2::matricized_access(lvec_dense_dense, idx_matrix),
     neuroim2::matricized_access(lvec_dense_sparse, idx_matrix),
-    tolerance=1e-12,
-    info="matricized_access with mixed Matrix formats should match"
+    tolerance = 1e-12,
+    info = "matricized_access with mixed Matrix formats should match"
   )
 
   # --- 2. Context: Where is it called? ---
@@ -602,7 +602,7 @@ test_that("matricized_access provides correct and efficient access", {
 
   # Check that series returns the expected shape: n_time × n_voxels
   expect_equal(dim(series_values), c(n_time, 5),
-              info="series() should use matricized_access for efficient lookup")
+    info = "series() should use matricized_access for efficient lookup")
 
   # --- 3. Compare optimized matrix operations for larger k ---
   if (requireNamespace("microbenchmark", quietly = TRUE)) {
@@ -619,8 +619,8 @@ test_that("matricized_access provides correct and efficient access", {
     lvec_sparse_sparse_large <- LatentNeuroVec(basis_sparse_large, loadings_sparse_large, sp, mask_vol, offset)
 
     # Extract matrices for benchmarking
-    b1 <- basis_dense_large[idx_time[1:5],, drop=FALSE]
-    b2 <- loadings_dense_large[idx_vox[1:5],, drop=FALSE]
+    b1 <- basis_dense_large[idx_time[1:5], , drop = FALSE]
+    b2 <- loadings_dense_large[idx_vox[1:5], , drop = FALSE]
 
     # Compare different matrix multiplication approaches
     bm <- microbenchmark::microbenchmark(
@@ -635,7 +635,7 @@ test_that("matricized_access provides correct and efficient access", {
 
     # For larger k, crossprod should be faster (ratio > 1)
     message(paste0("For k=", k_large, ", crossprod efficiency ratio=", round(ratio, 2),
-                   " (>1 means crossprod is faster)"))
+      " (>1 means crossprod is faster)"))
     # Performance varies by hardware, so we just check that both methods produce reasonable timing
     # and don't fail catastrophically (expect ratio to be positive and within reasonable bounds)
     expect_gte(ratio, 0.1)  # Much more lenient - just ensure no catastrophic failure
@@ -643,7 +643,7 @@ test_that("matricized_access provides correct and efficient access", {
 
     # Additional info printed but not tested (as results are hardware dependent)
     message("Performance ratio (elementwise/crossprod): ", round(ratio, 2),
-           " (>1 means crossprod is faster, but varies by hardware)")
+      " (>1 means crossprod is faster, but varies by hardware)")
   }
 })
 
@@ -651,7 +651,7 @@ test_that("matricized_access provides correct and efficient access", {
 
 # Helper function to create a basic, valid HDF5 structure for latent vec
 # This is a simplified version, focusing on structure for validation tests.
-create_minimal_latent_h5 <- function(file_path, X=5,Y=5,Z=3,Tval=10,Kval=4) {
+create_minimal_latent_h5 <- function(file_path, X = 5, Y = 5, Z = 3, Tval = 10, Kval = 4) {
   h5f <- NULL
   tryCatch({
     h5f <- H5File$new(file_path, mode = "w")
@@ -660,10 +660,10 @@ create_minimal_latent_h5 <- function(file_path, X=5,Y=5,Z=3,Tval=10,Kval=4) {
     hdr_grp <- h5f$create_group("header")
     hdr_grp$create_dataset("dim", robj = as.integer(c(4, X, Y, Z, Tval, 1, 1, 1)), dtype = h5types$H5T_NATIVE_INT32)
     # Add other minimal required header elements if validate_latent_file checks them before structure
-    hdr_grp$create_dataset("pixdim", robj = as.double(c(0,1,1,1,1,0,0,0)), dtype = h5types$H5T_NATIVE_DOUBLE) # Example
+    hdr_grp$create_dataset("pixdim", robj = as.double(c(0, 1, 1, 1, 1, 0, 0, 0)), dtype = h5types$H5T_NATIVE_DOUBLE) # Example
 
     # /mask dataset
-    mask_data <- array(1L, dim = c(X,Y,Z)) # All 1s for simplicity
+    mask_data <- array(1L, dim = c(X, Y, Z)) # All 1s for simplicity
     h5f$create_dataset("mask", robj = mask_data, dtype = h5types$H5T_NATIVE_INT32)
     nVox_mask <- sum(mask_data)
 
@@ -764,15 +764,19 @@ test_that("validate_latent_file detects /header/dim not starting with 4", {
 
   # Create the file with a bad /header/dim
   h5f <- NULL
-  X=5; Y=5; Z=3; Tval=10; Kval=4
+  X <- 5
+  Y <- 5
+  Z <- 3
+  Tval <- 10
+  Kval <- 4
   tryCatch({
     h5f <- H5File$new(temp_h5_malformed, mode = "w")
     hdr_grp <- h5f$create_group("header")
     # Malformed dim: starts with 3 instead of 4
     hdr_grp$create_dataset("dim", robj = as.integer(c(3, X, Y, Z, Tval, 1, 1, 1)), dtype = h5types$H5T_NATIVE_INT32)
-    hdr_grp$create_dataset("pixdim", robj = as.double(c(0,1,1,1,1,0,0,0)), dtype = h5types$H5T_NATIVE_DOUBLE)
+    hdr_grp$create_dataset("pixdim", robj = as.double(c(0, 1, 1, 1, 1, 0, 0, 0)), dtype = h5types$H5T_NATIVE_DOUBLE)
 
-    mask_data <- array(1L, dim = c(X,Y,Z))
+    mask_data <- array(1L, dim = c(X, Y, Z))
     h5f$create_dataset("mask", robj = mask_data, dtype = h5types$H5T_NATIVE_INT32)
     nVox_mask <- sum(mask_data)
 

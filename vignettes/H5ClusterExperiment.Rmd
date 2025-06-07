@@ -91,18 +91,18 @@ run1_data <- list()
 for (cid in 1:3) {
   voxels_in_cluster <- sum(clusters@clusters == cid)
   # Simulate time series with cluster-specific patterns
-  run1_data[[paste0("cluster_", cid)]] <- 
-    matrix(rnorm(voxels_in_cluster * n_timepoints_run1, 
-                 mean = cid),  # Different mean for each cluster
-           nrow = voxels_in_cluster, 
-           ncol = n_timepoints_run1)
+  run1_data[[paste0("cluster_", cid)]] <-
+    matrix(rnorm(voxels_in_cluster * n_timepoints_run1,
+      mean = cid),  # Different mean for each cluster
+    nrow = voxels_in_cluster,
+    ncol = n_timepoints_run1)
 }
 
 # Run 2: Summary data (averaged time series per cluster)
 n_timepoints_run2 <- 150
-run2_data <- matrix(rnorm(n_timepoints_run2 * 3), 
-                    nrow = n_timepoints_run2, 
-                    ncol = 3)
+run2_data <- matrix(rnorm(n_timepoints_run2 * 3),
+  nrow = n_timepoints_run2,
+  ncol = 3)
 ```
 
 ### Step 4: Create Metadata
@@ -116,7 +116,7 @@ run1_metadata <- list(
 )
 
 run2_metadata <- list(
-  subject_id = "sub-01", 
+  subject_id = "sub-01",
   task = "motor",
   TR = 2.0
 )
@@ -141,7 +141,7 @@ runs_data <- list(
     metadata = run1_metadata
   ),
   list(
-    scan_name = "motor_run", 
+    scan_name = "motor_run",
     type = "summary",
     data = run2_data,
     metadata = run2_metadata
@@ -214,9 +214,9 @@ ts_data <- series(rest_run, i = voxel_indices)
 dim(ts_data)  # timepoints x voxels
 
 # Plot one voxel's time series
-plot(ts_data[, 1], type = "l", 
-     main = "Time series for voxel 1",
-     xlab = "Time (TR)", ylab = "Signal")
+plot(ts_data[, 1], type = "l",
+  main = "Time series for voxel 1",
+  xlab = "Time (TR)", ylab = "Signal")
 ```
 
 ### Concatenating Across Runs
@@ -235,9 +235,9 @@ for (i in seq_along(experiment@runs)) {
 full_run_indices <- which(sapply(experiment@runs, function(r) is(r, "H5ClusterRun")))
 
 if (length(full_run_indices) > 0) {
-  all_ts <- series_concat(experiment, 
-                          mask_idx = 1:3,
-                          run_indices = full_run_indices[1])  # Use first full run
+  all_ts <- series_concat(experiment,
+    mask_idx = 1:3,
+    run_indices = full_run_indices[1])  # Use first full run
   cat("Concatenated dimensions:", dim(all_ts), "\n")
 } else {
   cat("No full runs available for voxel-level extraction\n")
@@ -257,11 +257,11 @@ dim(summary_matrix)  # timepoints x clusters
 
 # Plot average time series for each cluster
 matplot(summary_matrix, type = "l", lty = 1,
-        col = cluster_info$color,
-        main = "Cluster average time series",
-        xlab = "Time (TR)", ylab = "Signal")
-legend("topright", legend = cluster_info$name, 
-       col = cluster_info$color, lty = 1)
+  col = cluster_info$color,
+  main = "Cluster average time series",
+  xlab = "Time (TR)", ylab = "Signal")
+legend("topright", legend = cluster_info$name,
+  col = cluster_info$color, lty = 1)
 ```
 
 ## Memory Efficiency

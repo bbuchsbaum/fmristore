@@ -63,29 +63,29 @@
 #' \dontrun{
 #' # Create a simple labeled neuroimaging dataset
 #' vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(4, 4, 3, 5))
-#' 
+#'
 #' # Create mask with same spatial dimensions
 #' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(4, 4, 3))
-#' 
+#'
 #' # Define labels for each volume
 #' labels <- c("condition_A", "condition_B", "condition_C", "condition_D", "condition_E")
-#' 
+#'
 #' # Write to temporary HDF5 file
 #' temp_file <- tempfile(fileext = ".h5")
 #' h5_handle <- write_labeled_vec(vec, mask, labels, file = temp_file)
-#' 
+#'
 #' # Close the file handle returned by write_labeled_vec
 #' h5_handle$close_all()
-#' 
+#'
 #' # Read it back
 #' labeled_data <- read_labeled_vec(temp_file)
 #' print(labeled_data@labels)
-#' 
+#'
 #' # Clean up
 #' close(labeled_data)
 #' unlink(temp_file)
 #' }
-#' 
+#'
 #' @importFrom hdf5r H5File h5file is.h5file
 #' @importFrom neuroim2 spacing space origin trans matrixToQuatern DenseNeuroVol
 #' @importFrom hdf5r H5T_STRING H5S
@@ -99,15 +99,14 @@ write_labeled_vec <- function(vec,
                               dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE,
                               chunk_size = 1024,
                               header_values = list(),
-                              verbose = FALSE)
-{
+                              verbose = FALSE) {
   # === Pre-flight checks before opening file ===
-  
+
   # 1. Validate mask object and get mask array
   stopifnot(inherits(mask, "LogicalNeuroVol"))
   mask_arr <- as.array(mask)
   stopifnot(length(dim(mask_arr)) == 3) # Ensure mask is 3D
-  
+
   # 2. Check if mask is empty - fail fast
   # Now works correctly with logical mask_arr
   idx_nonzero <- which(mask_arr == TRUE)
@@ -115,13 +114,13 @@ write_labeled_vec <- function(vec,
   if (n_nonzero == 0) {
     stop("Mask is empty (all FALSE). Cannot write a LabeledVolumeSet with no valid voxels.")
   }
-  
+
   # 3. Validate vec dimensions against mask
   nd <- dim(vec)  # [X, Y, Z, nVols]
   stopifnot(length(nd) == 4)
   if (!all(dim(mask_arr) == nd[1:3])) {
-     stop("Mask dimensions [", paste(dim(mask_arr), collapse=","), 
-          "] do not match first 3 dimensions of vec [", paste(nd[1:3], collapse=","), "]")
+    stop("Mask dimensions [", paste(dim(mask_arr), collapse = ","),
+      "] do not match first 3 dimensions of vec [", paste(nd[1:3], collapse = ","), "]")
   }
   nVols <- nd[4]
 
@@ -129,34 +128,36 @@ write_labeled_vec <- function(vec,
   if (length(labels) != nVols) {
     stop("Length of 'labels' (", length(labels), ") must match the 4th dimension of 'vec' (", nVols, ").")
   }
-  
+
   # 5. Sanitize labels and check for duplicates
   # Perform basic sanitization first
   basic_safe_labels <- vapply(labels, function(lbl) gsub("[^A-Za-z0-9_.-]", "_", lbl), character(1))
-  
+
   # Check for duplicates *after* basic sanitization
   if (length(unique(basic_safe_labels)) != length(basic_safe_labels)) {
     stop("Duplicate labels detected after basic sanitization (gsub). Check input labels.")
   }
-  
+
   # Use the basic sanitized labels (now guaranteed unique after gsub)
   safe_labels <- basic_safe_labels
-  
+
   # === Open file using helper ===
   fh <- open_h5(file, mode = "w") # Use write mode
   h5obj <- fh$h5
-  
+
   # Get dimensions (already validated above)
-  X <- nd[1]; Y <- nd[2]; Z <- nd[3]
+  X <- nd[1]
+  Y <- nd[2]
+  Z <- nd[3]
 
   # Extract 4x4 transformation matrix from NeuroSpace
   tmat <- trans(space(vec))          # e.g. a 4x4
   # Convert to quaternion + qfac - Harden error message
   q <- tryCatch(
-      matrixToQuatern(tmat),
-      error = function(e) {
-          stop("Invalid NeuroSpace in 'vec' - cannot convert transformation matrix to quaternion: ", e$message)
-      }
+    matrixToQuatern(tmat),
+    error = function(e) {
+      stop("Invalid NeuroSpace in 'vec' - cannot convert transformation matrix to quaternion: ", e$message)
+    }
   )
 
   # Gather spacing & origin
@@ -185,7 +186,7 @@ write_labeled_vec <- function(vec,
     warning("Could not map HDF5 dtype to NIfTI codes. Header datatype/bitpix may be incorrect.")
   }
   # --- End mapping section ---
-  
+
   # Build minimal NIfTI-like header fields
   # Add common unused fields, initialized
   hdr_default <- list(
@@ -223,31 +224,31 @@ write_labeled_vec <- function(vec,
     qoffset_x   = org[1],
     qoffset_y   = org[2],
     qoffset_z   = org[3],
-    srow_x      = c(tmat[1,1], tmat[1,2], tmat[1,3], tmat[1,4]), # Store sform rows
-    srow_y      = c(tmat[2,1], tmat[2,2], tmat[2,3], tmat[2,4]),
-    srow_z      = c(tmat[3,1], tmat[3,2], tmat[3,3], tmat[3,4]),
+    srow_x      = c(tmat[1, 1], tmat[1, 2], tmat[1, 3], tmat[1, 4]), # Store sform rows
+    srow_y      = c(tmat[2, 1], tmat[2, 2], tmat[2, 3], tmat[2, 4]),
+    srow_z      = c(tmat[3, 1], tmat[3, 2], tmat[3, 3], tmat[3, 4]),
     intent_name = "", # Unused
     magic       = "n+1" # Keep writing variable length for now
   )
 
   # Merge user overrides from header_values, preventing overwrite of critical fields
   protected_fields <- c("dim", "pixdim", "quatern_b", "quatern_c", "quatern_d",
-                        "qoffset_x", "qoffset_y", "qoffset_z", "sizeof_hdr", "magic",
-                        "datatype", "bitpix")
+    "qoffset_x", "qoffset_y", "qoffset_z", "sizeof_hdr", "magic",
+    "datatype", "bitpix")
   for (nm in names(header_values)) {
     if (nm %in% protected_fields) {
-        warning("Ignoring attempt to override protected header field: '", nm, "'")
+      warning("Ignoring attempt to override protected header field: '", nm, "'")
     } else {
-        hdr_default[[nm]] <- header_values[[nm]]
+      hdr_default[[nm]] <- header_values[[nm]]
     }
   }
-  
+
   # 1) Write header fields into /header group
   # Create group first, checking existence
   if (!h5obj$exists("/header")) h5obj$create_group("/header")
   # Write each header field using h5_write
   for (nm in names(hdr_default)) {
-      h5_write(h5obj, file.path("/header", nm), hdr_default[[nm]], overwrite = TRUE)
+    h5_write(h5obj, file.path("/header", nm), hdr_default[[nm]], overwrite = TRUE)
   }
   # Store qfac separately using h5_write
   h5_write(h5obj, "/header/qfac", q$qfac, overwrite = TRUE)
@@ -260,7 +261,7 @@ write_labeled_vec <- function(vec,
 
   # 4) /data => subdatasets for each volume, storing masked data
   # Create parent group /data, checking existence
-  if (!h5obj$exists("/data")) h5obj$create_group("/data") 
+  if (!h5obj$exists("/data")) h5obj$create_group("/data")
   # idx_nonzero and n_nonzero already calculated above
 
   # Set valid chunk dimensions for 1D data
@@ -269,18 +270,18 @@ write_labeled_vec <- function(vec,
   for (i in seq_len(nVols)) {
     # Control verbosity
     if (verbose) message("Writing label: ", labels[i], " (safe name: ", safe_labels[i], ")")
-    
+
     # Data path uses SANITIZED label
     data_path <- file.path("/data", safe_labels[i])
-    
+
     # --- Corrected data extraction ---
     # Extract the 3D data for the current volume i
     # Note: NeuroVec subsetting might return a NeuroVol, ensure we get the array data
-    vol_i_data <- as.array(vec[[i]]) 
+    vol_i_data <- as.array(vec[[i]])
     # Extract only the values at the mask locations (idx_nonzero)
     vol_1d_masked <- vol_i_data[idx_nonzero]
     # --- End corrected data extraction ---
-    
+
     # Write using h5_write
     h5_write(
       h5 = h5obj,
@@ -301,8 +302,8 @@ write_labeled_vec <- function(vec,
 #' Read a Labeled Neuroimaging Volume Set from HDF5
 #'
 #' @description
-#' Reads an HDF5 file, typically one previously created by 
-#' \code{\link{write_labeled_vec}} (now deprecated), and constructs a 
+#' Reads an HDF5 file, typically one previously created by
+#' \code{\link{write_labeled_vec}} (now deprecated), and constructs a
 #' \code{\link{LabeledVolumeSet-class}} object.
 #' The HDF5 file is opened in read-only mode.
 #'
@@ -345,12 +346,12 @@ write_labeled_vec <- function(vec,
 read_labeled_vec <- function(file_path) {
   # --- 1. Handle File Source ---
   # Call simplified open_h5 (no auto_close)
-  fh <- open_h5(file_path, mode = "r") 
+  fh <- open_h5(file_path, mode = "r")
   h5obj <- fh$h5
-  # CRITICAL: Remove on.exit/defer call for h5obj. 
-  # Closing is now the responsibility of the user via the close() method 
+  # CRITICAL: Remove on.exit/defer call for h5obj.
+  # Closing is now the responsibility of the user via the close() method
   # if fh$owns is TRUE.
-  # Example removed call: 
+  # Example removed call:
   # if (fh$owns) on.exit(safe_h5_close(h5obj), add = TRUE)
 
   hdr_grp <- NULL # Initialize for finally block
@@ -361,7 +362,7 @@ read_labeled_vec <- function(file_path) {
     h5_read(h5obj, file.path("/header", nm), missing_ok = TRUE)
   }
   # Helper to read dataset from root group if present
-   .rd_root <- function(nm) {
+  .rd_root <- function(nm) {
     h5_read(h5obj, paste0("/", nm), missing_ok = TRUE)
   }
 
@@ -379,16 +380,18 @@ read_labeled_vec <- function(file_path) {
   # Read labels from root level
   labels_arr <- .rd_root("labels")
   if (is.null(labels_arr)) {
-      stop("Mandatory '/labels' dataset not found at file root.")
+    stop("Mandatory '/labels' dataset not found at file root.")
   }
-  
+
   # Check and validate dimensions
-  if (is.null(dims) || length(dims)<5 || dims[1]!=4) {
+  if (is.null(dims) || length(dims) < 5 || dims[1] != 4) {
     stop("Invalid or missing 'dim' in /header/dim")
   }
-  X <- dims[2]; Y <- dims[3]; Z <- dims[4]
+  X <- dims[2]
+  Y <- dims[3]
+  Z <- dims[4]
   nVols <- dims[5]
-  
+
   # Check labels consistency after reading from root
   if (length(labels_arr) != nVols) {
     stop("Mismatch: #labels (", length(labels_arr), ") != nVols specified in header/dim (", nVols, ").")
@@ -396,21 +399,21 @@ read_labeled_vec <- function(file_path) {
 
   # read /mask => 3D from root level
   mask_arr <- h5_read(h5obj, "/mask", missing_ok = FALSE)
-  
+
   # Check if dimensions were dropped (hdf5r might drop singleton dimensions)
   mask_dims <- dim(mask_arr)
   if (is.null(mask_dims)) {
-      # If dim is NULL, it's a vector - reshape to expected 3D
-      mask_arr <- array(mask_arr, dim = c(X, Y, Z))
+    # If dim is NULL, it's a vector - reshape to expected 3D
+    mask_arr <- array(mask_arr, dim = c(X, Y, Z))
   } else if (length(mask_dims) == 2 && Z == 1) {
-      # If 2D and Z should be 1, add the third dimension
-      mask_arr <- array(mask_arr, dim = c(mask_dims, 1))
+    # If 2D and Z should be 1, add the third dimension
+    mask_arr <- array(mask_arr, dim = c(mask_dims, 1))
   } else if (length(mask_dims) != 3) {
-      stop("Read /mask dataset has unexpected dimensions: ", paste(mask_dims, collapse = "x"))
+    stop("Read /mask dataset has unexpected dimensions: ", paste(mask_dims, collapse = "x"))
   }
-  if (!all(dim(mask_arr) == c(X,Y,Z))) {
-      stop("Dimensions of /mask [", paste(dim(mask_arr), collapse=","),
-           "] do not match dimensions specified in header/dim [", X, ",", Y, ",", Z, "]")
+  if (!all(dim(mask_arr) == c(X, Y, Z))) {
+    stop("Dimensions of /mask [", paste(dim(mask_arr), collapse = ","),
+      "] do not match dimensions specified in header/dim [", X, ",", Y, ",", Z, "]")
   }
 
   # Rebuild 4x4 transform from quaternion
@@ -424,49 +427,55 @@ read_labeled_vec <- function(file_path) {
     dz   <- pixdim[4]
   } else {
     warning("Missing or incomplete 'pixdim' in header. Using default spacing (1,1,1).")
-    dx <- 1; dy <- 1; dz <- 1
+    dx <- 1
+    dy <- 1
+    dz <- 1
   }
 
   if (!all(sapply(list(qb, qc, qd, qx, qy, qz), function(x) !is.null(x) && is.numeric(x)))) {
-     warning("Missing or non-numeric quaternion parameters in header. Using identity transform.")
-     mat <- diag(4)
-     mat[1,1] <- dx
-     mat[2,2] <- dy
-     mat[3,3] <- dz
+    warning("Missing or non-numeric quaternion parameters in header. Using identity transform.")
+    mat <- diag(4)
+    mat[1, 1] <- dx
+    mat[2, 2] <- dy
+    mat[3, 3] <- dz
   } else {
-     mat <- tryCatch(
-         neuroim2::quaternToMatrix(
-             quat     = c(qb,qc,qd),
-             origin   = c(qx,qy,qz),
-             stepSize = c(dx,dy,dz),
-             qfac     = qfac_val
-         ),
-         error = function(e) {
-             warning("Error calling quaternToMatrix: ", e$message, ". Using identity transform.")
-             mat_fallback <- diag(4)
-             mat_fallback[1,1] <- dx; mat_fallback[2,2] <- dy; mat_fallback[3,3] <- dz
-             mat_fallback
-         }
-     )
+    mat <- tryCatch(
+      neuroim2::quaternToMatrix(
+        quat     = c(qb, qc, qd),
+        origin   = c(qx, qy, qz),
+        stepSize = c(dx, dy, dz),
+        qfac     = qfac_val
+      ),
+      error = function(e) {
+        warning("Error calling quaternToMatrix: ", e$message, ". Using identity transform.")
+        mat_fallback <- diag(4)
+        mat_fallback[1, 1] <- dx
+        mat_fallback[2, 2] <- dy
+        mat_fallback[3, 3] <- dz
+        mat_fallback
+      }
+    )
   }
 
   # build space => just do a 3D NeuroSpace
-  spc <- NeuroSpace(dim=c(X,Y,Z), spacing=c(dx,dy,dz), trans=mat)
+  spc <- NeuroSpace(dim = c(X, Y, Z), spacing = c(dx, dy, dz), trans = mat)
 
   # build mask
-  mask_vol <- LogicalNeuroVol(as.logical(mask_arr), space=spc)
+  mask_vol <- LogicalNeuroVol(as.logical(mask_arr), space = spc)
 
-  # --- 6. Prepare Lazy Loading Environment --- 
-  load_env <- new.env(parent=emptyenv())
+  # --- 6. Prepare Lazy Loading Environment ---
+  load_env <- new.env(parent = emptyenv())
   # The H5File handle is stored in the main object's obj slot
-  load_env$mask_idx <- which(as.logical(mask_arr)==TRUE) # Ensure logical mask used
-  load_env$dims     <- c(X,Y,Z)
+  load_env$mask_idx <- which(as.logical(mask_arr) == TRUE) # Ensure logical mask used
+  load_env$dims     <- c(X, Y, Z)
   load_env$space    <- spc
   # Remove sanitize function from environment
   # load_env$sanitize_label <- function(lbl) { gsub("[^A-Za-z0-9_.-]", "_", lbl) }
 
   # Define sanitize function locally instead
-  sanitize_label_func <- function(lbl) { gsub("[^A-Za-z0-9_.-]", "_", lbl) }
+  sanitize_label_func <- function(lbl) {
+    gsub("[^A-Za-z0-9_.-]", "_", lbl)
+  }
 
   # Define the core loading logic which needs the parent object
   internal_loader <- function(i, parent_obj) {
@@ -475,69 +484,71 @@ read_labeled_vec <- function(file_path) {
       stop("HDF5 file handle associated with this LabeledVolumeSet is invalid or closed.")
     }
 
-    tryCatch({
-      # Get the ORIGINAL label name using the numeric index
-      lab <- parent_obj@labels[i]
-      
-      # --- Corrected: Sanitize label to find data path ---
-      # Use the local sanitize function
-      safe_lab <- sanitize_label_func(lab)
-      # Problem: make.unique suffixing might be needed if collisions occurred during write
-      # This requires storing the safe_labels from writer, or re-implementing make.unique logic
-      # Simplification for now: Assume basic sanitization is enough or paths were unique
-      # TODO: Revisit this if make.unique collisions cause read failures
-      data_path <- file.path("/data", safe_lab)
-      
-      # Read the data using h5_read
-      val1 <- h5_read(h5f, data_path, missing_ok = FALSE)
-      
-      # Create the 3D array using dims stored in load_env
-      vol <- array(0, dim=parent_obj@load_env$dims)
-      
-      current_mask_idx <- parent_obj@load_env$mask_idx
-      if (length(current_mask_idx) == 0) {
-        warning("Internal inconsistency: Mask indices are empty but file exists for label ", lab)
-        # Use space from load_env
-        return(DenseNeuroVol(vol, space=parent_obj@load_env$space)) 
-      }
-      
-      if (length(current_mask_idx) != length(val1)) {
-        # Check if data length exceeds mask length (potential corruption)
-        if (length(val1) > length(current_mask_idx)) {
-             stop(paste0("Data length mismatch for label ", sQuote(lab), ". Stored data (", 
-                        length(val1), ") exceeds mask size (", length(current_mask_idx), "). File may be corrupt."))
-        } else {
-             warning(paste0("Data length mismatch for label ", sQuote(lab), ". Expected ",
-                            length(current_mask_idx), " values based on mask, but found ", length(val1), ". Padding with zeros."))
-             # Fill available data, rest remains zero
-             vol[current_mask_idx[1:length(val1)]] <- val1
+    tryCatch(
+      {
+        # Get the ORIGINAL label name using the numeric index
+        lab <- parent_obj@labels[i]
+
+        # --- Corrected: Sanitize label to find data path ---
+        # Use the local sanitize function
+        safe_lab <- sanitize_label_func(lab)
+        # Problem: make.unique suffixing might be needed if collisions occurred during write
+        # This requires storing the safe_labels from writer, or re-implementing make.unique logic
+        # Simplification for now: Assume basic sanitization is enough or paths were unique
+        # TODO: Revisit this if make.unique collisions cause read failures
+        data_path <- file.path("/data", safe_lab)
+
+        # Read the data using h5_read
+        val1 <- h5_read(h5f, data_path, missing_ok = FALSE)
+
+        # Create the 3D array using dims stored in load_env
+        vol <- array(0, dim = parent_obj@load_env$dims)
+
+        current_mask_idx <- parent_obj@load_env$mask_idx
+        if (length(current_mask_idx) == 0) {
+          warning("Internal inconsistency: Mask indices are empty but file exists for label ", lab)
+          # Use space from load_env
+          return(DenseNeuroVol(vol, space = parent_obj@load_env$space))
         }
-      } else {
-        vol[current_mask_idx] <- val1 # Fill using mask indices
-      }
-      # Use space from load_env
-      DenseNeuroVol(vol, space=parent_obj@load_env$space)
-      
-    }, error=function(e) {
+
+        if (length(current_mask_idx) != length(val1)) {
+          # Check if data length exceeds mask length (potential corruption)
+          if (length(val1) > length(current_mask_idx)) {
+            stop(paste0("Data length mismatch for label ", sQuote(lab), ". Stored data (",
+              length(val1), ") exceeds mask size (", length(current_mask_idx), "). File may be corrupt."))
+          } else {
+            warning(paste0("Data length mismatch for label ", sQuote(lab), ". Expected ",
+              length(current_mask_idx), " values based on mask, but found ", length(val1), ". Padding with zeros."))
+            # Fill available data, rest remains zero
+            vol[current_mask_idx[1:length(val1)]] <- val1
+          }
+        } else {
+          vol[current_mask_idx] <- val1 # Fill using mask indices
+        }
+        # Use space from load_env
+        DenseNeuroVol(vol, space = parent_obj@load_env$space)
+
+      },
+      error = function(e) {
         # Simplify error message to reveal original error
-        stop(sprintf("Error loading data for label '%s': %s", 
-                     lab %||% "(unknown)", 
-                     conditionMessage(e)))
-    })
+        stop(sprintf("Error loading data for label '%s': %s",
+          lab %||% "(unknown)",
+          conditionMessage(e)))
+      })
   }
 
-  # --- 7. Create LabeledVolumeSet Object --- 
+  # --- 7. Create LabeledVolumeSet Object ---
   lvol <- new("LabeledVolumeSet",
-              obj = h5obj, # Assign handle directly to obj slot
-              mask = mask_vol,
-              labels = labels_arr, # Store original labels
-              load_env = load_env # Minimal load_env
-              # Removed h5_wrapper assignment
-              )
+    obj = h5obj, # Assign handle directly to obj slot
+    mask = mask_vol,
+    labels = labels_arr, # Store original labels
+    load_env = load_env # Minimal load_env
+    # Removed h5_wrapper assignment
+  )
 
   # Assign the loader function - creates a closure capturing lvol
   load_env$loader <- function(i) {
-      internal_loader(i, lvol) # 'lvol' is the parent object here
+    internal_loader(i, lvol) # 'lvol' is the parent object here
   }
 
   # If file was opened internally, the defer handler takes care of closing.
@@ -560,8 +571,8 @@ read_labeled_vec <- function(file_path) {
 #' @export
 setMethod(
   f = "[",
-  signature = signature(x="LabeledVolumeSet"),
-  definition = function(x, i, j, k, l, ..., drop=TRUE) {
+  signature = signature(x = "LabeledVolumeSet"),
+  definition = function(x, i, j, k, l, ..., drop = TRUE) {
     # Validity check is implicitly handled by the loader now
 
     # 1) Figure out any missing dims => use full range
@@ -594,7 +605,7 @@ setMethod(
     }
 
     out_dims <- c(length(i), length(j), length(k), length(l))
-    result <- array(0, dim=out_dims)
+    result <- array(0, dim = out_dims)
 
     # 2) Read each volume in l, subset in memory
     loader_func <- x@load_env$loader
@@ -606,8 +617,8 @@ setMethod(
         stop("Failed to load volume ", lv, " (label: '", x@labels[lv], "'): ", e$message)
       })
       vol_arr <- as.array(vol_3d) # Convert DenseNeuroVol to array
-      subcube <- vol_arr[i, j, k, drop=FALSE]
-      result[,,, out_l_pos] <- subcube
+      subcube <- vol_arr[i, j, k, drop = FALSE]
+      result[, , , out_l_pos] <- subcube
       out_l_pos <- out_l_pos + 1
     }
 
@@ -619,12 +630,12 @@ setMethod(
 )
 
 
-#' @rdname linear_access-methods  
+#' @rdname linear_access-methods
 #' @importFrom neuroim2 linear_access
 #' @export
 setMethod(
   f = "linear_access",
-  signature = signature(x="LabeledVolumeSet", i="numeric"),
+  signature = signature(x = "LabeledVolumeSet", i = "numeric"),
   definition = function(x, i) {
     # Validity check is implicitly handled by the loader
 
@@ -638,8 +649,8 @@ setMethod(
       stop("Some indices out of range 1..", total)
     }
 
-    sub_4d <- arrayInd(i, .dim=bigDim)
-    vol_groups <- split(seq_len(nrow(sub_4d)), sub_4d[,4])
+    sub_4d <- arrayInd(i, .dim = bigDim)
+    vol_groups <- split(seq_len(nrow(sub_4d)), sub_4d[, 4])
     out <- numeric(length(i))
 
     loader_func <- x@load_env$loader
@@ -648,18 +659,18 @@ setMethod(
     for (v_str in names(vol_groups)) {
       v_idx <- as.integer(v_str)
       these_rows <- vol_groups[[v_str]]
-      coords <- sub_4d[these_rows, , drop=FALSE]
+      coords <- sub_4d[these_rows, , drop = FALSE]
 
       # Call the loader
       vol_3d <- tryCatch(loader_func(v_idx), error = function(e) {
-         stop("Failed to load volume ", v_idx, " (label: '", x@labels[v_idx], "'): ", e$message)
+        stop("Failed to load volume ", v_idx, " (label: '", x@labels[v_idx], "'): ", e$message)
       })
       vol_arr <- as.array(vol_3d)
 
       for (row_i in seq_len(nrow(coords))) {
-        rx <- coords[row_i,1]
-        ry <- coords[row_i,2]
-        rz <- coords[row_i,3]
+        rx <- coords[row_i, 1]
+        ry <- coords[row_i, 2]
+        rz <- coords[row_i, 3]
         val <- vol_arr[rx, ry, rz]
         out_idx <- these_rows[row_i]
         out[out_idx] <- val
@@ -673,7 +684,7 @@ setMethod(
 #' @rdname extract-methods
 setMethod(
   f = "[[",
-  signature = signature(x="LabeledVolumeSet", i="numeric"),
+  signature = signature(x = "LabeledVolumeSet", i = "numeric"),
   definition = function(x, i, j, ...) {
     # Validity check implicit in loader
 
@@ -690,7 +701,7 @@ setMethod(
 
     # use the environment's loader to get that one volume
     vol <- tryCatch(loader_func(i), error = function(e) {
-        stop("Failed to load volume ", i, " (label: '", x@labels[i], "'): ", e$message)
+      stop("Failed to load volume ", i, " (label: '", x@labels[i], "'): ", e$message)
     })
     vol
   }
@@ -730,49 +741,49 @@ setMethod(
     file_path_or_handle <- object@obj # Accessing the S4 slot directly
 
     if (inherits(file_path_or_handle, "H5File")) {
-        # It's an H5File handle
-        if (file_path_or_handle$is_valid) {
-            file_status <- tryCatch(file_path_or_handle$get_filename(), error = function(e) "Valid Handle (path unavailable)")
-        } else {
-            file_status <- "CLOSED Handle"
-        }
+      # It's an H5File handle
+      if (file_path_or_handle$is_valid) {
+        file_status <- tryCatch(file_path_or_handle$get_filename(), error = function(e) "Valid Handle (path unavailable)")
+      } else {
+        file_status <- "CLOSED Handle"
+      }
     } else if (is.character(file_path_or_handle)) {
-        # It's a file path string
-        file_status <- file_path_or_handle
-        # We could add a check here if the file exists, but might be slow/unnecessary for 'show'
+      # It's a file path string
+      file_status <- file_path_or_handle
+      # We could add a check here if the file exists, but might be slow/unnecessary for 'show'
     }
 
-    cat("\n", crayon::bold(crayon::blue("LabeledVolumeSet")), "\n", sep="")
+    cat("\n", crayon::bold(crayon::blue("LabeledVolumeSet")), "\n", sep = "")
 
     sp   <- space(object@mask)
     nd3  <- dim(sp)
     nvol <- length(object@labels)
 
-    cat(crayon::bold("\n+= Volume Info "), crayon::silver("---------------------------"), "\n", sep="")
-    cat("| ", crayon::yellow("3D Dimensions"), " : ", paste(nd3, collapse=" x "), "\n", sep="")
-    cat("| ", crayon::yellow("Total Volumes"), " : ", nvol, "\n", sep="")
+    cat(crayon::bold("\n+= Volume Info "), crayon::silver("---------------------------"), "\n", sep = "")
+    cat("| ", crayon::yellow("3D Dimensions"), " : ", paste(nd3, collapse = " x "), "\n", sep = "")
+    cat("| ", crayon::yellow("Total Volumes"), " : ", nvol, "\n", sep = "")
 
     lbl_preview <- object@labels[1:min(3, nvol)]
     cat("| ", crayon::yellow("Labels"), "        : ",
-        paste(lbl_preview, collapse=", "),
-        if (nvol > 3) crayon::silver(paste0(" ... (", nvol - 3, " more)")), "\n", sep="")
+      paste(lbl_preview, collapse = ", "),
+      if (nvol > 3) crayon::silver(paste0(" ... (", nvol - 3, " more)")), "\n", sep = "")
 
-    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep="")
-    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" x "), "\n", sep="")
-    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse=" x "), "\n", sep="")
+    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep = "")
+    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
+    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse = " x "), "\n", sep = "")
 
     if (length(sp@axes@ndim) == 1 && sp@axes@ndim >= 3) {
       cat("| ", crayon::yellow("Orientation"), "   : ",
-          paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
+        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep = "")
     } else {
       cat("| ", crayon::yellow("Orientation"), "   : Unknown / Not specified\n")
     }
 
-    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep="")
-    cat("  ", crayon::yellow("HDF5 File"), "    : ", file_status, "\n", sep="")
-    cat("  ", crayon::yellow("Data Path"), "    : /data/<label>\n", sep="")
-    cat("  ", crayon::yellow("Mask Path"), "    : /mask\n", sep="")
-    cat("  ", crayon::yellow("Labels Path"), "  : /labels\n", sep="") # Added label path info
+    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep = "")
+    cat("  ", crayon::yellow("HDF5 File"), "    : ", file_status, "\n", sep = "")
+    cat("  ", crayon::yellow("Data Path"), "    : /data/<label>\n", sep = "")
+    cat("  ", crayon::yellow("Mask Path"), "    : /mask\n", sep = "")
+    cat("  ", crayon::yellow("Labels Path"), "  : /labels\n", sep = "") # Added label path info
 
     cat("\n")
   }
@@ -788,26 +799,26 @@ setMethod(
   signature = signature(x = "LabeledVolumeSet", i = "character"),
   definition = function(x, i, j, ...) {
     # Validity check implicit in loader
-    
+
     if (length(i) != 1) {
       stop("Must provide a single label name for character index.")
     }
-    
+
     # Find the numeric index corresponding to the label
     numeric_idx <- match(i, x@labels)
-    
+
     if (is.na(numeric_idx)) {
       stop("Label '", i, "' not found in LabeledVolumeSet.")
     }
-    
+
     # Call the loader function directly with the numeric index
     loader_func <- x@load_env$loader
     if (!is.function(loader_func)) stop("Internal error: loader function not found in LabeledVolumeSet environment.")
-    
+
     vol <- tryCatch(loader_func(numeric_idx), error = function(e) {
       stop("Failed to load volume for label '", i, "' (index: ", numeric_idx, "): ", e$message)
     })
-    
+
     vol
   }
 )
@@ -840,4 +851,3 @@ setMethod("close", "LabeledVolumeSet", function(con, ...) {
   }
   invisible(NULL)
 })
-

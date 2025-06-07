@@ -15,7 +15,7 @@ H5NeuroVecSource <- function(file_name) {
   new("H5NeuroVecSource", file_name = file_name)
 }
 
-#' Read a 4D HDF5 file 
+#' Read a 4D HDF5 file
 #'
 #' @param file_name The path to a 4D HDF5 file.
 #' @return A new \code{H5NeuroVecSource} object.
@@ -73,7 +73,7 @@ H5NeuroVec <- function(file_name) {
   h5obj <- hdf5r::H5File$new(file_name)
 
   # Check the 'rtype' attribute
-  rtype <- try(hdf5r::h5attr(h5obj, which="rtype"), silent=TRUE)
+  rtype <- try(hdf5r::h5attr(h5obj, which = "rtype"), silent = TRUE)
   if (!is.character(rtype) || rtype != "DenseNeuroVec") {
     stop("Invalid HDF5 file for H5NeuroVec: ", file_name)
   }
@@ -82,7 +82,7 @@ H5NeuroVec <- function(file_name) {
   if (length(h5obj[["space/dim"]][]) != 4) {
     stop(
       "Cannot create H5NeuroVec: file must have 4 dimensions; found: ",
-      paste(h5obj[["space/dim"]][], collapse=" ")
+      paste(h5obj[["space/dim"]][], collapse = " ")
     )
   }
 
@@ -90,10 +90,10 @@ H5NeuroVec <- function(file_name) {
   sp <- NeuroSpace(
     dim    = h5obj[["space/dim"]][],
     origin = h5obj[["space/origin"]][],
-    trans  = h5obj[["space/trans"]][,]
+    trans  = h5obj[["space/trans"]][, ]
   )
 
-  new("H5NeuroVec", space=sp, obj=h5obj)
+  new("H5NeuroVec", space = sp, obj = h5obj)
 }
 
 #' Convert DenseNeuroVec to H5NeuroVec
@@ -110,25 +110,25 @@ setAs(
   from = "DenseNeuroVec",
   to   = "H5NeuroVec",
   def  = function(from) {
-    to_nih5_vec(from, file_name=NULL, data_type="FLOAT")
+    to_nih5_vec(from, file_name = NULL, data_type = "FLOAT")
   }
 )
 
 #' @export
 setMethod(
   f   = "series",
-  signature = signature(x="H5NeuroVec", i="integer"),
+  signature = signature(x = "H5NeuroVec", i = "integer"),
   definition = function(x, i) {
     assertthat::assert_that(max(i) <= dim(x)[4])
     assertthat::assert_that(min(i) >= 1)
-    x@obj[["data"]][,,, i, drop=FALSE]
+    x@obj[["data"]][, , , i, drop = FALSE]
   }
 )
 
 #' @export
 setMethod(
   f = "series",
-  signature = signature(x="H5NeuroVec", i="numeric"),
+  signature = signature(x = "H5NeuroVec", i = "numeric"),
   definition = function(x, i) {
     callGeneric(x, as.integer(i))
   }
@@ -137,7 +137,7 @@ setMethod(
 #' @export
 setMethod(
   f = "series",
-  signature = signature(x="H5NeuroVec", i="matrix"),
+  signature = signature(x = "H5NeuroVec", i = "matrix"),
   definition = function(x, i) {
     assertthat::assert_that(ncol(i) == 3)
     assertthat::assert_that(max(i) <= prod(dim(x)[1:3]))
@@ -151,8 +151,8 @@ setMethod(
 #' @export
 setMethod(
   f = "series",
-  signature = signature(x="H5NeuroVec", i="integer"),
-  definition = function(x, i, j, k, drop=TRUE) {
+  signature = signature(x = "H5NeuroVec", i = "integer"),
+  definition = function(x, i, j, k, drop = TRUE) {
     if (missing(j) && missing(k)) {
       # i is a linear index; convert to (x,y,z)
       grid <- indexToGridCpp(i, dim(x)[1:3])
@@ -160,10 +160,10 @@ setMethod(
     } else {
       # Possibly expand.grid approach
       assertthat::assert_that(
-        length(i)==1 && length(j)==1 && length(k)==1,
-        msg="Expecting single-voxel indices for i,j,k"
+        length(i) == 1 && length(j) == 1 && length(k) == 1,
+        msg = "Expecting single-voxel indices for i,j,k"
       )
-      ret <- x@obj[["data/elements"]][i,j,k,]
+      ret <- x@obj[["data/elements"]][i, j, k, ]
       if (drop) drop(ret) else ret
     }
   }
@@ -173,7 +173,7 @@ setMethod(
 #' @export
 setMethod(
   f = "series",
-  signature = signature(x="H5NeuroVec", i="numeric"),
+  signature = signature(x = "H5NeuroVec", i = "numeric"),
   definition = function(x, i, j, k) {
     if (missing(j) && missing(k)) {
       callGeneric(x, as.integer(i))
@@ -187,20 +187,20 @@ setMethod(
 #' @export
 setMethod(
   f = "series",
-  signature = signature(x="H5NeuroVec", i="matrix"),
+  signature = signature(x = "H5NeuroVec", i = "matrix"),
   definition = function(x, i) {
     assertthat::assert_that(ncol(i) == 3)
     d4 <- dim(x)[4]
 
     # Build bounding box for i
-    ir <- lapply(seq_len(ncol(i)), function(j) seq(min(i[,j]), max(i[,j])))
+    ir <- lapply(seq_len(ncol(i)), function(j) seq(min(i[, j]), max(i[, j])))
 
     # e.g. sub-block
     ret <- x@obj[["data/elements"]][
       ir[[1]][1]:ir[[1]][length(ir[[1]])],
       ir[[2]][1]:ir[[2]][length(ir[[2]])],
-      ir[[3]][1]:ir[[3]][length(ir[[3]])],
-      , drop=FALSE
+      ir[[3]][1]:ir[[3]][length(ir[[3]])], ,
+      drop = FALSE
     ]
 
     # flatten
@@ -211,7 +211,7 @@ setMethod(
         ind - min(ind) + 1
       })
       i3 <- gridToIndex3DCpp(dim(ret)[1:3], i2)
-      ret2[, i3, drop=FALSE]
+      ret2[, i3, drop = FALSE]
     } else {
       ret2
     }
@@ -223,39 +223,43 @@ setMethod(
 #' @rdname linear_access-methods
 setMethod(
   f = "linear_access",
-  signature = signature(x="H5NeuroVec", i="numeric"),
+  signature = signature(x = "H5NeuroVec", i = "numeric"),
   definition = function(x, i) {
     # 1) Convert linear => (x,y,z,t)
     coords <- arrayInd(i, dim(x))
     n <- nrow(coords)
 
     # 2) bounding box
-    minX <- min(coords[,1]); maxX <- max(coords[,1])
-    minY <- min(coords[,2]); maxY <- max(coords[,2])
-    minZ <- min(coords[,3]); maxZ <- max(coords[,3])
-    minT <- min(coords[,4]); maxT <- max(coords[,4])
+    minX <- min(coords[, 1])
+    maxX <- max(coords[, 1])
+    minY <- min(coords[, 2])
+    maxY <- max(coords[, 2])
+    minZ <- min(coords[, 3])
+    maxZ <- max(coords[, 3])
+    minT <- min(coords[, 4])
+    maxT <- max(coords[, 4])
 
     # 3) Read sub-block
     dset <- x@obj[["data/elements"]]
-    sub4d <- dset[minX:maxX, minY:maxY, minZ:maxZ, minT:maxT, drop=FALSE]
+    sub4d <- dset[minX:maxX, minY:maxY, minZ:maxZ, minT:maxT, drop = FALSE]
 
     # 4) Flatten sub4d
     sub4d_vec <- as.vector(sub4d)
 
     # 5) Compute local offsets
-    offX <- coords[,1] - minX + 1
-    offY <- coords[,2] - minY + 1
-    offZ <- coords[,3] - minZ + 1
-    offT <- coords[,4] - minT + 1
+    offX <- coords[, 1] - minX + 1
+    offY <- coords[, 2] - minY + 1
+    offZ <- coords[, 3] - minZ + 1
+    offT <- coords[, 4] - minT + 1
 
     lenX <- maxX - minX + 1
     lenY <- maxY - minY + 1
     lenZ <- maxZ - minZ + 1
 
     sub_lin_idx <- offX +
-      (offY - 1L)* lenX +
-      (offZ - 1L)* lenX*lenY +
-      (offT - 1L)* lenX*lenY*lenZ
+      (offY - 1L) * lenX +
+      (offZ - 1L) * lenX * lenY +
+      (offT - 1L) * lenX * lenY * lenZ
 
     out_vals <- sub4d_vec[sub_lin_idx]
     out_vals
@@ -266,7 +270,7 @@ setMethod(
 #' @rdname linear_access-methods
 setMethod(
   f = "linear_access",
-  signature = signature(x="H5NeuroVec", i="integer"),
+  signature = signature(x = "H5NeuroVec", i = "integer"),
   definition = function(x, i) {
     callGeneric(x, as.numeric(i))
   }
@@ -275,8 +279,8 @@ setMethod(
 #' @rdname extract-methods
 setMethod(
   f = "[",
-  signature = signature(x="H5NeuroVec", i="numeric", j="numeric", drop="ANY"),
-  definition = function(x, i, j, k, l, ..., drop=TRUE) {
+  signature = signature(x = "H5NeuroVec", i = "numeric", j = "numeric", drop = "ANY"),
+  definition = function(x, i, j, k, l, ..., drop = TRUE) {
     # Provide defaults if missing
     if (missing(i)) i <- seq_len(dim(x)[1])
     if (missing(j)) j <- seq_len(dim(x)[2])
@@ -289,31 +293,38 @@ setMethod(
       # Build an empty array. The dimension that's length-0
       # remains 0 in the result.
       out_dim <- c(length(i), length(j), length(k), length(l))
-      out_arr <- array(numeric(0), dim=out_dim)
+      out_arr <- array(numeric(0), dim = out_dim)
       if (drop) out_arr <- drop(out_arr)
       return(out_arr)
     }
 
     # Otherwise do normal bounding-box approach
     # -------------------------------------------------------------
-    i <- as.numeric(i); j <- as.numeric(j); k <- as.numeric(k); l <- as.numeric(l)
+    i <- as.numeric(i)
+    j <- as.numeric(j)
+    k <- as.numeric(k)
+    l <- as.numeric(l)
 
     # Basic range checks
     dims_x <- dim(x)
     if (any(i < 1 | i > dims_x[1]) ||
-        any(j < 1 | j > dims_x[2]) ||
-        any(k < 1 | k > dims_x[3]) ||
-        any(l < 1 | l > dims_x[4])) {
+      any(j < 1 | j > dims_x[2]) ||
+      any(k < 1 | k > dims_x[3]) ||
+      any(l < 1 | l > dims_x[4])) {
       stop("Subscript out of range in H5NeuroVec dimensions.")
     }
 
-    minI <- min(i); maxI <- max(i)
-    minJ <- min(j); maxJ <- max(j)
-    minK <- min(k); maxK <- max(k)
-    minL <- min(l); maxL <- max(l)
+    minI <- min(i)
+    maxI <- max(i)
+    minJ <- min(j)
+    maxJ <- max(j)
+    minK <- min(k)
+    maxK <- max(k)
+    minL <- min(l)
+    maxL <- max(l)
 
     dset <- x@obj[["data/elements"]]
-    subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, minL:maxL, drop=FALSE]
+    subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, minL:maxL, drop = FALSE]
 
     i_off <- i - minI + 1
     j_off <- j - minJ + 1
@@ -334,10 +345,10 @@ setMethod(
     out_dim <- c(nI, nJ, nK, nL)
     N <- nI * nJ * nK * nL
 
-    idx_i <- rep(seq_len(nI), times=nJ*nK*nL)
-    idx_j <- rep(rep(seq_len(nJ), each=nI), times=nK*nL)
-    idx_k <- rep(rep(seq_len(nK), each=nI*nJ), times=nL)
-    idx_l <- rep(seq_len(nL), each=nI*nJ*nK)
+    idx_i <- rep(seq_len(nI), times = nJ * nK * nL)
+    idx_j <- rep(rep(seq_len(nJ), each = nI), times = nK * nL)
+    idx_k <- rep(rep(seq_len(nK), each = nI * nJ), times = nL)
+    idx_l <- rep(seq_len(nL), each = nI * nJ * nK)
 
     loc_i <- i_off[idx_i]
     loc_j <- j_off[idx_j]
@@ -345,13 +356,13 @@ setMethod(
     loc_l <- l_off[idx_l]
 
     sub_lin_idx <- loc_i +
-      (loc_j - 1)* subdimI +
-      (loc_k - 1)* subdimI*subdimJ +
-      (loc_l - 1)* subdimI*subdimJ*subdimK
+      (loc_j - 1) * subdimI +
+      (loc_k - 1) * subdimI * subdimJ +
+      (loc_l - 1) * subdimI * subdimJ * subdimK
 
     out_vals <- subvol_vec[sub_lin_idx]
 
-    arr_out <- array(out_vals, dim=out_dim)
+    arr_out <- array(out_vals, dim = out_dim)
     if (drop) {
       arr_out <- drop(arr_out)
     }
@@ -384,9 +395,8 @@ setMethod(
 #' @rdname series-methods
 setMethod(
   f = "series",
-  signature = signature(x="H5NeuroVec", i="integer"),
-  definition = function(x, i, j, k, drop=TRUE) {
-
+  signature = signature(x = "H5NeuroVec", i = "integer"),
+  definition = function(x, i, j, k, drop = TRUE) {
     # If user provided only 'i', treat it as a vector of linear voxel indices
     if (missing(j) && missing(k)) {
       # compute total # of voxels in the 3D part
@@ -394,25 +404,25 @@ setMethod(
 
       # We'll build linear indices for all timepoints
       # offsets = c(0, nels, 2*nels, ..., (nTime-1)*nels)
-      offsets <- seq(0, (dim(x)[4]-1)) * nels
+      offsets <- seq(0, (dim(x)[4] - 1)) * nels
 
       # For each element in i, we add each offset => flatten
       # 'map' is from purrr or we can do a base R loop
       idx_list <- lapply(i, function(pos) pos + offsets)
-      idx <- unlist(idx_list, use.names=FALSE)
+      idx <- unlist(idx_list, use.names = FALSE)
 
       # Now we rely on x[idx] => must be valid 1D subscript
       # (which is handled by your `[.H5NeuroVec` or `linear_access()` method)
       vals <- x[idx]  # => numeric vector of length length(i)*nTime
 
       # Reshape => [nTime, length(i)]
-      ret <- matrix(vals, nrow=dim(x)[4], ncol=length(i))
+      ret <- matrix(vals, nrow = dim(x)[4], ncol = length(i))
       if (drop) drop(ret) else ret
 
     } else {
       # If user provided i,j,k => single voxel across time
       # Confirm each is length=1
-      stopifnot(length(i)==1 && length(j)==1 && length(k)==1)
+      stopifnot(length(i) == 1 && length(j) == 1 && length(k) == 1)
       # Subset the entire time dimension
       ret <- x[i, j, k, seq_len(dim(x)[4])]
       if (drop) drop(ret) else ret
@@ -424,9 +434,9 @@ setMethod(
 #' @rdname series-methods
 setMethod(
   f = "series",
-  signature = signature(x="H5NeuroVec", i="numeric"),
-  definition = function(x, i, j, k, drop=TRUE) {
-    callGeneric(x, as.integer(i), as.integer(j), as.integer(k), drop=drop)
+  signature = signature(x = "H5NeuroVec", i = "numeric"),
+  definition = function(x, i, j, k, drop = TRUE) {
+    callGeneric(x, as.integer(i), as.integer(j), as.integer(k), drop = drop)
   })
 
 #' Convert NeuroVec to HDF5 Format, returning an H5NeuroVec
@@ -456,32 +466,31 @@ setMethod(
 #' \dontrun{
 #' # Create a simple 4D neuroimaging vector
 #' vec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(3, 3, 2, 5))
-#' 
+#'
 #' # Convert to HDF5 format in a temporary file
 #' temp_file <- tempfile(fileext = ".h5")
 #' h5_vec <- to_nih5_vec(vec, file_name = temp_file)
-#' 
+#'
 #' # Access the data
 #' print(dim(h5_vec))
 #' print(class(h5_vec))
-#' 
+#'
 #' # Clean up
 #' close(h5_vec)
 #' unlink(temp_file)
 #' }
-#' 
+#'
 #' @keywords internal
 #' @importFrom lifecycle deprecate_warn
 #' @export
 to_nih5_vec <- function(vec,
                         file_name   = NULL,
                         data_type   = "FLOAT",
-                        chunk_dim   = c(4,4,4, dim(vec)[4]),
+                        chunk_dim   = c(4, 4, 4, dim(vec)[4]),
                         nbit        = FALSE,
-                        compression = 6)
-{
-  if (!requireNamespace("hdf5r", quietly=TRUE)) {
-    stop("Package 'hdf5r' must be installed for HDF5 I/O.", call.=FALSE)
+                        compression = 6) {
+  if (!requireNamespace("hdf5r", quietly = TRUE)) {
+    stop("Package 'hdf5r' must be installed for HDF5 I/O.", call. = FALSE)
   }
 
   # 1) Coerce to DenseNeuroVec
@@ -494,34 +503,34 @@ to_nih5_vec <- function(vec,
 
   # 3) If no file_name, use temp
   if (is.null(file_name)) {
-    file_name <- tempfile(fileext=".h5")
+    file_name <- tempfile(fileext = ".h5")
   }
 
   # 4) Create or overwrite
-  h5obj <- hdf5r::H5File$new(file_name, mode="w")
+  h5obj <- hdf5r::H5File$new(file_name, mode = "w")
 
   # 5) Setup dimension
-  space_ds <- hdf5r::H5S$new(dims=dim(vec), maxdims=dim(vec))
+  space_ds <- hdf5r::H5S$new(dims = dim(vec), maxdims = dim(vec))
   dtype_pl  <- hdf5r::H5P_DATASET_CREATE$new()
 
   # 6) Data type
   h5dtype <- switch(data_type,
-                    "BINARY"  = hdf5r::h5types$H5T_NATIVE_HBOOL,
-                    "SHORT"   = hdf5r::h5types$H5T_NATIVE_SHORT,
-                    "INT"     = hdf5r::h5types$H5T_NATIVE_INT,
-                    "INTEGER" = hdf5r::h5types$H5T_NATIVE_INT,
-                    "FLOAT"   = hdf5r::h5types$H5T_NATIVE_FLOAT,
-                    "DOUBLE"  = hdf5r::h5types$H5T_NATIVE_DOUBLE,
-                    "LONG"    = hdf5r::h5types$H5T_NATIVE_LONG,
-                    NULL
+    "BINARY"  = hdf5r::h5types$H5T_NATIVE_HBOOL,
+    "SHORT"   = hdf5r::h5types$H5T_NATIVE_SHORT,
+    "INT"     = hdf5r::h5types$H5T_NATIVE_INT,
+    "INTEGER" = hdf5r::h5types$H5T_NATIVE_INT,
+    "FLOAT"   = hdf5r::h5types$H5T_NATIVE_FLOAT,
+    "DOUBLE"  = hdf5r::h5types$H5T_NATIVE_DOUBLE,
+    "LONG"    = hdf5r::h5types$H5T_NATIVE_LONG,
+    NULL
   )
   if (is.null(h5dtype)) {
     stop("Unsupported 'data_type': ", data_type)
   }
 
   # 7) Chunk/fill/compression
-  dtype_pl$set_chunk(chunk_dim)$set_fill_value(h5dtype,0)$set_deflate(compression)
-  if (nbit && compression>0) {
+  dtype_pl$set_chunk(chunk_dim)$set_fill_value(h5dtype, 0)$set_deflate(compression)
+  if (nbit && compression > 0) {
     dtype_pl$set_nbit()
   }
 
@@ -537,7 +546,7 @@ to_nih5_vec <- function(vec,
     name             = "elements",
     space            = space_ds,
     dtype            = h5dtype,
-    dataset_create_pl= dtype_pl,
+    dataset_create_pl = dtype_pl,
     chunk_dims       = chunk_dim,
     gzip_level       = compression
   )
@@ -549,10 +558,10 @@ to_nih5_vec <- function(vec,
   sgroup[["trans"]]   <- trans(space(vec))
 
   # 12) Write data
-  dset[,,,] <- as.array(vec)
+  dset[, , , ] <- as.array(vec)
 
   # 13) Return new H5NeuroVec
-  new("H5NeuroVec", space=space(vec), obj=h5obj)
+  new("H5NeuroVec", space = space(vec), obj = h5obj)
 }
 
 #' Display an H5NeuroVec object
@@ -568,40 +577,40 @@ to_nih5_vec <- function(vec,
 #' @export
 setMethod(
   f = "show",
-  signature = signature(object="H5NeuroVec"),
+  signature = signature(object = "H5NeuroVec"),
   definition = function(object) {
     # Basic header
-    cat("\n", crayon::bold(crayon::blue("H5NeuroVec")), "\n", sep="")
+    cat("\n", crayon::bold(crayon::blue("H5NeuroVec")), "\n", sep = "")
 
     # Gather dimension info
     d <- dim(object)  # c(X, Y, Z, nVol)
-    cat(crayon::bold("\n+= Dimensions "), crayon::silver("---------------------------"), "\n", sep="")
+    cat(crayon::bold("\n+= Dimensions "), crayon::silver("---------------------------"), "\n", sep = "")
     cat("| ", crayon::yellow("Spatial (XxYxZ)"), " : ",
-        paste(d[1:3], collapse=" x "), "\n", sep="")
-    cat("| ", crayon::yellow("Number of Volumes"), " : ", d[4], "\n", sep="")
+      paste(d[1:3], collapse = " x "), "\n", sep = "")
+    cat("| ", crayon::yellow("Number of Volumes"), " : ", d[4], "\n", sep = "")
 
     # Spacing, origin
     sp  <- space(object)
-    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep="")
-    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing,2), collapse=" x "), "\n", sep="")
-    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin,2), collapse=" x "), "\n", sep="")
+    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep = "")
+    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
+    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse = " x "), "\n", sep = "")
 
     # If axes are known, show them; else fallback
     if (length(sp@axes@ndim) >= 3) {
       cat("| ", crayon::yellow("Orientation"), "   : ",
-          paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep="")
+        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep = "")
     } else {
       cat("| ", crayon::yellow("Orientation"), "   : Unknown\n")
     }
 
     # HDF5 file info
-    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep="")
+    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep = "")
     if (object@obj$is_valid) {
-      cat("  ", crayon::yellow("File"), " : ", object@obj$get_filename(), "\n", sep="")
+      cat("  ", crayon::yellow("File"), " : ", object@obj$get_filename(), "\n", sep = "")
     } else {
-      cat("  ", crayon::yellow("File"), " : (CLOSED HDF5 File)\n", sep="")
+      cat("  ", crayon::yellow("File"), " : (CLOSED HDF5 File)\n", sep = "")
     }
-    cat("  ", crayon::yellow("Dataset"), " : /data/elements\n", sep="")
+    cat("  ", crayon::yellow("Dataset"), " : /data/elements\n", sep = "")
     cat("\n")
   }
 )

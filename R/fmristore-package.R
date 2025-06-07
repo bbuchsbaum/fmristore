@@ -1,8 +1,8 @@
 #' fmristore: Efficient Storage of fMRI Data
 #'
-#' The fmristore package provides efficient storage and retrieval of functional 
-#' magnetic resonance imaging (fMRI) data using HDF5 format. It offers S4 classes 
-#' and methods for working with dense and sparse representations of 4D neuroimaging 
+#' The fmristore package provides efficient storage and retrieval of functional
+#' magnetic resonance imaging (fMRI) data using HDF5 format. It offers S4 classes
+#' and methods for working with dense and sparse representations of 4D neuroimaging
 #' data, latent space decompositions, and spatially clustered voxel time series.
 #'
 #' @section Main Features:

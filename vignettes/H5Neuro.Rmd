@@ -53,7 +53,7 @@ Most fMRI data includes a time dimension. Here's how to handle 4D data efficient
 
 ```{r fmri_timeseries, fig.width=8}
 # Create fMRI data: 10x10x5 brain, 20 time points
-fmri_data <- array(rnorm(10*10*5*20), dim = c(10, 10, 5, 20))
+fmri_data <- array(rnorm(10 * 10 * 5 * 20), dim = c(10, 10, 5, 20))
 fmri_vec <- NeuroVec(fmri_data, NeuroSpace(c(10, 10, 5, 20)))
 
 # Convert to HDF5
@@ -62,14 +62,14 @@ h5_fmri <- as_h5(fmri_vec, file = h5_file)
 
 # Extract time series for a single voxel
 voxel_timeseries <- series(h5_fmri, i = 5, j = 5, k = 3)
-plot(voxel_timeseries, type = "l", 
-     main = "fMRI Time Series for Voxel [5,5,3]",
-     xlab = "Time", ylab = "Signal")
+plot(voxel_timeseries, type = "l",
+  main = "fMRI Time Series for Voxel [5,5,3]",
+  xlab = "Time", ylab = "Signal")
 
 # Extract a single time point (3D volume)
-volume_t10 <- h5_fmri[,,,10]
-print(paste("Volume at time 10 has dimensions:", 
-            paste(dim(volume_t10), collapse = "x")))
+volume_t10 <- h5_fmri[, , , 10]
+print(paste("Volume at time 10 has dimensions:",
+  paste(dim(volume_t10), collapse = "x")))
 
 close(h5_fmri)
 ```
@@ -80,8 +80,8 @@ If you have HDF5 files created by `fmristore` or compatible tools:
 
 ```{r load_existing}
 # First, let's create an example file
-example_data <- NeuroVol(array(1:27, dim = c(3, 3, 3)), 
-                         NeuroSpace(c(3, 3, 3)))
+example_data <- NeuroVol(array(1:27, dim = c(3, 3, 3)),
+  NeuroSpace(c(3, 3, 3)))
 h5_file <- tempfile(fileext = ".h5")
 temp_h5 <- as_h5(example_data, file = h5_file)
 close(temp_h5)
@@ -90,7 +90,7 @@ close(temp_h5)
 h5_brain <- H5NeuroVol(file_name = h5_file)
 
 # Work with it naturally
-print(h5_brain[,,2])  # Get slice 2
+print(h5_brain[, , 2])  # Get slice 2
 print(dim(h5_brain))  # Check dimensions
 
 close(h5_brain)
@@ -110,9 +110,9 @@ close(h5_data)  # Essential!
 For better performance with large datasets:
 ```{r chunk_example, eval=FALSE}
 # Optimize for accessing full volumes at each time point
-h5_data <- as_h5(my_4d_data, 
-                 file = "output.h5",
-                 chunk_dims = c(64, 64, 40, 1))
+h5_data <- as_h5(my_4d_data,
+  file = "output.h5",
+  chunk_dims = c(64, 64, 40, 1))
 ```
 
 ### 3. Memory vs Speed Trade-off
@@ -124,8 +124,8 @@ h5_data <- as_h5(my_4d_data,
 ### Preprocessing Large Datasets
 ```{r preprocess_example, fig.width=8}
 # Create example data
-large_fmri <- NeuroVec(array(rnorm(50*50*30*100), c(50, 50, 30, 100)),
-                       NeuroSpace(c(50, 50, 30, 100)))
+large_fmri <- NeuroVec(array(rnorm(50 * 50 * 30 * 100), c(50, 50, 30, 100)),
+  NeuroSpace(c(50, 50, 30, 100)))
 h5_file <- tempfile(fileext = ".h5")
 h5_data <- as_h5(large_fmri, file = h5_file)
 
@@ -134,13 +134,13 @@ n_timepoints <- dim(h5_data)[4]
 means <- numeric(n_timepoints)
 
 for (t in 1:n_timepoints) {
-  volume_t <- h5_data[,,,t]
+  volume_t <- h5_data[, , , t]
   means[t] <- mean(volume_t)
 }
 
-plot(means, type = "l", 
-     main = "Mean Brain Activity Over Time",
-     xlab = "Time", ylab = "Mean Signal")
+plot(means, type = "l",
+  main = "Mean Brain Activity Over Time",
+  xlab = "Time", ylab = "Mean Signal")
 
 close(h5_data)
 unlink(h5_file)
@@ -149,7 +149,7 @@ unlink(h5_file)
 ### Region of Interest Analysis
 ```{r roi_example, fig.width=8}
 # Create example data with a specific ROI
-brain_data <- array(rnorm(20*20*10*50), c(20, 20, 10, 50))
+brain_data <- array(rnorm(20 * 20 * 10 * 50), c(20, 20, 10, 50))
 roi_mask <- array(FALSE, c(20, 20, 10))
 roi_mask[8:12, 8:12, 4:6] <- TRUE  # Define ROI
 
@@ -162,16 +162,16 @@ roi_indices <- which(roi_mask, arr.ind = TRUE)
 roi_timeseries <- matrix(0, nrow = nrow(roi_indices), ncol = 50)
 
 for (i in 1:nrow(roi_indices)) {
-  roi_timeseries[i,] <- series(h5_fmri, 
-                                i = roi_indices[i,1],
-                                j = roi_indices[i,2], 
-                                k = roi_indices[i,3])
+  roi_timeseries[i, ] <- series(h5_fmri,
+    i = roi_indices[i, 1],
+    j = roi_indices[i, 2],
+    k = roi_indices[i, 3])
 }
 
 mean_roi <- colMeans(roi_timeseries)
-plot(mean_roi, type = "l", 
-     main = "Average ROI Time Series",
-     xlab = "Time", ylab = "Signal")
+plot(mean_roi, type = "l",
+  main = "Average ROI Time Series",
+  xlab = "Time", ylab = "Signal")
 
 close(h5_fmri)
 unlink(h5_file)

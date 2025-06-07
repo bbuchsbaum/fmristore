@@ -7,24 +7,24 @@ library(fmristore)
 
 # Helper to setup the test HDF5 file using create_dummy...
 # Allows controlling how n_time is stored for different test cases
-setup_test_file_full <- function(write_n_time_attr = FALSE, 
-                                   write_n_time_meta = FALSE,
-                                   n_time_val = 12, # Match default in create_dummy...
-                                   ...) { # Pass extra args to create_dummy...
-  
+setup_test_file_full <- function(write_n_time_attr = FALSE,
+                                 write_n_time_meta = FALSE,
+                                 n_time_val = 12, # Match default in create_dummy...
+                                 ...) { # Pass extra args to create_dummy...
+
   auto_loc <- "none"
   if (write_n_time_attr && write_n_time_meta) {
     stop("Cannot set both write_n_time_attr and write_n_time_meta to TRUE")
   }
   if (write_n_time_attr) auto_loc <- "attribute"
   if (write_n_time_meta) auto_loc <- "metadata"
-  
+
   tmp_filepath <- tempfile(fileext = ".h5")
-  
-  create_dummy_clustered_full_h5(filepath = tmp_filepath, 
-                                 n_time = n_time_val, 
-                                 auto_n_time_location = auto_loc,
-                                 ...)
+
+  create_dummy_clustered_full_h5(filepath = tmp_filepath,
+    n_time = n_time_val,
+    auto_n_time_location = auto_loc,
+    ...)
 }
 
 # Helper to clean up the created test file
@@ -67,7 +67,7 @@ create_dummy_clustered_full_h5 <- function(filepath,
 
   # Create HDF5 file
   file <- H5File$new(filepath, mode = "w")
-  on.exit(if(file$is_valid) file$close_all(), add = TRUE) # Ensure closure
+  on.exit(if (file$is_valid) file$close_all(), add = TRUE) # Ensure closure
 
   # Write Mask, Cluster Map, Voxel Coords
   file[["mask"]] <- as.integer(mask_arr)
@@ -88,16 +88,16 @@ create_dummy_clustered_full_h5 <- function(filepath,
 
   # Write n_time if requested
   if (auto_n_time_location == "attribute") {
-      h5attr(scan_grp, "n_time") <- n_time
+    h5attr(scan_grp, "n_time") <- n_time
   } else if (auto_n_time_location == "metadata") {
-      meta_grp <- scan_grp$create_group("metadata")
-      meta_grp[["n_time"]] <- n_time
+    meta_grp <- scan_grp$create_group("metadata")
+    meta_grp[["n_time"]] <- n_time
   }
 
   # Write Full Cluster Data under the scan
   scan_clus_grp <- scan_grp$create_group("clusters")
   # Only create expected_reconstruction if n_time is positive
-  expected_reconstruction <- if(n_time > 0) array(0, dim = c(dims, n_time)) else NULL
+  expected_reconstruction <- if (n_time > 0) array(0, dim = c(dims, n_time)) else NULL
 
   for (cid in cluster_ids) {
     # Find which voxels *within the mask* belong to this cluster
@@ -107,8 +107,8 @@ create_dummy_clustered_full_h5 <- function(filepath,
     if (n_vox_in_cluster > 0) {
       # Generate data [nVoxInCluster, nTime]
       # Formula: cluster_id * 1000 + (voxel_offset_within_cluster * 100) + timepoint
-      cluster_mat <- if(n_time > 0) matrix(0, nrow = n_vox_in_cluster, ncol = n_time) else matrix(0, nrow = n_vox_in_cluster, ncol = 1)
-      if(n_time > 0) {
+      cluster_mat <- if (n_time > 0) matrix(0, nrow = n_vox_in_cluster, ncol = n_time) else matrix(0, nrow = n_vox_in_cluster, ncol = 1)
+      if (n_time > 0) {
         for (vox_idx in 1:n_vox_in_cluster) {
           cluster_mat[vox_idx, ] <- cid * 1000 + (vox_idx * 100) + 1:n_time
         }
@@ -124,18 +124,18 @@ create_dummy_clustered_full_h5 <- function(filepath,
       cluster_data_list[[as.character(cid)]] <- cluster_mat
 
       # Fill expected full array (for testing subsets later)
-      if(!is.null(expected_reconstruction) && n_time > 0) {
+      if (!is.null(expected_reconstruction) && n_time > 0) {
         # Get the 3D coordinates corresponding to these mask indices
-        coords_this_cluster <- voxel_coords_mask[mask_indices_in_cluster, , drop=FALSE]
-        for(vox_idx in 1:n_vox_in_cluster) {
-            coord <- coords_this_cluster[vox_idx, ]
-            expected_reconstruction[coord[1], coord[2], coord[3], ] <- cluster_mat[vox_idx, ]
+        coords_this_cluster <- voxel_coords_mask[mask_indices_in_cluster, , drop = FALSE]
+        for (vox_idx in 1:n_vox_in_cluster) {
+          coord <- coords_this_cluster[vox_idx, ]
+          expected_reconstruction[coord[1], coord[2], coord[3], ] <- cluster_mat[vox_idx, ]
         }
       }
     } else {
       # Handle case where a cluster ID might have 0 voxels (though unlikely with rep())
-       scan_clus_grp[[paste0("cluster_", cid)]] <- matrix(numeric(0), nrow=0, ncol=max(1, n_time))
-       cluster_data_list[[as.character(cid)]] <- matrix(numeric(0), nrow=0, ncol=max(1, n_time))
+      scan_clus_grp[[paste0("cluster_", cid)]] <- matrix(numeric(0), nrow = 0, ncol = max(1, n_time))
+      cluster_data_list[[as.character(cid)]] <- matrix(numeric(0), nrow = 0, ncol = max(1, n_time))
     }
   }
 
@@ -143,16 +143,16 @@ create_dummy_clustered_full_h5 <- function(filepath,
   file$close_all()
 
   return(list(filepath = filepath,
-              mask = mask_vol,
-              clusters = clusters_vol,
-              voxel_coords = voxel_coords_mask, # Coords of masked voxels
-              dims = dims,
-              n_time = n_time,
-              scan_name = scan_name,
-              cluster_ids = cluster_ids,
-              cluster_data_list = cluster_data_list, # Data as stored per cluster
-              expected_reconstruction = expected_reconstruction # Full 4D array (potentially large)
-             ))
+    mask = mask_vol,
+    clusters = clusters_vol,
+    voxel_coords = voxel_coords_mask, # Coords of masked voxels
+    dims = dims,
+    n_time = n_time,
+    scan_name = scan_name,
+    cluster_ids = cluster_ids,
+    cluster_data_list = cluster_data_list, # Data as stored per cluster
+    expected_reconstruction = expected_reconstruction # Full 4D array (potentially large)
+  ))
 }
 
 
@@ -162,18 +162,18 @@ test_that("make_run_full constructs object correctly from file path", {
 
   # Use new constructor
   run_full <- H5ClusterRun(file = setup_info$filepath,
-                                 scan_name = setup_info$scan_name,
-                                 mask = setup_info$mask,
-                                 clusters = setup_info$clusters,
-                                 n_time = setup_info$n_time) 
-  
+    scan_name = setup_info$scan_name,
+    mask = setup_info$mask,
+    clusters = setup_info$clusters,
+    n_time = setup_info$n_time)
+
   expect_s4_class(run_full, "H5ClusterRun")
   expect_equal(run_full@scan_name, setup_info$scan_name)
   expect_equal(run_full@n_time, setup_info$n_time)
   expect_equal(run_full@n_voxels, sum(setup_info$mask))
   expect_true(inherits(run_full@obj, "H5File"))
   expect_true(run_full@obj$is_valid)
-  
+
   # Important: Close the handle managed by the object
   expect_silent(h5file(run_full)$close_all())
 })
@@ -182,19 +182,19 @@ test_that("make_run_full constructs object correctly from file path", {
 test_that("make_run_full constructs object correctly from open H5File handle", {
   setup_info <- setup_test_file_full()
   on.exit(cleanup_test_file(setup_info))
-  
-  h5f <- H5File$new(setup_info$filepath, mode = 'r')
+
+  h5f <- H5File$new(setup_info$filepath, mode = "r")
   # Note: If make_run_full takes ownership, h5f might be closed by its finalizer
   # Here, we assume make_run_full *uses* the handle but doesn't close it if passed open
   on.exit(if (h5f$is_valid) h5f$close_all(), add = TRUE)
 
   # Use new constructor with the H5File object directly
   run_full_open <- H5ClusterRun(file = h5f,
-                                scan_name = setup_info$scan_name,
-                                mask = setup_info$mask,
-                                clusters = setup_info$clusters,
-                                n_time = setup_info$n_time)
-  
+    scan_name = setup_info$scan_name,
+    mask = setup_info$mask,
+    clusters = setup_info$clusters,
+    n_time = setup_info$n_time)
+
   expect_s4_class(run_full_open, "H5ClusterRun")
   expect_true(run_full_open@obj$is_valid)
   # Get the filename from the setup_info since h5f might not support get_filename() directly
@@ -207,11 +207,11 @@ test_that("make_run_full reads n_time from HDF5 attributes if NULL", {
 
   # Use new constructor
   run_attr <- H5ClusterRun(file = setup_attr$filepath,
-                                 scan_name = setup_attr$scan_name,
-                                 mask = setup_attr$mask,
-                                 clusters = setup_attr$clusters,
-                                 n_time = NULL) # Explicitly pass NULL
-                                 
+    scan_name = setup_attr$scan_name,
+    mask = setup_attr$mask,
+    clusters = setup_attr$clusters,
+    n_time = NULL) # Explicitly pass NULL
+
   expect_equal(run_attr@n_time, setup_attr$n_time)
   expect_silent(h5file(run_attr)$close_all())
 })
@@ -222,11 +222,11 @@ test_that("make_run_full reads n_time from HDF5 metadata dataset if NULL", {
 
   # Use new constructor
   run_meta <- H5ClusterRun(file = setup_meta$filepath,
-                                 scan_name = setup_meta$scan_name,
-                                 mask = setup_meta$mask,
-                                 clusters = setup_meta$clusters,
-                                 n_time = NULL)
-                                 
+    scan_name = setup_meta$scan_name,
+    mask = setup_meta$mask,
+    clusters = setup_meta$clusters,
+    n_time = NULL)
+
   expect_equal(run_meta@n_time, setup_meta$n_time)
   expect_silent(h5file(run_meta)$close_all())
 })
@@ -239,10 +239,10 @@ test_that("inference message depends on fmristore.verbose option", {
     run_infer_verbose <- withr::with_options(
       list(fmristore.verbose = TRUE),
       H5ClusterRun(file = setup_none$filepath,
-                   scan_name = setup_none$scan_name,
-                   mask = setup_none$mask,
-                   clusters = setup_none$clusters,
-                   n_time = NULL)
+        scan_name = setup_none$scan_name,
+        mask = setup_none$mask,
+        clusters = setup_none$clusters,
+        n_time = NULL)
     ),
     "Inferred n_time"
   )
@@ -253,10 +253,10 @@ test_that("inference message depends on fmristore.verbose option", {
     run_infer_silent <- withr::with_options(
       list(fmristore.verbose = FALSE),
       H5ClusterRun(file = setup_none$filepath,
-                   scan_name = setup_none$scan_name,
-                   mask = setup_none$mask,
-                   clusters = setup_none$clusters,
-                   n_time = NULL)
+        scan_name = setup_none$scan_name,
+        mask = setup_none$mask,
+        clusters = setup_none$clusters,
+        n_time = NULL)
     )
   )
   expect_equal(run_infer_silent@n_time, setup_none$n_time)
@@ -271,7 +271,7 @@ test_that("make_run_full throws errors for invalid inputs", {
   # Create bad inputs
   bad_mask <- setup_info$mask
   # Create a new mask with different dimensions
-  bad_mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(1,1,1)), neuroim2::NeuroSpace(c(1,1,1)))
+  bad_mask <- neuroim2::LogicalNeuroVol(array(TRUE, c(1, 1, 1)), neuroim2::NeuroSpace(c(1, 1, 1)))
   bad_clusters <- setup_info$clusters
   bad_clusters@clusters <- bad_clusters@clusters[-1] # Mismatched length
 
@@ -281,26 +281,26 @@ test_that("make_run_full throws errors for invalid inputs", {
   # expect_error(H5ClusterRun(setup_info$filepath, setup_info$scan_name, 1, setup_info$clusters, setup_info$n_time), "must be a LogicalNeuroVol")
   # expect_error(H5ClusterRun(setup_info$filepath, setup_info$scan_name, setup_info$mask, 1, setup_info$n_time), "must be a ClusteredNeuroVol")
   # Test dimension mismatch (uses check_same_dims)
-  expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=bad_mask, clusters=setup_info$clusters, n_time=setup_info$n_time), "Dimensions of 'mask' and 'clusters' must match")
+  expect_error(H5ClusterRun(file = setup_info$filepath, scan_name = setup_info$scan_name, mask = bad_mask, clusters = setup_info$clusters, n_time = setup_info$n_time), "Dimensions of 'mask' and 'clusters' must match")
   # Test cluster length mismatch
-  expect_error(H5ClusterRun(file=setup_info$filepath, scan_name=setup_info$scan_name, mask=setup_info$mask, clusters=bad_clusters, n_time=setup_info$n_time), "Mismatch: clusters@clusters length")
+  expect_error(H5ClusterRun(file = setup_info$filepath, scan_name = setup_info$scan_name, mask = setup_info$mask, clusters = bad_clusters, n_time = setup_info$n_time), "Mismatch: clusters@clusters length")
 
   # Test invalid compress inputs
   expect_error(
     H5ClusterRun(file = setup_info$filepath,
-                 scan_name = setup_info$scan_name,
-                 mask = setup_info$mask,
-                 clusters = setup_info$clusters,
-                 n_time = setup_info$n_time,
-                 compress = c(TRUE, FALSE)),
+      scan_name = setup_info$scan_name,
+      mask = setup_info$mask,
+      clusters = setup_info$clusters,
+      n_time = setup_info$n_time,
+      compress = c(TRUE, FALSE)),
     "'compress' must be a single logical value")
   expect_error(
     H5ClusterRun(file = setup_info$filepath,
-                 scan_name = setup_info$scan_name,
-                 mask = setup_info$mask,
-                 clusters = setup_info$clusters,
-                 n_time = setup_info$n_time,
-                 compress = "yes"),
+      scan_name = setup_info$scan_name,
+      mask = setup_info$mask,
+      clusters = setup_info$clusters,
+      n_time = setup_info$n_time,
+      compress = "yes"),
     "'compress' must be a single logical value")
   # Test error if n_time cannot be determined
   # Note: This test is currently commented out because the constructor successfully
@@ -312,21 +312,21 @@ test_that("make_run_full throws errors for invalid inputs", {
   #                                 scan_name = setup_uninferrable$scan_name,
   #                                 mask = setup_uninferrable$mask,
   #                                 clusters = setup_uninferrable$clusters,
-  #                                 n_time = NULL), 
+  #                                 n_time = NULL),
   #              "Could not determine 'n_time'")
 })
 
 test_that("make_run_full stops if n_time determined is invalid", {
   setup_info <- setup_test_file_full(write_n_time_attr = TRUE, n_time_val = -5) # Write invalid n_time
   on.exit(cleanup_test_file(setup_info))
-  
+
   # Use new constructor
   expect_error(H5ClusterRun(file = setup_info$filepath,
-                                  scan_name = setup_info$scan_name,
-                                  mask = setup_info$mask,
-                                  clusters = setup_info$clusters,
-                                  n_time = NULL), 
-               "must be a single positive integer")
+    scan_name = setup_info$scan_name,
+    mask = setup_info$mask,
+    clusters = setup_info$clusters,
+    n_time = NULL),
+  "must be a single positive integer")
 })
 
 test_that("make_run_full errors when cluster dataset has wrong dimensions", {
@@ -335,10 +335,10 @@ test_that("make_run_full errors when cluster dataset has wrong dimensions", {
 
   expect_error(
     H5ClusterRun(file = setup_bad$filepath,
-                       scan_name = setup_bad$scan_name,
-                       mask = setup_bad$mask,
-                       clusters = setup_bad$clusters,
-                       n_time = NULL),
+      scan_name = setup_bad$scan_name,
+      mask = setup_bad$mask,
+      clusters = setup_bad$clusters,
+      n_time = NULL),
     "Could not determine 'n_time'"
   )
 })
@@ -351,10 +351,10 @@ test_that("series() retrieves correct voxel time series", {
   on.exit(cleanup_test_file(setup_info))
 
   run_full <- H5ClusterRun(file = setup_info$filepath,
-                                 scan_name = setup_info$scan_name,
-                                 mask = setup_info$mask,
-                                 clusters = setup_info$clusters,
-                                 n_time = setup_info$n_time)
+    scan_name = setup_info$scan_name,
+    mask = setup_info$mask,
+    clusters = setup_info$clusters,
+    n_time = setup_info$n_time)
 
   mask_idx1 <- 1L
   coord1 <- setup_info$voxel_coords[mask_idx1, ]
@@ -386,17 +386,17 @@ test_that("linear_access reconstructs voxel values", {
   on.exit(cleanup_test_file(setup_info))
 
   run_full <- H5ClusterRun(file = setup_info$filepath,
-                                 scan_name = setup_info$scan_name,
-                                 mask = setup_info$mask,
-                                 clusters = setup_info$clusters,
-                                 n_time = setup_info$n_time)
+    scan_name = setup_info$scan_name,
+    mask = setup_info$mask,
+    clusters = setup_info$clusters,
+    n_time = setup_info$n_time)
 
   dims4 <- dim(run_full)
   coord_in <- setup_info$voxel_coords[1, ]
   t_in <- 1L
   idx_in <- coord_in[1] + (coord_in[2] - 1) * dims4[1] +
-            (coord_in[3] - 1) * dims4[1] * dims4[2] +
-            (t_in - 1) * dims4[1] * dims4[2] * dims4[3]
+    (coord_in[3] - 1) * dims4[1] * dims4[2] +
+    (t_in - 1) * dims4[1] * dims4[2] * dims4[3]
 
   val_in <- linear_access(run_full, idx_in)
   expected_in <- setup_info$expected_reconstruction[
@@ -406,8 +406,8 @@ test_that("linear_access reconstructs voxel values", {
   coord_out <- c(1L, 1L, 3L)
   t_out <- 1L
   idx_out <- coord_out[1] + (coord_out[2] - 1) * dims4[1] +
-             (coord_out[3] - 1) * dims4[1] * dims4[2] +
-             (t_out - 1) * dims4[1] * dims4[2] * dims4[3]
+    (coord_out[3] - 1) * dims4[1] * dims4[2] +
+    (t_out - 1) * dims4[1] * dims4[2] * dims4[3]
 
   val_out <- linear_access(run_full, idx_out)
   expect_equal(val_out, 0)

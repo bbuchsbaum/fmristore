@@ -38,8 +38,8 @@ Imagine your brain is divided into regions (clusters):
 
 ```{r visualize-concept, echo=FALSE, fig.height=3}
 # Simple visualization of clustered brain
-plot(1:10, 1:10, type = "n", axes = FALSE, 
-     xlab = "", ylab = "", main = "Brain Clusters")
+plot(1:10, 1:10, type = "n", axes = FALSE,
+  xlab = "", ylab = "", main = "Brain Clusters")
 rect(1, 1, 4, 4, col = "lightblue", border = "black", lwd = 2)
 rect(5, 1, 8, 4, col = "lightgreen", border = "black", lwd = 2)
 rect(2, 5, 6, 8, col = "lightcoral", border = "black", lwd = 2)
@@ -85,14 +85,14 @@ cluster_data <- list()
 
 # Cluster 1: Sine wave pattern
 n_vox_c1 <- sum(clusters@clusters == 1)
-base_signal_c1 <- sin(seq(0, 4*pi, length.out = n_timepoints))
+base_signal_c1 <- sin(seq(0, 4 * pi, length.out = n_timepoints))
 cluster_data[["cluster_1"]] <- matrix(
   rep(base_signal_c1, each = n_vox_c1) + rnorm(n_vox_c1 * n_timepoints, sd = 0.2),
-  nrow = n_vox_c1, 
+  nrow = n_vox_c1,
   ncol = n_timepoints
 )
 
-# Cluster 2: Square wave pattern  
+# Cluster 2: Square wave pattern
 n_vox_c2 <- sum(clusters@clusters == 2)
 base_signal_c2 <- rep(c(-1, 1), length.out = n_timepoints)
 cluster_data[["cluster_2"]] <- matrix(
@@ -149,10 +149,10 @@ voxel_ts <- series(full_run, i = voxel_indices)
 
 # Plot the time series
 matplot(voxel_ts, type = "l", lty = 1,
-        main = "Individual Voxel Time Series",
-        xlab = "Time", ylab = "Signal")
-legend("topright", legend = paste("Voxel", voxel_indices), 
-       col = 1:3, lty = 1)
+  main = "Individual Voxel Time Series",
+  xlab = "Time", ylab = "Signal")
+legend("topright", legend = paste("Voxel", voxel_indices),
+  col = 1:3, lty = 1)
 ```
 
 ## H5ClusterRunSummary: Averaged Data
@@ -171,7 +171,7 @@ Use `H5ClusterRunSummary` when you need:
 # Create averaged time series per cluster
 summary_data <- matrix(
   c(base_signal_c1,    # Cluster 1 average
-    base_signal_c2,    # Cluster 2 average  
+    base_signal_c2,    # Cluster 2 average
     rnorm(n_timepoints)),  # Cluster 3 average
   nrow = n_timepoints,
   ncol = 3
@@ -218,11 +218,11 @@ print(paste("Summary dimensions:", paste(dim(summary_matrix), collapse = " x "))
 ```{r plot-summary}
 # Plot cluster averages
 matplot(summary_matrix, type = "l", lty = 1, lwd = 2,
-        main = "Cluster Average Time Series",
-        xlab = "Time", ylab = "Average Signal",
-        col = c("blue", "green", "red"))
-legend("topright", legend = paste("Cluster", 1:3), 
-       col = c("blue", "green", "red"), lty = 1, lwd = 2)
+  main = "Cluster Average Time Series",
+  xlab = "Time", ylab = "Average Signal",
+  col = c("blue", "green", "red"))
+legend("topright", legend = paste("Cluster", 1:3),
+  col = c("blue", "green", "red"), lty = 1, lwd = 2)
 ```
 
 ## Comparing Storage Efficiency
@@ -238,7 +238,7 @@ cat("  Voxels:", full_voxels, "\n")
 cat("  Total values:", full_elements, "\n\n")
 
 cat("Summary run storage:\n")
-cat("  Clusters:", ncol(summary_matrix), "\n")  
+cat("  Clusters:", ncol(summary_matrix), "\n")
 cat("  Total values:", summary_elements, "\n\n")
 
 cat("Compression ratio:", round(full_elements / summary_elements, 1), ":1\n")
@@ -250,36 +250,36 @@ cat("Compression ratio:", round(full_elements / summary_elements, 1), ":1\n")
 
 1. **Analyzing spatial patterns**
    ```{r spatial-pattern, eval=FALSE}
-   # Example: Find peak voxel in each cluster
-   peak_voxels <- lapply(1:3, function(cluster_id) {
-     voxels_in_cluster <- which(clusters@clusters == cluster_id)
-     cluster_ts <- series(full_run, i = voxels_in_cluster)
-     variances <- apply(cluster_ts, 2, var)
-     voxels_in_cluster[which.max(variances)]
-   })
+# Example: Find peak voxel in each cluster
+peak_voxels <- lapply(1:3, function(cluster_id) {
+  voxels_in_cluster <- which(clusters@clusters == cluster_id)
+  cluster_ts <- series(full_run, i = voxels_in_cluster)
+  variances <- apply(cluster_ts, 2, var)
+  voxels_in_cluster[which.max(variances)]
+})
    ```
 
 2. **Voxel-wise statistics needed**
    ```{r voxel-stats, eval=FALSE}
-   # Example: Compute voxel-wise correlation with task
-   task_regressor <- sin(seq(0, 4*pi, length.out = n_timepoints))
-   all_voxel_ts <- series(full_run, i = 1:n_voxels)
-   correlations <- cor(task_regressor, all_voxel_ts)
+# Example: Compute voxel-wise correlation with task
+task_regressor <- sin(seq(0, 4 * pi, length.out = n_timepoints))
+all_voxel_ts <- series(full_run, i = 1:n_voxels)
+correlations <- cor(task_regressor, all_voxel_ts)
    ```
 
 ### Choose H5ClusterRunSummary when:
 
 1. **Connectivity analysis**
    ```{r connectivity, eval=FALSE}
-   # Example: Cluster-to-cluster correlation
-   cluster_connectivity <- cor(summary_matrix)
+# Example: Cluster-to-cluster correlation
+cluster_connectivity <- cor(summary_matrix)
    ```
 
 2. **Group comparisons**
    ```{r group-compare, eval=FALSE}
-   # Example: Compare cluster means across conditions
-   rest_means <- colMeans(as.matrix(experiment@runs[["rest_run"]]))
-   task_means <- colMeans(as.matrix(experiment@runs[["task_run"]]))
+# Example: Compare cluster means across conditions
+rest_means <- colMeans(as.matrix(experiment@runs[["rest_run"]]))
+task_means <- colMeans(as.matrix(experiment@runs[["task_run"]]))
    ```
 
 ## Memory Considerations

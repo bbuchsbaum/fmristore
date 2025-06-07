@@ -40,7 +40,7 @@ test_that("as.array reconstructs the full 4D data correctly", {
     vals <- as.vector(tcrossprod(basis_mat[t, , drop = FALSE], loadings_mat)) + offset_vec
     vol <- array(0, dim = dims[1:3])
     vol[mask_idx] <- vals
-    expected[,,, t] <- vol
+    expected[, , , t] <- vol
   }
 
   expect_equal(arr, expected, tolerance = 1e-12)
@@ -58,4 +58,3 @@ test_that("linear_access returns correct values and errors out-of-range", {
   expect_error(linear_access(lvec, 0), "positive integers")
   expect_error(linear_access(lvec, nels + 1), "exceed the total number of elements")
 })
-

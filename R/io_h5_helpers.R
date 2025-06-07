@@ -24,35 +24,35 @@ read_h5_mask_to_LogicalNeuroVol <- function(h5, dset = "/mask", ref_space) {
   mask_data_raw <- NULL
   dims <- NULL
   tryCatch({
-      # Get dimensions FIRST from the dataset object
-      dims <- mask_dset$dims
-      if (is.null(dims) || length(dims) != 3) { # Expecting 3D mask
-          stop(sprintf("Dataset '%s' does not have expected 3 dimensions. Found dimensions: %s", 
-                       dset, paste(dims, collapse="x")))
-      }
-      
-      # Validate dataset dimensions against the reference space
-      ref_dims <- dim(ref_space)
-      if (!identical(dims, ref_dims)) {
-          stop(sprintf(
-              "Mask dimensions in HDF5 (%s) do not match reference space dimensions (%s) for dataset '%s'", 
-              paste(dims, collapse="x"), 
-              paste(ref_dims, collapse="x"), 
-              dset
-          ))
-      }
-      
-      # Now read the data (might be flattened)
-      mask_data_raw <- mask_dset$read()
+    # Get dimensions FIRST from the dataset object
+    dims <- mask_dset$dims
+    if (is.null(dims) || length(dims) != 3) { # Expecting 3D mask
+      stop(sprintf("Dataset '%s' does not have expected 3 dimensions. Found dimensions: %s",
+        dset, paste(dims, collapse = "x")))
+    }
+
+    # Validate dataset dimensions against the reference space
+    ref_dims <- dim(ref_space)
+    if (!identical(dims, ref_dims)) {
+      stop(sprintf(
+        "Mask dimensions in HDF5 (%s) do not match reference space dimensions (%s) for dataset '%s'",
+        paste(dims, collapse = "x"),
+        paste(ref_dims, collapse = "x"),
+        dset
+      ))
+    }
+
+    # Now read the data (might be flattened)
+    mask_data_raw <- mask_dset$read()
   }, finally = {
-      if (!is.null(mask_dset) && mask_dset$is_valid) try(mask_dset$close(), silent=TRUE)
+    if (!is.null(mask_dset) && mask_dset$is_valid) try(mask_dset$close(), silent = TRUE)
   })
-  
+
   if (is.null(mask_data_raw)) stop("Failed to read mask data from ", dset)
 
   # Reshape potentially flattened data using stored dimensions, coerce to logical
   mask_data_logical <- array(as.logical(mask_data_raw), dim = dims)
-  
+
   # Construct and return LogicalNeuroVol using the reference space
   LogicalNeuroVol(mask_data_logical, ref_space)
 }
@@ -63,27 +63,27 @@ read_h5_mask_to_LogicalNeuroVol <- function(h5, dset = "/mask", ref_space) {
 read_h5_clusters_to_ClusteredNeuroVol <- function(h5, mask,
                                                   map_dset = "/cluster_map") {
 
-                                              
+
   stopifnot(h5$exists(map_dset))
   cmap_dset <- h5[[map_dset]]
   vec <- NULL
   tryCatch({
-      # Use $read() here too for consistency, although it's expected to be 1D
-      vec <- as.integer(cmap_dset$read())
+    # Use $read() here too for consistency, although it's expected to be 1D
+    vec <- as.integer(cmap_dset$read())
   }, finally = {
-      if (!is.null(cmap_dset) && cmap_dset$is_valid) try(cmap_dset$close(), silent=TRUE)
+    if (!is.null(cmap_dset) && cmap_dset$is_valid) try(cmap_dset$close(), silent = TRUE)
   })
   if (is.null(vec)) stop("Failed to read cluster map from ", map_dset)
-  
+
   if (length(vec) != sum(mask)) {
     stop(sprintf(
-        "Length of %s (%d) does not equal number of TRUE voxels in mask (%d)", 
-        map_dset, length(vec), sum(mask)
+      "Length of %s (%d) does not equal number of TRUE voxels in mask (%d)",
+      map_dset, length(vec), sum(mask)
     ))
   }
   # Pass vector and space (extracted from mask) to constructor
-  ClusteredNeuroVol(mask, vec) 
-} 
+  ClusteredNeuroVol(mask, vec)
+}
 
 #' Safely close an HDF5 object (file, group, dataset, attribute, dataspace, property list)
 #'
