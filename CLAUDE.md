@@ -29,7 +29,7 @@ R CMD INSTALL .
 Rscript -e "testthat::test_dir('tests/testthat')"
 
 # Run a specific test file
-Rscript -e "testthat::test_file('tests/testthat/test-h5classes.R')"
+Rscript -e "testthat::test_file('tests/testthat/test-cluster_experiment.R')"
 
 # Or within R:
 # testthat::test_local()

@@ -5,7 +5,6 @@
 \alias{as_h5,NeuroVec-method}
 \alias{as_h5,LatentNeuroVec-method}
 \alias{as_h5,LabeledVolumeSet-method}
-\alias{as_h5,list-method}
 \alias{as_h5,NeuroVecSeq-method}
 \title{Generic function to convert R objects to HDF5 format}
 \usage{
@@ -30,19 +29,6 @@ as_h5(object, file, ...)
   dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE,
   chunk_size = 1024,
   header_values = list()
-)
-
-\S4method{as_h5}{list}(
-  object,
-  file,
-  scan_names,
-  mask,
-  clusters,
-  scan_metadata,
-  cluster_metadata = NULL,
-  summary_only = FALSE,
-  compression = 4,
-  chunk_size = 1024
 )
 
 \S4method{as_h5}{NeuroVecSeq}(object, file = NULL, ...)
@@ -138,7 +124,7 @@ providing a standardized interface for serialization to HDF5.
       \item{\code{compression}}{Integer [0..9], default 4}
       \item{\code{chunk_size}}{Chunk dimension for 2D writes, default 1024}
     }
-    Returns an HDF5-backed object representing the clustered dataset (e.g., H5ClusterExperiment).
+    Returns an HDF5-backed object representing the clustered dataset (e.g., H5ParcellatedMultiScan).
   }
   \item{\code{signature(object = "NeuroVecSeq")}}{
     Writes a sequence of NeuroVec objects (multiple 4D scans) to a single HDF5 file.

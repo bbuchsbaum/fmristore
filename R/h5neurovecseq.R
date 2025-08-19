@@ -39,7 +39,12 @@ setMethod("[[", signature(x = "H5NeuroVecSeq", i = "ANY"),
 
 #' @rdname h5file-methods
 #' @export
-setMethod("h5file", "H5NeuroVecSeq", function(x) x@obj)
+setMethod("h5file", "H5NeuroVecSeq", function(x) {
+  if (is.null(x@obj)) {
+    stop("H5File object is NULL")
+  }
+  x@obj$filename
+})
 
 #' @rdname close
 #' @export

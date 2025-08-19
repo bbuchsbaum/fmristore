@@ -18,15 +18,15 @@ This directory contains vignettes demonstrating the key functionality of the fmr
 - Efficient access by label or index
 - Best practices for data organization
 
-### 3. H5ClusterExperiment.Rmd
-**Working with Clustered fMRI Data: H5ClusterExperiment**
+### 3. H5ParcellatedMultiScan.Rmd
+**Working with Clustered fMRI Data: H5ParcellatedMultiScan**
 - Overview of clustered/parcellated fMRI data storage
 - Creating and managing multi-run experiments
 - Memory-efficient access to clustered time series
 - Working with both full and summary data
 
-### 4. H5ClusterRun.Rmd
-**Understanding H5ClusterRun and H5ClusterRunSummary**
+### 4. H5ParcellatedScan.Rmd
+**Understanding H5ParcellatedScan and H5ParcellatedScanSummary**
 - Detailed comparison of full vs summary cluster storage
 - When to use each type of representation
 - Storage efficiency and memory considerations

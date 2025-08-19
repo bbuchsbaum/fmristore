@@ -13,8 +13,8 @@ read_labeled_vec(file_path)
 A \code{\link{LabeledVolumeSet-class}} object with an open HDF5 file handle.
 }
 \description{
-Reads an HDF5 file, typically one previously created by 
-\code{\link{write_labeled_vec}} (now deprecated), and constructs a 
+Reads an HDF5 file, typically one previously created by
+\code{\link{write_labeled_vec}} (now deprecated), and constructs a
 \code{\link{LabeledVolumeSet-class}} object.
 The HDF5 file is opened in read-only mode.
 }

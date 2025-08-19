@@ -2,15 +2,15 @@
 % Please edit documentation in R/all_generic.R, R/cluster_experiment.R
 \name{matrix_concat}
 \alias{matrix_concat}
-\alias{matrix_concat,H5ClusterExperiment-method}
+\alias{matrix_concat,H5ParcellatedMultiScan-method}
 \title{Concatenate Cluster Summary Matrices Across Runs (Generic)}
 \usage{
 matrix_concat(experiment, run_indices = NULL, ...)
 
-\S4method{matrix_concat}{H5ClusterExperiment}(experiment, run_indices = NULL)
+\S4method{matrix_concat}{H5ParcellatedMultiScan}(experiment, run_indices = NULL)
 }
 \arguments{
-\item{experiment}{The experiment object (typically \code{\link{H5ClusterExperiment-class}}).}
+\item{experiment}{The experiment object (typically \code{\link{H5ParcellatedMultiScan-class}}).}
 
 \item{run_indices}{Optional: A numeric or character vector specifying which runs to include.
 If NULL, uses all runs that are of summary type or can produce a summary matrix.}
@@ -25,21 +25,21 @@ Concatenate Cluster Summary Matrices Across Runs (Generic)
 }
 \section{Methods (by class)}{
 \itemize{
-\item \code{matrix_concat(H5ClusterExperiment)}: Concatenate summary matrices for H5ClusterExperiment
+\item \code{matrix_concat(H5ParcellatedMultiScan)}: Concatenate summary matrices for H5ParcellatedMultiScan
 
 }}
 \examples{
 \dontrun{
-if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
+if (!is.null(fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan)) {
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(
       n_time_run2 = 6L # Shorter time series for Run2_Summary
     )
-    exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
+    exp_obj <- fmristore::H5ParcellatedMultiScan(file_path = temp_exp_file)
 
-    # Note: matrix_concat typically works on runs with summary data (H5ClusterRunSummary)
+    # Note: matrix_concat typically works on runs with summary data (H5ParcellatedScanSummary)
     # The helper creates "Run2_Summary".
     # concatenated_matrix <- matrix_concat(exp_obj, run_indices = "Run2_Summary")
     # print(dim(concatenated_matrix))
@@ -72,31 +72,20 @@ if (!is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
 
 }
 \seealso{
-Other H5Cluster: 
-\code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusterExperiment}},
-\code{\link{H5ClusterExperiment-class}},
-\code{\link{H5ClusterRun-class}},
-\code{\link{H5ClusterRunSummary-class}},
-\code{\link{H5ClusteredArray-class}},
-\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
-\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
-\code{\link{as.data.frame}()},
-\code{\link{as.matrix}()},
+Other H5Parcellated: 
+\code{\link{$,H5ParcellatedMultiScan-method}},
+\code{\link{H5ParcellatedArray-class}},
+\code{\link{H5ParcellatedMultiScan}},
+\code{\link{H5ParcellatedScan-class}},
+\code{\link{H5ParcellatedScanSummary-class}},
 \code{\link{close}()},
-\code{\link{cluster_metadata,H5ClusterExperiment-method}},
+\code{\link{cluster_metadata,H5ParcellatedMultiScan-method}},
 \code{\link{clusters}()},
-\code{\link{dim}()},
-\code{\link{h5file,H5ClusteredArray-method}},
-\code{\link{linear_access-methods}},
-\code{\link{make_run_full}()},
-\code{\link{make_run_summary}()},
+\code{\link{h5file,H5ParcellatedArray-method}},
 \code{\link{mask}()},
-\code{\link{n_scans,H5ClusterExperiment-method}},
-\code{\link{scan_metadata,H5ClusterExperiment-method}},
-\code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series}()},
-\code{\link{series_concat}()},
-\code{\link{show,H5ClusterRun-method}}
+\code{\link{n_scans,H5ParcellatedMultiScan-method}},
+\code{\link{scan_metadata,H5ParcellatedMultiScan-method}},
+\code{\link{scan_names,H5ParcellatedMultiScan-method}},
+\code{\link{series_concat}()}
 }
-\concept{H5Cluster}
+\concept{H5Parcellated}

@@ -31,10 +31,9 @@ This extends \code{NeuroVec}, so it is logically a 4D object with dimension
 \examples{
 \dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
-    requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("read_labeled_vec", where = "package:fmristore") &&
-    !is.null(fmristore:::create_minimal_h5_for_LabeledVolumeSet)) {
-
+  requireNamespace("hdf5r", quietly = TRUE) &&
+  exists("read_labeled_vec", where = "package:fmristore") &&
+  !is.null(fmristore:::create_minimal_h5_for_LabeledVolumeSet)) {
   # Setup: Create a temporary HDF5 file suitable for read_labeled_vec
   temp_h5_path <- NULL
   lvs <- NULL

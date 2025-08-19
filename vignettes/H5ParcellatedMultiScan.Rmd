@@ -1,10 +1,10 @@
 ---
-title: "Working with Clustered fMRI Data: H5ClusterExperiment"
+title: "Working with Clustered fMRI Data: H5ParcellatedMultiScan"
 author: "fmristore Package"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Working with Clustered fMRI Data: H5ClusterExperiment}
+  %\VignetteIndexEntry{Working with Clustered fMRI Data: H5ParcellatedMultiScan}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -23,7 +23,7 @@ library(neuroim2)
 
 ## Overview
 
-The `H5ClusterExperiment` class provides an efficient way to store and access multi-run fMRI data that has been organized by spatial clusters (e.g., brain parcels or regions). This approach is particularly useful when:
+The `H5ParcellatedMultiScan` class provides an efficient way to store and access multi-run fMRI data that has been organized by spatial clusters (e.g., brain parcels or regions). This approach is particularly useful when:
 
 - You have multiple fMRI runs from the same or different subjects
 - Your data has been parcellated using an atlas or clustering algorithm
@@ -42,10 +42,10 @@ Instead of storing fMRI data as a regular 4D array (x, y, z, time), clustered st
 
 ### Types of Cluster Runs
 
-1. **Full Runs** (`H5ClusterRun`): Store complete time series for every voxel
-2. **Summary Runs** (`H5ClusterRunSummary`): Store only averaged time series per cluster
+1. **Full Runs** (`H5ParcellatedScan`): Store complete time series for every voxel
+2. **Summary Runs** (`H5ParcellatedScanSummary`): Store only averaged time series per cluster
 
-## Creating an H5ClusterExperiment
+## Creating an H5ParcellatedMultiScan
 
 Let's start with a simple example using simulated data.
 
@@ -161,13 +161,13 @@ write_clustered_experiment_h5(
 )
 ```
 
-## Reading and Using H5ClusterExperiment
+## Reading and Using H5ParcellatedMultiScan
 
 ### Loading the Data
 
 ```{r load-experiment}
-# Create H5ClusterExperiment object
-experiment <- H5ClusterExperiment(h5_file)
+# Create H5ParcellatedMultiScan object
+experiment <- H5ParcellatedMultiScan(h5_file)
 
 # Basic information
 experiment
@@ -231,8 +231,8 @@ for (i in seq_along(experiment@runs)) {
 }
 
 # Get time series from full runs only
-# Find which run indices correspond to H5ClusterRun (full data)
-full_run_indices <- which(sapply(experiment@runs, function(r) is(r, "H5ClusterRun")))
+# Find which run indices correspond to H5ParcellatedScan (full data)
+full_run_indices <- which(sapply(experiment@runs, function(r) is(r, "H5ParcellatedScan")))
 
 if (length(full_run_indices) > 0) {
   all_ts <- series_concat(experiment,
@@ -266,7 +266,7 @@ legend("topright", legend = cluster_info$name,
 
 ## Memory Efficiency
 
-The H5ClusterExperiment design provides several memory advantages:
+The H5ParcellatedMultiScan design provides several memory advantages:
 
 1. **Lazy loading**: Data is only read when accessed
 2. **Partial reading**: Can extract specific voxels or time ranges

@@ -3,7 +3,7 @@ library(hdf5r)
 library(neuroim2)
 library(fmristore)
 
-# Test .dataset_path method for H5ClusterRun
+# Test .dataset_path method for H5ParcellatedScan
 
 test_that(".dataset_path validates inputs and constructs path", {
   mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2, 2, 1))
@@ -18,7 +18,7 @@ test_that(".dataset_path validates inputs and constructs path", {
     add = TRUE)
 
   obj <- h5f
-  run <- new("H5ClusterRun",
+  run <- new("H5ParcellatedScan",
     obj = obj,
     mask = mask,
     clusters = clus,
@@ -30,7 +30,7 @@ test_that(".dataset_path validates inputs and constructs path", {
   expect_equal(fmristore:::.dataset_path(run, 1L), "/scans/runA/clusters/cluster_1")
   expect_error(fmristore:::.dataset_path(run, 0L), "single positive integer")
 
-  run_bad <- new("H5ClusterRun",
+  run_bad <- new("H5ParcellatedScan",
     obj = obj,
     mask = mask,
     clusters = clus,
@@ -67,7 +67,7 @@ test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds
   grp[["cluster_1"]] <- matrix(1:6, nrow = 2, ncol = 3)
   grp[["cluster_2"]] <- matrix(11:16, nrow = 2, ncol = 3)
 
-  run <- new("H5ClusterRun",
+  run <- new("H5ParcellatedScan",
     obj = h5f,
     mask = mask,
     clusters = clus,

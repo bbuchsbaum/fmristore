@@ -4,7 +4,7 @@
 \alias{h5_read_subset}
 \title{Convenience wrapper to read a subset from an HDF5 dataset}
 \usage{
-h5_read_subset(h5, path, index = NULL)
+h5_read_subset(h5, path, index = NULL, warn_memory = TRUE)
 }
 \arguments{
 \item{h5}{An open \code{H5File} handle.}

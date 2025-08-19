@@ -1,7 +1,7 @@
-#' Constructor for H5ClusterRun Objects
+#' Constructor for H5ParcellatedScan Objects
 #'
 #' @description
-#' Creates a new \code{H5ClusterRun} object, representing a single run of full
+#' Creates a new \code{H5ParcellatedScan} object, representing a single run of full
 #' voxel-level clustered data from an HDF5 file.
 #'
 #' This function handles file opening/closing and reads necessary metadata like
@@ -20,20 +20,20 @@
 #'   will attempt to read it from the HDF5 file attributes or metadata dataset.
 #' @param compress (Optional) Logical indicating compression status (metadata).
 #'
-#' @return A new \code{H5ClusterRun} object with an open file handle managed by the object.
+#' @return A new \code{H5ParcellatedScan} object with an open file handle managed by the object.
 #'
 #' @examples
 #' \dontrun{
 #' # Create temporary HDF5 file with minimal experiment structure
 #' temp_file <- tempfile(fileext = ".h5")
-#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(file_path = temp_file)
 #'
 #' # Create mask and clusters
 #' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
 #' clusters <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 3)
 #'
-#' # Create H5ClusterRun object
-#' run <- H5ClusterRun(exp_file, scan_name = "Run1_Full", mask = mask, clusters = clusters)
+#' # Create H5ParcellatedScan object
+#' run <- H5ParcellatedScan(exp_file, scan_name = "Run1_Full", mask = mask, clusters = clusters)
 #'
 #' # Access properties
 #' print(run@n_time)
@@ -48,36 +48,36 @@
 #' @importFrom hdf5r h5attr
 #' @importFrom withr defer
 #' @export
-H5ClusterRun <- function(file, scan_name,
+H5ParcellatedScan <- function(file, scan_name,
                          mask, clusters,
                          n_time = NULL, compress = FALSE) {
   # --- 1. Argument Validation (Basic) ---
   if (!((is.character(file) && length(file) == 1 && nzchar(file)) || inherits(file, "H5File"))) {
-    stop("[H5ClusterRun] 'file' must be a non-empty character string path or an H5File object.")
+    stop("[H5ParcellatedScan] 'file' must be a non-empty character string path or an H5File object.")
   }
   if (!is.character(scan_name) || length(scan_name) != 1 || !nzchar(scan_name)) {
-    stop("[H5ClusterRun] 'scan_name' must be a non-empty character string.")
+    stop("[H5ParcellatedScan] 'scan_name' must be a non-empty character string.")
   }
   if (!is(mask, "LogicalNeuroVol")) {
-    stop("[H5ClusterRun] 'mask' must be a LogicalNeuroVol object.")
+    stop("[H5ParcellatedScan] 'mask' must be a LogicalNeuroVol object.")
   }
   if (!is(clusters, "ClusteredNeuroVol")) {
-    stop("[H5ClusterRun] 'clusters' must be a ClusteredNeuroVol object.")
+    stop("[H5ParcellatedScan] 'clusters' must be a ClusteredNeuroVol object.")
   }
   # Dimension consistency check (using helper)
   check_same_dims(mask, clusters, dims_to_compare = 1:3,
-    msg = "[H5ClusterRun] Dimensions of 'mask' and 'clusters' must match.")
+    msg = "[H5ParcellatedScan] Dimensions of 'mask' and 'clusters' must match.")
 
   n_vox <- sum(mask)
   if (!identical(length(clusters@clusters), as.integer(n_vox))) {
     stop(sprintf(
-      "[H5ClusterRun] Mismatch: clusters@clusters length (%d) != sum(mask) (%d).",
+      "[H5ParcellatedScan] Mismatch: clusters@clusters length (%d) != sum(mask) (%d).",
       length(clusters@clusters), n_vox
     ))
   }
 
   if (!is.logical(compress) || length(compress) != 1) {
-    stop("[H5ClusterRun] 'compress' must be a single logical value.")
+    stop("[H5ParcellatedScan] 'compress' must be a single logical value.")
   }
 
   # --- 2. Open HDF5 file ---
@@ -92,7 +92,7 @@ H5ClusterRun <- function(file, scan_name,
   # --- 3. Determine n_time (if NULL) ---
   # This logic is copied/adapted from make_run_full
   if (is.null(determined_n_time)) {
-    scan_group_path <- paste0("/scans/", scan_name)
+    scan_group_path <- sprintf(H5_PATHS$SCAN_GROUP_TPL, scan_name)
     scan_group <- NULL
 
     scan_group_exists <- tryCatch(h5obj$exists(scan_group_path), error = function(e) FALSE)
@@ -116,7 +116,7 @@ H5ClusterRun <- function(file, scan_name,
           } else if (tryCatch(scan_group$exists("clusters"), error = function(e) FALSE)) {
             first_cid <- clusters@clusters[1] # Assumes at least one cluster
             if (!is.null(first_cid) && !is.na(first_cid)) {
-              dset_path_cid1 <- sprintf("/scans/%s/clusters/cluster_%d", scan_name, as.integer(first_cid))
+              dset_path_cid1 <- sprintf(H5_PATHS$CLUSTER_DSET_TPL, scan_name, as.integer(first_cid))
               if (tryCatch(h5obj$exists(dset_path_cid1), error = function(e) FALSE)) {
                 dset_cid1 <- NULL
                 tryCatch({
@@ -125,7 +125,7 @@ H5ClusterRun <- function(file, scan_name,
                   if (length(dims) == 2) {
                     determined_n_time <- dims[2]
                     if (isTRUE(getOption("fmristore.verbose"))) {
-                      message(sprintf("[H5ClusterRun] Inferred n_time = %d from dataset '%s'.", determined_n_time, dset_path_cid1))
+                      message(sprintf("[H5ParcellatedScan] Inferred n_time = %d from dataset '%s'.", determined_n_time, dset_path_cid1))
                     }
                   }
                 }, finally = {
@@ -138,14 +138,14 @@ H5ClusterRun <- function(file, scan_name,
         error = function(e) {
           # Close scan_group if opened before error
           if (!is.null(scan_group) && scan_group$is_valid) try(scan_group$close())
-          warning(sprintf("[H5ClusterRun] Error reading n_time metadata for scan '%s': %s. Proceeding without inferred n_time.", scan_name, e$message))
+          warning(sprintf("[H5ParcellatedScan] Error reading n_time metadata for scan '%s': %s. Proceeding without inferred n_time.", scan_name, e$message))
         })
     }
 
     if (is.null(determined_n_time)) {
       # Close the file handle we opened if we couldn't determine n_time
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-      stop(sprintf("[H5ClusterRun] Could not determine 'n_time' for scan '%s'. Provide it explicitly or ensure it exists in HDF5 attributes/metadata.", scan_name))
+      stop(sprintf("[H5ParcellatedScan] Could not determine 'n_time' for scan '%s'. Provide it explicitly or ensure it exists in HDF5 attributes/metadata.", scan_name))
     }
   }
 
@@ -153,7 +153,7 @@ H5ClusterRun <- function(file, scan_name,
   if (!is.numeric(determined_n_time) || length(determined_n_time) != 1 || determined_n_time <= 0 || floor(determined_n_time) != determined_n_time) {
     # Close the file handle before stopping
     if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-    stop(sprintf("[H5ClusterRun] Determined 'n_time' (%s) must be a single positive integer.", as.character(determined_n_time)))
+    stop(sprintf("[H5ParcellatedScan] Determined 'n_time' (%s) must be a single positive integer.", as.character(determined_n_time)))
   }
   final_n_time <- as.integer(determined_n_time)
 
@@ -163,7 +163,7 @@ H5ClusterRun <- function(file, scan_name,
   # The object's finalizer (if defined) or manual closing should handle it later.
   new_obj <- tryCatch(
     {
-      new("H5ClusterRun",
+      new("H5ParcellatedScan",
         obj       = h5obj, # Pass the open handle
         scan_name = scan_name,
         mask      = mask,
@@ -176,17 +176,17 @@ H5ClusterRun <- function(file, scan_name,
     error = function(e) {
       # If new() fails, close the handle we opened.
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-      stop(sprintf("[H5ClusterRun] Failed to create object: %s", e$message))
+      stop(sprintf("[H5ParcellatedScan] Failed to create object: %s", e$message))
     })
 
   # Return the created object, which now manages the H5 handle.
   return(new_obj)
 }
 
-#' Constructor for H5ClusterRunSummary Objects
+#' Constructor for H5ParcellatedScanSummary Objects
 #'
 #' @description
-#' Creates a new \code{H5ClusterRunSummary} object, representing a single run of
+#' Creates a new \code{H5ParcellatedScanSummary} object, representing a single run of
 #' summary cluster time-series data from an HDF5 file.
 #'
 #' This function handles file opening/closing, validates the summary dataset,
@@ -202,19 +202,19 @@ H5ClusterRun <- function(file, scan_name,
 #' @param summary_dset (Optional) The name of the dataset within the run's summary group
 #'   (default: "summary_data").
 #'
-#' @return A new \code{H5ClusterRunSummary} object with an open file handle managed by the object.
+#' @return A new \code{H5ParcellatedScanSummary} object with an open file handle managed by the object.
 #'
 #' @examples
 #' \dontrun{
 #' # Create temporary HDF5 file with minimal experiment structure
 #' temp_file <- tempfile(fileext = ".h5")
-#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(file_path = temp_file)
 #'
 #' # Create mask
 #' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
 #'
-#' # Create H5ClusterRunSummary object
-#' run_summary <- H5ClusterRunSummary(exp_file, scan_name = "Run2_Summary", mask = mask)
+#' # Create H5ParcellatedScanSummary object
+#' run_summary <- H5ParcellatedScanSummary(exp_file, scan_name = "Run2_Summary", mask = mask)
 #'
 #' # Access properties
 #' print(run_summary@cluster_names)
@@ -228,36 +228,36 @@ H5ClusterRun <- function(file, scan_name,
 #' @importFrom methods new is
 #' @importFrom hdf5r H5D
 #' @export
-H5ClusterRunSummary <- function(file, scan_name,
+H5ParcellatedScanSummary <- function(file, scan_name,
                                 mask, clusters = NULL,
                                 cluster_names = character(), cluster_ids = integer(),
                                 summary_dset = "summary_data") {
   # --- 1. Argument Validation (Basic) ---
   if (!((is.character(file) && length(file) == 1 && nzchar(file)) || inherits(file, "H5File"))) {
-    stop("[H5ClusterRunSummary] 'file' must be a non-empty character string path or an H5File object.")
+    stop("[H5ParcellatedScanSummary] 'file' must be a non-empty character string path or an H5File object.")
   }
   if (!is.character(scan_name) || length(scan_name) != 1 || !nzchar(scan_name)) {
-    stop("[H5ClusterRunSummary] 'scan_name' must be a non-empty character string.")
+    stop("[H5ParcellatedScanSummary] 'scan_name' must be a non-empty character string.")
   }
   if (!is(mask, "LogicalNeuroVol")) {
-    stop("[H5ClusterRunSummary] 'mask' must be a LogicalNeuroVol object.")
+    stop("[H5ParcellatedScanSummary] 'mask' must be a LogicalNeuroVol object.")
   }
   n_vox <- sum(mask)
   if (!is.null(clusters)) {
     if (!is(clusters, "ClusteredNeuroVol")) {
-      stop("[H5ClusterRunSummary] 'clusters' must be a ClusteredNeuroVol object.")
+      stop("[H5ParcellatedScanSummary] 'clusters' must be a ClusteredNeuroVol object.")
     }
     check_same_dims(mask, clusters, dims_to_compare = 1:3,
-      msg = "[H5ClusterRunSummary] Dimensions of 'mask' and provided 'clusters' must match.")
+      msg = "[H5ParcellatedScanSummary] Dimensions of 'mask' and provided 'clusters' must match.")
     if (!identical(length(clusters@clusters), as.integer(n_vox))) {
       stop(sprintf(
-        "[H5ClusterRunSummary] Mismatch: provided clusters@clusters length (%d) != sum(mask) (%d).",
+        "[H5ParcellatedScanSummary] Mismatch: provided clusters@clusters length (%d) != sum(mask) (%d).",
         length(clusters@clusters), n_vox
       ))
     }
   }
   if (!is.character(summary_dset) || length(summary_dset) != 1 || !nzchar(summary_dset)) {
-    stop("[H5ClusterRunSummary] 'summary_dset' must be a non-empty character string.")
+    stop("[H5ParcellatedScanSummary] 'summary_dset' must be a non-empty character string.")
   }
 
   # --- 2. Open HDF5 file ---
@@ -266,7 +266,7 @@ H5ClusterRunSummary <- function(file, scan_name,
   # The returned object will own the handle. No defer needed here.
 
   # --- 3. Validate HDF5 structure before reading data ---
-  scan_group_path <- file.path("/scans", scan_name)
+  scan_group_path <- sprintf(H5_PATHS$SCAN_GROUP_TPL, scan_name)
   summary_group_path <- file.path(scan_group_path, "clusters_summary")
   dset_path <- file.path(summary_group_path, summary_dset)
 
@@ -278,7 +278,7 @@ H5ClusterRunSummary <- function(file, scan_name,
     },
     error = function(e) {
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-      stop(paste0("[H5ClusterRunSummary] ", e$message))
+      stop(paste0("[H5ParcellatedScanSummary] ", e$message))
     })
 
   # --- 4. Read dataset dimensions and reconcile cluster info ---
@@ -301,7 +301,7 @@ H5ClusterRunSummary <- function(file, scan_name,
     },
     error = function(e) {
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-      stop(sprintf("[H5ClusterRunSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
+      stop(sprintf("[H5ParcellatedScanSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
     })
 
   dataset_dims <- info_res$dims
@@ -349,11 +349,11 @@ H5ClusterRunSummary <- function(file, scan_name,
   # --- 5. Create the object ---
   new_obj <- tryCatch(
     {
-      new("H5ClusterRunSummary",
+      new("H5ParcellatedScanSummary",
         obj = h5obj, # Pass the open handle
         scan_name = scan_name,
         mask = mask,
-        n_voxels = as.integer(n_vox), # Add n_voxels, inherited from H5ClusteredArray
+        n_voxels = as.integer(n_vox), # Add n_voxels, inherited from H5ParcellatedArray
         clusters = if (is.null(clusters)) new("ClusteredNeuroVol") else clusters,
         n_time = as.integer(final_n_time),
         cluster_names = final_cluster_names,
@@ -363,7 +363,7 @@ H5ClusterRunSummary <- function(file, scan_name,
     },
     error = function(e) {
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
-      stop(sprintf("[H5ClusterRunSummary] Failed to create H5ClusterRunSummary object: %s", e$message))
+      stop(sprintf("[H5ParcellatedScanSummary] Failed to create H5ParcellatedScanSummary object: %s", e$message))
     })
 
   return(new_obj)

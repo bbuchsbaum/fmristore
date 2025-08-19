@@ -2,10 +2,10 @@
 #' @importFrom methods is
 NULL
 
-# Contains methods and helper functions for H5ClusterExperiment objects
+# Contains methods and helper functions for H5ParcellatedMultiScan objects
 
 # Helper function for stricter validation of a user-provided mask against HDF5 content
-# Internal to H5ClusterExperiment constructor logic
+# Internal to H5ParcellatedMultiScan constructor logic
 #
 # @param user_mask The mask object provided by the user (already passed basic checks by ensure_mask).
 # @param h5_handle An open H5File handle to the experiment file.
@@ -24,7 +24,7 @@ NULL
     stop("Internal Error: .validate_user_provided_mask_h5 requires a NeuroSpace object for master_space.")
   }
 
-  message("[H5ClusterExperiment] Performing stricter HDF5-based validation for user-provided mask...")
+  message("[H5ParcellatedMultiScan] Performing stricter HDF5-based validation for user-provided mask...")
 
   # 1. Check consistency with cluster map length (number of active voxels)
   if (sum(user_mask@.Data) != expected_cmap_len) {
@@ -77,15 +77,15 @@ NULL
     stop("User-provided mask's pattern of TRUE voxels does not match the pattern derived from the HDF5 file ('/voxel_coords' or '/mask'). User mask override rejected.")
   }
 
-  message("[H5ClusterExperiment] User-provided mask pattern validation successful.")
+  message("[H5ParcellatedMultiScan] User-provided mask pattern validation successful.")
   invisible(NULL)
 }
 
-#' @describeIn series_concat Concatenate voxel time series for H5ClusterExperiment
+#' @describeIn series_concat Concatenate voxel time series for H5ParcellatedMultiScan
 #' @export
-#' @family H5Cluster
+#' @family H5Parcellated
 setMethod("series_concat",
-  signature(experiment = "H5ClusterExperiment", mask_idx = "numeric"),
+  signature(experiment = "H5ParcellatedMultiScan", mask_idx = "numeric"),
   function(experiment, mask_idx, run_indices = NULL) {
 
     if (length(experiment@runs) == 0) {
@@ -116,8 +116,8 @@ setMethod("series_concat",
     for (idx in run_indices) {
       current_run <- experiment@runs[[idx]]
 
-      if (!is(current_run, "H5ClusterRun")) {
-        stop(sprintf("[series_concat] Run %d (scan: '%s') is not an H5ClusterRun object. Voxel-level series cannot be extracted.",
+      if (!is(current_run, "H5ParcellatedScan")) {
+        stop(sprintf("[series_concat] Run %d (scan: '%s') is not an H5ParcellatedScan object. Voxel-level series cannot be extracted.",
           idx, current_run@scan_name))
       }
 
@@ -162,11 +162,11 @@ setMethod("series_concat",
   })
 
 
-#' @describeIn matrix_concat Concatenate summary matrices for H5ClusterExperiment
+#' @describeIn matrix_concat Concatenate summary matrices for H5ParcellatedMultiScan
 #' @export
-#' @family H5Cluster
+#' @family H5Parcellated
 setMethod("matrix_concat",
-  signature(experiment = "H5ClusterExperiment"),
+  signature(experiment = "H5ParcellatedMultiScan"),
   function(experiment, run_indices = NULL) {
 
     if (length(experiment@runs) == 0) {
@@ -195,8 +195,8 @@ setMethod("matrix_concat",
     for (idx in run_indices) {
       current_run <- experiment@runs[[idx]]
 
-      if (!is(current_run, "H5ClusterRunSummary")) {
-        stop(sprintf("[matrix_concat] Run %d (scan: '%s') is not an H5ClusterRunSummary object. Summary matrix cannot be extracted.",
+      if (!is(current_run, "H5ParcellatedScanSummary")) {
+        stop(sprintf("[matrix_concat] Run %d (scan: '%s') is not an H5ParcellatedScanSummary object. Summary matrix cannot be extracted.",
           idx, current_run@scan_name))
       }
 
@@ -237,15 +237,15 @@ setMethod("matrix_concat",
   })
 
 
-#' Constructor for H5ClusterExperiment Objects
+#' Constructor for H5ParcellatedMultiScan Objects
 #'
 #' @description
-#' Creates a new `H5ClusterExperiment` object, representing a collection of
+#' Creates a new `H5ParcellatedMultiScan` object, representing a collection of
 #' clustered neuroimaging runs sharing a common HDF5 file, mask, and cluster map.
 #'
 #' This function handles opening the HDF5 file (if a path is provided),
 #' identifying available scans, and creating the appropriate run objects
-#' (`H5ClusterRun` or `H5ClusterRunSummary`) for each scan based on
+#' (`H5ParcellatedScan` or `H5ParcellatedScanSummary`) for each scan based on
 #' the available data within the HDF5 file structure (following the
 #' ClusteredTimeSeriesSpec).
 #'
@@ -276,16 +276,16 @@ setMethod("matrix_concat",
 #'   object. If \code{FALSE}, the handle is closed after reading metadata.
 #'   *Note:* For most operations, the handle needs to remain open.
 #'
-#' @return A new \code{H5ClusterExperiment} object.
+#' @return A new \code{H5ParcellatedMultiScan} object.
 #'
 #' @examples
 #' \dontrun{
 #' # Create temporary HDF5 file with minimal experiment structure
 #' temp_file <- tempfile(fileext = ".h5")
-#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(file_path = temp_file)
 #'
-#' # Create H5ClusterExperiment object
-#' experiment <- H5ClusterExperiment(exp_file)
+#' # Create H5ParcellatedMultiScan object
+#' experiment <- H5ParcellatedMultiScan(exp_file)
 #'
 #' # Access scan names
 #' print(scan_names(experiment))
@@ -308,15 +308,15 @@ setMethod("matrix_concat",
 #' @importFrom hdf5r H5File list.groups H5A H5D h5attr h5attr_names list.datasets
 #' @importFrom methods new is
 #' @export
-#' @family H5Cluster
-H5ClusterExperiment <- function(file,
+#' @family H5Parcellated
+H5ParcellatedMultiScan <- function(file,
                                 scan_names = NULL,
                                 mask = NULL,
                                 clusters = NULL,
                                 scan_metadata = NULL,
                                 cluster_metadata = NULL,
                                 summary_preference = NULL,
-                                keep_handle_open = TRUE # TODO: Implement finalizer logic if TRUE
+                                keep_handle_open = TRUE
 ) {
   # Rename file_source to file internally for clarity
   file_source <- file
@@ -337,7 +337,7 @@ H5ClusterExperiment <- function(file,
       if (opened_here && !keep_handle_open && !is.null(h5obj) && h5obj$is_valid) {
         close_h5_safely(h5obj)
       }
-      # TODO: Add finalizer registration if keep_handle_open is TRUE
+      # Finalizer registration is handled later in the function
     },
     add = TRUE)
 
@@ -346,15 +346,15 @@ H5ClusterExperiment <- function(file,
   h5obj <- fh$h5
   # Defer closing the file only if we opened it and the user doesn't want to keep it open.
   # Note: keep_handle_open is TRUE by default, so defer usually won't close it here.
-  # The H5ClusterExperiment object's finalizer handles closing if keep_handle_open=TRUE.
+  # The H5ParcellatedMultiScan object's finalizer handles closing if keep_handle_open=TRUE.
   defer(
     {
       if (fh$owns && !keep_handle_open && h5obj$is_valid) {
-        message("[H5ClusterExperiment] Closing HDF5 file handle opened by constructor.")
+        message("[H5ParcellatedMultiScan] Closing HDF5 file handle opened by constructor.")
         try(h5obj$close_all(), silent = TRUE)
       }
     },
-    envir = parent.frame()) # Defer in the context of the calling function H5ClusterExperiment
+    envir = parent.frame()) # Defer in the context of the calling function H5ParcellatedMultiScan
 
   # --- Read Header Info and Create Master NeuroSpace ---
   master_space <- NULL
@@ -433,7 +433,7 @@ H5ClusterExperiment <- function(file,
 
     },
     error = function(e) {
-      stop(sprintf("[H5ClusterExperiment] Failed to read header and create NeuroSpace: %s", e$message))
+      stop(sprintf("[H5ParcellatedMultiScan] Failed to read header and create NeuroSpace: %s", e$message))
     })
   # Header group is automatically closed by on.exit if added to opened_groups
 
@@ -501,9 +501,9 @@ H5ClusterExperiment <- function(file,
   # --- End Auto-load/Validation ---
 
   # --- 2. Determine Scan Names ---
-  scans_group_path <- "/scans"
+  scans_group_path <- H5_PATHS$SCANS_GROUP
   if (!h5obj$exists(scans_group_path)) {
-    stop(sprintf("[H5ClusterExperiment] Scans group not found at '%s'.", scans_group_path))
+    stop(sprintf("[H5ParcellatedMultiScan] Scans group not found at '%s'.", scans_group_path))
   }
   scans_group <- h5obj[[scans_group_path]]
   opened_groups[["scans"]] <- scans_group
@@ -530,18 +530,18 @@ H5ClusterExperiment <- function(file,
 
   if (is.null(scan_names)) {
     if (length(available_scans) == 0) {
-      warning("[H5ClusterExperiment] No scan groups found under '/scans'.")
+      warning("[H5ParcellatedMultiScan] No scan groups found under '/scans'.")
       scan_names <- character(0)
     } else {
       scan_names <- available_scans
     }
   } else {
     if (!is.character(scan_names) || length(scan_names) == 0) {
-      stop("[H5ClusterExperiment] Provided 'scan_names' must be a non-empty character vector.")
+      stop("[H5ParcellatedMultiScan] Provided 'scan_names' must be a non-empty character vector.")
     }
     missing_scans <- setdiff(scan_names, available_scans)
     if (length(missing_scans) > 0) {
-      stop(sprintf("[H5ClusterExperiment] Specified scan names not found under '/scans': %s",
+      stop(sprintf("[H5ParcellatedMultiScan] Specified scan names not found under '/scans': %s",
         paste(missing_scans, collapse = ", ")))
     }
     # Keep only requested scans in the specified order
@@ -582,7 +582,7 @@ H5ClusterExperiment <- function(file,
     if (has_summary_data) {
       summary_group <- NULL
       tryCatch({
-        # Only need to check existence, H5ClusterRunSummary will open group/dataset
+        # Only need to check existence, H5ParcellatedScanSummary will open group/dataset
         # summary_group <- h5obj[[summary_group_path]]; opened_groups[[paste0(sname,"_summary")]] <- summary_group
         summary_group <- h5obj[[summary_group_path]] # Open just to check dataset existence
         summary_dset_exists <- summary_group$exists(summary_dset_name)
@@ -603,16 +603,16 @@ H5ClusterExperiment <- function(file,
     create_summary <- FALSE
     if (!is.null(scan_class)) {
       # Use class attribute if available
-      if (scan_class == "H5ClusterRunSummary") {
+      if (scan_class == "H5ParcellatedScanSummary") {
         create_summary <- TRUE
         if (!summary_dset_exists) {
-          stop(sprintf("Scan '%s' has class='H5ClusterRunSummary' but summary data not found at %s",
+          stop(sprintf("Scan '%s' has class='H5ParcellatedScanSummary' but summary data not found at %s",
             sname, file.path(summary_group_path, summary_dset_name)))
         }
-      } else if (scan_class == "H5ClusterRun") {
+      } else if (scan_class == "H5ParcellatedScan") {
         create_summary <- FALSE
         if (!has_full_data) {
-          stop(sprintf("Scan '%s' has class='H5ClusterRun' but full data not found under %s",
+          stop(sprintf("Scan '%s' has class='H5ParcellatedScan' but full data not found under %s",
             sname, file.path(scan_path, "clusters")))
         }
       } else {
@@ -679,7 +679,7 @@ H5ClusterExperiment <- function(file,
       tryCatch(
         {
           # Use the canonical constructor
-          runs_list[[sname]] <- H5ClusterRunSummary(
+          runs_list[[sname]] <- H5ParcellatedScanSummary(
             file = h5obj, # MODIFIED: Pass H5File handle
             scan_name = sname,
             mask = mask,       # Pass validated mask
@@ -689,7 +689,7 @@ H5ClusterExperiment <- function(file,
             summary_dset = summary_dset_name
           )
         },
-        error = function(e) stop(sprintf("Failed to create H5ClusterRunSummary for scan '%s': %s", sname, e$message)))
+        error = function(e) stop(sprintf("Failed to create H5ParcellatedScanSummary for scan '%s': %s", sname, e$message)))
 
     } else {
 
@@ -701,7 +701,7 @@ H5ClusterExperiment <- function(file,
       tryCatch(
         {
           # Use the canonical constructor
-          runs_list[[sname]] <- H5ClusterRun(
+          runs_list[[sname]] <- H5ParcellatedScan(
             file = h5obj, # MODIFIED: Pass H5File handle
             scan_name = sname,
             mask = mask,       # Pass validated mask
@@ -710,13 +710,13 @@ H5ClusterExperiment <- function(file,
             # compress = ? # Let constructor handle reading compress attr if needed
           )
         },
-        error = function(e) stop(sprintf("Failed to create H5ClusterRun for scan '%s': %s", sname, e$message)))
+        error = function(e) stop(sprintf("Failed to create H5ParcellatedScan for scan '%s': %s", sname, e$message)))
     }
   }
 
   if (!is.null(summary_only_attr)) {
     if (isTRUE(summary_only_attr) && found_full) {
-      warning("[H5ClusterExperiment] '/scans@summary_only' is TRUE but full data was found in at least one scan.")
+      warning("[H5ParcellatedMultiScan] '/scans@summary_only' is TRUE but full data was found in at least one scan.")
     }
   }
 
@@ -783,14 +783,14 @@ H5ClusterExperiment <- function(file,
     }
     cluster_metadata <- global_meta_df
   } else {
-    if (!is.data.frame(cluster_metadata)) stop("[H5ClusterExperiment] Provided 'cluster_metadata' must be a data.frame.")
+    if (!is.data.frame(cluster_metadata)) stop("[H5ParcellatedMultiScan] Provided 'cluster_metadata' must be a data.frame.")
     # User provided metadata overrides loaded
   }
 
   # --- 7. Override scan metadata if provided ---
   if (!is.null(scan_metadata)) {
     if (!is.list(scan_metadata) || length(scan_metadata) != length(runs_list)) {
-      stop(sprintf("[H5ClusterExperiment] Provided 'scan_metadata' must be a list of length %d.", length(runs_list)))
+      stop(sprintf("[H5ParcellatedMultiScan] Provided 'scan_metadata' must be a list of length %d.", length(runs_list)))
     }
     # Merge/replace carefully. For now, just replace.
     # Ensure names match if replacing
@@ -802,42 +802,37 @@ H5ClusterExperiment <- function(file,
   }
 
   # --- 8. Create Experiment Object ---
-  exp_obj <- new("H5ClusterExperiment",
+  exp_obj <- new("H5ParcellatedMultiScan",
     runs = runs_list,
     scan_metadata = final_scan_metadata,
     cluster_metadata = cluster_metadata)
 
   # --- Add Finalizer if needed (Checklist Item 4.3) ---
-  # Removed finalizer logic for simplicity. User manages handle if keep_handle_open=TRUE.
-  # if (opened_here && keep_handle_open) {
-  #   message("Registering finalizer to close HDF5 handle when experiment object is garbage collected.")
-  #   reg.finalizer(exp_obj, function(e) {
-  #     # Access the handle from the object's structure (assuming it's consistent)
-  #     # This relies on the handle being stored accessible within the object, e.g., exp_obj@runs[[1]]@obj
-  #     h5_handle_to_close <- NULL
-  #     if (length(e@runs) > 0 && inherits(e@runs[[1]], "H5ClusteredArray")) {
-  #        h5_handle_to_close <- e@runs[[1]]@obj
-  #     }
-  #     if (!is.null(h5_handle_to_close) && is_h5file(h5_handle_to_close) && h5_handle_to_close$is_valid) {
-  #        try(h5_handle_to_close$close_all(), silent = TRUE)
-  #     }
-  #   }, onexit = TRUE)
-  # } else if (opened_here && !keep_handle_open) {
-  #     # Close handle immediately if opened here and not keeping open
-  #     try(h5obj$close_all(), silent = TRUE)
-  # } # else: handle was passed in open, user manages its lifecycle
+  if (opened_here && keep_handle_open) {
+    if (isTRUE(getOption("fmristore.verbose"))) {
+      message("[H5ParcellatedMultiScan] Registering finalizer to close HDF5 handle when experiment object is garbage collected.")
+    }
+    reg.finalizer(exp_obj, function(e) {
+      # Access the handle from the object's structure
+      h5_handle_to_close <- NULL
+      if (length(e@runs) > 0 && inherits(e@runs[[1]], "H5ParcellatedArray")) {
+         h5_handle_to_close <- e@runs[[1]]@obj
+      }
+      if (!is.null(h5_handle_to_close) && inherits(h5_handle_to_close, "H5File") && h5_handle_to_close$is_valid) {
+         try(h5_handle_to_close$close_all(), silent = TRUE)
+      }
+    }, onexit = TRUE)
+  } else if (opened_here && !keep_handle_open) {
+      # Close handle immediately if opened here and not keeping open
+      try(h5obj$close_all(), silent = TRUE)
+  } # else: handle was passed in open, user manages its lifecycle
   # --- End Finalizer ---
-
-  # If file was opened here and we are NOT keeping it open, close it now.
-  if (opened_here && !keep_handle_open) {
-    try(h5obj$close_all(), silent = TRUE)
-  }
 
   return(exp_obj)
 }
 
 
-#' Accessor Methods for H5ClusterExperiment
+#' Accessor Methods for H5ParcellatedMultiScan
 
 #' Access Slots/Properties using `$`
 #'
@@ -846,13 +841,13 @@ H5ClusterExperiment <- function(file,
 #' first run object stored within the experiment.
 #' Also provides access to the experiment's own slots (`runs`, `scan_metadata`, `cluster_metadata`).
 #'
-#' @param x An `H5ClusterExperiment` object.
+#' @param x An `H5ParcellatedMultiScan` object.
 #' @param name The name of the property or slot to access (`mask`, `clusters`, `obj`, `runs`, `scan_metadata`, `cluster_metadata`).
 #'
 #' @return The requested object or value.
 #' @export
-#' @family H5Cluster
-setMethod("$", "H5ClusterExperiment", function(x, name) {
+#' @family H5Parcellated
+setMethod("$", "H5ParcellatedMultiScan", function(x, name) {
   # Check for experiment's own slots first
   if (name %in% slotNames(x)) {
     return(slot(x, name))
@@ -872,32 +867,61 @@ setMethod("$", "H5ClusterExperiment", function(x, name) {
   }
 
   # Default behavior or error for unknown names
-  # stop(sprintf("'%s' is not a valid slot or accessible property for H5ClusterExperiment", name))
+  # stop(sprintf("'%s' is not a valid slot or accessible property for H5ParcellatedMultiScan", name))
   # Returning NULL might be safer than erroring? Or follow default $ behavior if possible.
   return(NULL)
 })
 
 #' Get the HDF5 file object via generic
-#' @param x H5ClusterExperiment object
+#' @param x H5ParcellatedMultiScan object
 #' @return The HDF5 file object from the first run.
 #' @rdname h5file-methods
 #' @export
-#' @family H5Cluster
-setMethod("h5file", "H5ClusterExperiment", function(x) {
+#' @family H5Parcellated
+setMethod("h5file", "H5ParcellatedMultiScan", function(x) {
   if (length(x@runs) == 0) {
-    stop("Cannot get HDF5 file object: Experiment contains no runs.")
+    stop("Cannot get HDF5 file: Experiment contains no runs.")
   }
   # Assumes all runs share the same handle (enforced by validity check)
-  x@runs[[1]]@obj
+  if (is.null(x@runs[[1]]@obj)) {
+    stop("H5File object is NULL")
+  }
+  x@runs[[1]]@obj$filename
+})
+
+#' Get the H5File object for H5ParcellatedScan objects
+#' @param x H5ParcellatedScan object
+#' @return The H5File object handle
+#' @rdname h5file-methods
+#' @export
+#' @family H5Parcellated
+setMethod("h5file", "H5ParcellatedScan", function(x) {
+  if (is.null(x@obj)) {
+    stop("H5File object is NULL")
+  }
+  x@obj$filename
+})
+
+#' Get the H5File object for H5ParcellatedScanSummary objects
+#' @param x H5ParcellatedScanSummary object
+#' @return The H5File object handle
+#' @rdname h5file-methods
+#' @export
+#' @family H5Parcellated
+setMethod("h5file", "H5ParcellatedScanSummary", function(x) {
+  if (is.null(x@obj)) {
+    stop("H5File object is NULL")
+  }
+  x@obj$filename
 })
 
 #' Get the mask object via generic
-#' @param x H5ClusterExperiment object
+#' @param x H5ParcellatedMultiScan object
 #' @return The mask object from the first run.
 #' @rdname mask-methods
 #' @export
-#' @family H5Cluster
-setMethod("mask", "H5ClusterExperiment", function(x) {
+#' @family H5Parcellated
+setMethod("mask", "H5ParcellatedMultiScan", function(x) {
   if (length(x@runs) == 0) {
     stop("Cannot get mask object: Experiment contains no runs.")
   }
@@ -905,12 +929,12 @@ setMethod("mask", "H5ClusterExperiment", function(x) {
 })
 
 #' Get the clusters object via generic
-#' @param x H5ClusterExperiment object
+#' @param x H5ParcellatedMultiScan object
 #' @return The clusters object from the first run.
 #' @rdname clusters-methods
 #' @export
-#' @family H5Cluster
-setMethod("clusters", "H5ClusterExperiment", function(x) {
+#' @family H5Parcellated
+setMethod("clusters", "H5ParcellatedMultiScan", function(x) {
   if (length(x@runs) == 0) {
     stop("Cannot get clusters object: Experiment contains no runs.")
   }
@@ -918,49 +942,49 @@ setMethod("clusters", "H5ClusterExperiment", function(x) {
 })
 
 #' Get scan names
-#' @param x H5ClusterExperiment object
+#' @param x H5ParcellatedMultiScan object
 #' @return Character vector of scan names.
 #' @rdname scan_names-methods
 #' @export
-#' @family H5Cluster
-setMethod("scan_names", "H5ClusterExperiment", function(x) {
+#' @family H5Parcellated
+setMethod("scan_names", "H5ParcellatedMultiScan", function(x) {
   names(x@runs) %||% character(0)
 })
 
 #' Get number of scans
-#' @param x H5ClusterExperiment object
+#' @param x H5ParcellatedMultiScan object
 #' @return Integer number of scans.
 #' @rdname n_scans-methods
 #' @export
-#' @family H5Cluster
-setMethod("n_scans", "H5ClusterExperiment", function(x) {
+#' @family H5Parcellated
+setMethod("n_scans", "H5ParcellatedMultiScan", function(x) {
   length(x@runs)
 })
 
 #' Get scan metadata
-#' @param x H5ClusterExperiment object
+#' @param x H5ParcellatedMultiScan object
 #' @return List of scan metadata.
 #' @rdname scan_metadata-methods
 #' @export
-#' @family H5Cluster
-setMethod("scan_metadata", "H5ClusterExperiment", function(x) {
+#' @family H5Parcellated
+setMethod("scan_metadata", "H5ParcellatedMultiScan", function(x) {
   x@scan_metadata
 })
 
 #' Get cluster metadata
-#' @param x H5ClusterExperiment object
+#' @param x H5ParcellatedMultiScan object
 #' @return Data frame of cluster metadata.
 #' @rdname cluster_metadata-methods
 #' @export
-#' @family H5Cluster
-setMethod("cluster_metadata", "H5ClusterExperiment", function(x) {
+#' @family H5Parcellated
+setMethod("cluster_metadata", "H5ParcellatedMultiScan", function(x) {
   x@cluster_metadata
 })
 
 #' @rdname show-methods
 #' @importFrom methods show
-setMethod("show", "H5ClusterExperiment", function(object) {
-  cat("\nH5ClusterExperiment\n")
+setMethod("show", "H5ParcellatedMultiScan", function(object) {
+  cat("\nH5ParcellatedMultiScan\n")
   cat("  # runs        :", length(object@runs), "\n")
   # Use %||% which should be defined in io_h5_helpers.R now
   num_clusters <- length(object@cluster_metadata$cluster_id) %||%
@@ -978,13 +1002,13 @@ setMethod("show", "H5ClusterExperiment", function(object) {
 })
 
 #' Close the HDF5 file handle
-#' @param con H5ClusterExperiment object
+#' @param con H5ParcellatedMultiScan object
 #' @param ... Additional arguments (ignored)
 #' @return NULL invisibly
 #' @rdname close
 #' @export
-#' @family H5Cluster
-setMethod("close", "H5ClusterExperiment", function(con, ...) {
+#' @family H5Parcellated
+setMethod("close", "H5ParcellatedMultiScan", function(con, ...) {
   # All runs share the same H5File handle, so we only need to close it once
   if (length(con@runs) > 0 && !is.null(con@runs[[1]]@obj)) {
     safe_h5_close(con@runs[[1]]@obj)

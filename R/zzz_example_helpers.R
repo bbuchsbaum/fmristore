@@ -394,9 +394,9 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
   return(out_file)
 }
 
-#' Populate HDF5 structure for a single H5ClusterRun within an existing H5File
+#' Populate HDF5 structure for a single H5ParcellatedScan within an existing H5File
 #'
-#' This function is a helper for creating minimal H5ClusterExperiment examples.
+#' This function is a helper for creating minimal H5ParcellatedMultiScan examples.
 #' It assumes the H5File object is open and writable.
 #'
 #' @param h5obj An open, writable \code{H5File} object (from package hdf5r).
@@ -408,7 +408,7 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
 #' @param compress Logical, whether to compress HDF5 datasets (minimal impact for small data).
 #' @keywords internal
 #' @return Invisibly returns TRUE on success, or stops on error.
-populate_H5ClusterRun_in_h5file <- function(h5obj,
+populate_H5ParcellatedScan_in_h5file <- function(h5obj,
                                             scan_name,
                                             mask_vol,
                                             cluster_map_vol,
@@ -437,7 +437,7 @@ populate_H5ClusterRun_in_h5file <- function(h5obj,
       run_grp <- scans_grp$create_group(scan_name)
 
       # Set attributes for the run group
-      hdf5r::h5attr(run_grp, "class") <- "H5ClusterRun"
+      hdf5r::h5attr(run_grp, "class") <- "H5ParcellatedScan"
       hdf5r::h5attr(run_grp, "n_time") <- as.integer(n_time)
       # fmristore version attribute could be added if constructor expects/uses it.
 
@@ -503,13 +503,13 @@ populate_H5ClusterRun_in_h5file <- function(h5obj,
           n_vox_in_this_cluster <- sum(cluster_assignments_in_mask == id)
           if (n_vox_in_this_cluster > 0) {
             # Data: n_time x n_vox_in_this_cluster
-            # The H5ClusterRun constructor expects data loaded to be n_vox x n_time (from summary)
+            # The H5ParcellatedScan constructor expects data loaded to be n_vox x n_time (from summary)
             # or reads n_time x n_vox from disk if that's how write_clustered_run_h5 does it.
             # write_clustered_run_h5 writes dataset as h5_write(..., robj = data_for_cluster) # data_for_cluster is n_vox x n_time from input
             # So, the dataset on disk should be n_vox x n_time. But cluster_ts() returns n_time x n_vox.
             # Let's assume disk storage is n_time x n_vox_in_cluster for now, common for time series.
             # If constructor expects n_vox x n_time, then this needs to be transposed before constructor is called, or disk format adjusted.
-            # The H5ClusterRun constructor: data for each cluster is loaded as: dset[,]
+            # The H5ParcellatedScan constructor: data for each cluster is loaded as: dset[,]
             # Let's use n_time x n_vox_in_cluster on disk.
             cluster_ts_data <- matrix(stats::rnorm(n_time * n_vox_in_this_cluster),
               nrow = n_time, ncol = n_vox_in_this_cluster)
@@ -525,15 +525,15 @@ populate_H5ClusterRun_in_h5file <- function(h5obj,
 
     },
     error = function(e) {
-      stop(sprintf("Error populating H5ClusterRun for scan '%s': %s", scan_name, e$message))
+      stop(sprintf("Error populating H5ParcellatedScan for scan '%s': %s", scan_name, e$message))
     })
 
   invisible(TRUE)
 }
 
-#' Populate HDF5 structure for a single H5ClusterRunSummary within an existing H5File
+#' Populate HDF5 structure for a single H5ParcellatedScanSummary within an existing H5File
 #'
-#' This function is a helper for creating minimal H5ClusterExperiment examples.
+#' This function is a helper for creating minimal H5ParcellatedMultiScan examples.
 #' It assumes the H5File object is open and writable.
 #'
 #' @param h5obj An open, writable \code{H5File} object (from package hdf5r).
@@ -545,7 +545,7 @@ populate_H5ClusterRun_in_h5file <- function(h5obj,
 #' @param compress Logical, whether to compress HDF5 datasets.
 #' @keywords internal
 #' @return Invisibly returns TRUE on success, or stops on error.
-populate_H5ClusterRunSummary_in_h5file <- function(h5obj,
+populate_H5ParcellatedScanSummary_in_h5file <- function(h5obj,
                                                    scan_name,
                                                    mask_vol,
                                                    cluster_map_vol,
@@ -574,10 +574,10 @@ populate_H5ClusterRunSummary_in_h5file <- function(h5obj,
       run_grp <- scans_grp$create_group(scan_name)
 
       # Set attributes for the run group
-      hdf5r::h5attr(run_grp, "class") <- "H5ClusterRunSummary"
+      hdf5r::h5attr(run_grp, "class") <- "H5ParcellatedScanSummary"
       hdf5r::h5attr(run_grp, "n_time") <- as.integer(n_time)
 
-      # Write mask, cluster_map, cluster_ids, cluster_names (same as H5ClusterRun part)
+      # Write mask, cluster_map, cluster_ids, cluster_names (same as H5ParcellatedScan part)
       run_grp$create_dataset("mask", robj = mask_vol@.Data, dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
         chunk_dims = "auto", gzip_level = if (compress) 4L else 0L)
 
@@ -636,17 +636,17 @@ populate_H5ClusterRunSummary_in_h5file <- function(h5obj,
 
     },
     error = function(e) {
-      stop(sprintf("Error populating H5ClusterRunSummary for scan '%s': %s", scan_name, e$message))
+      stop(sprintf("Error populating H5ParcellatedScanSummary for scan '%s': %s", scan_name, e$message))
     })
 
   invisible(TRUE)
 }
 
-#' Create a minimal HDF5 file suitable for H5ClusterExperiment examples
+#' Create a minimal HDF5 file suitable for H5ParcellatedMultiScan examples
 #'
 #' This function creates a temporary HDF5 file with a minimal but valid structure
-#' for an H5ClusterExperiment, including a master mask, master cluster definitions,
-#' one H5ClusterRun, and one H5ClusterRunSummary.
+#' for an H5ParcellatedMultiScan, including a master mask, master cluster definitions,
+#' one H5ParcellatedScan, and one H5ParcellatedScanSummary.
 #'
 #' @param file_path Optional: path to HDF5 file. If \code{NULL}, a temp file is created.
 #' @param master_mask_dims 3D dimensions for the master mask, e.g., c(5L, 5L, 4L).
@@ -655,7 +655,7 @@ populate_H5ClusterRunSummary_in_h5file <- function(h5obj,
 #' @param n_time_run2 Integer, n_time for the second (summary) run.
 #' @return Path to the created HDF5 file.
 #' @keywords internal
-create_minimal_h5_for_H5ClusterExperiment <- function(
+create_minimal_h5_for_H5ParcellatedMultiScan <- function(
     file_path = NULL,
     master_mask_dims = c(5L, 5L, 4L),
     num_master_clusters = 3L,
@@ -713,7 +713,7 @@ create_minimal_h5_for_H5ClusterExperiment <- function(
     # 3. Write master mask to /mask
     h5f$create_dataset("mask", robj = master_mask_vol@.Data,
       dtype = hdf5r::h5types$H5T_NATIVE_HBOOL)
-    # Write space information for the master mask (as H5ClusterExperiment constructor uses it)
+    # Write space information for the master mask (as H5ParcellatedMultiScan constructor uses it)
     # The constructor calls .read_space(h5obj, "/")
     master_space_grp <- h5f$create_group("space") # Should be at root if path is "/"
     master_sp_obj <- neuroim2::space(master_mask_vol)
@@ -761,20 +761,20 @@ create_minimal_h5_for_H5ClusterExperiment <- function(
     }
 
     # 5. Populate a full run
-    populate_H5ClusterRun_in_h5file(h5obj = h5f,
+    populate_H5ParcellatedScan_in_h5file(h5obj = h5f,
       scan_name = "Run1_Full",
       mask_vol = master_mask_vol, # Using master mask for run
       cluster_map_vol = master_cluster_map_vol, # Using master clusters for run
       n_time = n_time_run1)
 
     # 6. Populate a summary run
-    populate_H5ClusterRunSummary_in_h5file(h5obj = h5f,
+    populate_H5ParcellatedScanSummary_in_h5file(h5obj = h5f,
       scan_name = "Run2_Summary",
       mask_vol = master_mask_vol,
       cluster_map_vol = master_cluster_map_vol,
       n_time = n_time_run2)
 
-    # 7. Create header group (required by H5ClusterExperiment constructor)
+    # 7. Create header group (required by H5ParcellatedMultiScan constructor)
     header_grp <- h5f$create_group("header")
     # dim: [4, X, Y, Z, ...] where 4 indicates NIfTI volume
     header_grp$create_dataset("dim", robj = as.integer(c(4L, master_mask_dims, 1L, 1L, 1L, 1L)),
@@ -784,13 +784,13 @@ create_minimal_h5_for_H5ClusterExperiment <- function(
       dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
 
     # 8. Set root class attribute
-    hdf5r::h5attr(h5f, "class") <- "H5ClusterExperiment"
+    hdf5r::h5attr(h5f, "class") <- "H5ParcellatedMultiScan"
     # Potentially add fmristore_version attribute if constructor checks it
     # hdf5r::h5attr(h5f, "fmristore_version") <- as.character(utils::packageVersion("fmristore"))
 
   }, error = function(e) {
     if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
-    stop(sprintf("Error creating minimal HDF5 for H5ClusterExperiment at %s: %s", out_file, e$message))
+    stop(sprintf("Error creating minimal HDF5 for H5ParcellatedMultiScan at %s: %s", out_file, e$message))
   }, finally = {
     if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) {
       try(h5f$close_all(), silent = TRUE)

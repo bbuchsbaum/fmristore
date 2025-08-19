@@ -19,16 +19,16 @@ This generic returns any available metadata associated with clusters in an objec
 \dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
     requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5ClusterExperiment", where = "package:fmristore") &&
+    exists("H5ParcellatedMultiScan", where = "package:fmristore") &&
     exists("cluster_metadata", where = "package:fmristore") &&
-    !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
+    !is.null(fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan)) {
 
   temp_exp_file <- NULL
   exp_obj <- NULL
   tryCatch({
-    # Create a minimal H5ClusterExperiment
-    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment()
-    exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
+    # Create a minimal H5ParcellatedMultiScan
+    temp_exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan()
+    exp_obj <- fmristore::H5ParcellatedMultiScan(file_path = temp_exp_file)
 
     # Get the cluster metadata
     c_meta <- cluster_metadata(exp_obj)

@@ -42,25 +42,25 @@ n_voxels <- 1000
 
 # Create basis & loadings
 basis <- Matrix(rnorm(n_timepoints * n_components),
-                nrow = n_timepoints,
-                ncol = n_components)
+  nrow = n_timepoints,
+  ncol = n_components)
 loadings <- Matrix(rnorm(n_voxels * n_components),
-                   nrow = n_voxels,
-                   ncol = n_components,
-                   sparse = TRUE)
+  nrow = n_voxels,
+  ncol = n_components,
+  sparse = TRUE)
 
 # Create space (10x10x10 volume, 100 timepoints)
-spc <- NeuroSpace(c(10,10,10,n_timepoints))
+spc <- NeuroSpace(c(10, 10, 10, n_timepoints))
 
 # Create mask
-mask_array <- array(TRUE, dim=c(10,10,10))
-mask_vol   <- LogicalNeuroVol(mask_array, NeuroSpace(c(10,10,10)))
+mask_array <- array(TRUE, dim = c(10, 10, 10))
+mask_vol   <- LogicalNeuroVol(mask_array, NeuroSpace(c(10, 10, 10)))
 
 # Construct LatentNeuroVec
 lvec <- LatentNeuroVec(basis = basis,
-                       loadings = loadings,
-                       space = spc,
-                       mask = mask_vol)
+  loadings = loadings,
+  space = spc,
+  mask = mask_vol)
 }
 
 }

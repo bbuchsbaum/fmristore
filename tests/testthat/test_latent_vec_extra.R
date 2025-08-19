@@ -3,6 +3,7 @@ library(hdf5r)
 library(neuroim2)
 library(Matrix)
 library(fmristore)
+library(methods)  # Ensure S4 methods are available
 
 # Helper to create a simple deterministic LatentNeuroVec
 make_simple_lvec <- function() {

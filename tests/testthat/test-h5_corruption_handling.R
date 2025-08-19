@@ -77,7 +77,7 @@ test_that("H5NeuroVol handles corrupted HDF5 files gracefully", {
   # )
 })
 
-test_that("H5ClusterExperiment handles invalid cluster configurations", {
+test_that("H5ParcellatedMultiScan handles invalid cluster configurations", {
   skip_if_not_installed("hdf5r")
   skip_if_not_installed("neuroim2")
 
@@ -126,7 +126,7 @@ test_that("H5ClusterExperiment handles invalid cluster configurations", {
 
   # Test: Should detect mismatch between cluster_map and actual cluster datasets
   expect_error(
-    H5ClusterExperiment(temp_file),
+    H5ParcellatedMultiScan(temp_file),
     info = "Should fail when cluster IDs in data don't match cluster_map"
   )
 
@@ -135,7 +135,7 @@ test_that("H5ClusterExperiment handles invalid cluster configurations", {
   on.exit(unlink(temp_file2), add = TRUE)
 
   # Create valid initial structure
-  fmristore:::create_minimal_h5_for_H5ClusterExperiment(
+  fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(
     file_path = temp_file2,
     master_mask_dims = c(5L, 5L, 5L),  # Fixed: use correct parameter name
     num_master_clusters = 3L,          # Fixed: use correct parameter name
@@ -159,7 +159,7 @@ test_that("H5ClusterExperiment handles invalid cluster configurations", {
   # Should fail with error about invalid cluster_metadata slot (list instead of data.frame)
   # This happens because the inconsistent lengths cause it to return a list
   expect_error(
-    H5ClusterExperiment(temp_file2),
+    H5ParcellatedMultiScan(temp_file2),
     regexp = "invalid object for slot.*cluster_metadata.*got class.*list.*should be.*data.frame",
     info = "Should fail when cluster metadata has inconsistent lengths"
   )
@@ -193,7 +193,42 @@ test_that("Concurrent HDF5 access and resource cleanup", {
     h5_vec1[1, 1, 1, 1:5]
   }, error = function(e) {
     # If even simple indexing fails, skip this specific test
-    skip(paste("HDF5 access failed:", e$message))
+    
+    error_msg <- if (inherits(e, "condition")) {
+      # Try different ways to get the message
+      tryCatch({
+        # First try conditionMessage which is the proper way
+        conditionMessage(e)
+      }, error = function(e3) {
+        # If that fails, try direct access
+        tryCatch({
+          if (!is.null(e[["message"]])) {
+            e[["message"]]
+          } else if (!is.null(e$message)) {
+            e$message
+          } else {
+            "Condition object but message not accessible"
+          }
+        }, error = function(e4) {
+          "Condition object but message extraction failed"
+        })
+      })
+    } else if (is.environment(e)) {
+      # Try to extract error info from environment
+      tryCatch({
+        # Check if there's a message element in the environment
+        if (exists("message", envir = e)) {
+          get("message", envir = e)
+        } else {
+          "Error object is an environment (no message found)"
+        }
+      }, error = function(e2) {
+        "Error object is an environment (could not access contents)"
+      })
+    } else {
+      paste("Unknown error type:", class(e))
+    }
+    skip(paste("HDF5 access failed:", error_msg))
   })
   expect_length(data1, 5)
   close(h5_vec1)
@@ -205,7 +240,31 @@ test_that("Concurrent HDF5 access and resource cleanup", {
   data2 <- tryCatch({
     h5_vec2[1, 1, 1, 6:10]
   }, error = function(e) {
-    skip(paste("HDF5 access failed:", e$message))
+    error_msg <- if (inherits(e, "condition")) {
+      # Try different ways to get the message
+      tryCatch({
+        # First try conditionMessage which is the proper way
+        conditionMessage(e)
+      }, error = function(e3) {
+        # If that fails, try direct access
+        tryCatch({
+          if (!is.null(e[["message"]])) {
+            e[["message"]]
+          } else if (!is.null(e$message)) {
+            e$message
+          } else {
+            "Condition object but message not accessible"
+          }
+        }, error = function(e4) {
+          "Condition object but message extraction failed"
+        })
+      })
+    } else if (is.environment(e)) {
+      "Error object is an environment (not a standard condition)"
+    } else {
+      paste("Unknown error type:", class(e))
+    }
+    skip(paste("HDF5 access failed:", error_msg))
   })
   expect_length(data2, 5)
   close(h5_vec2)

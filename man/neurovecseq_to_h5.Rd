@@ -19,7 +19,7 @@ neurovecseq_to_h5(
 
 \item{file}{Path to the output HDF5 file. If NULL, uses a temporary file.}
 
-\item{scan_names}{Optional character vector of names for each scan. 
+\item{scan_names}{Optional character vector of names for each scan.
 If NULL, uses "scan_1", "scan_2", etc.}
 
 \item{data_type}{Character string specifying the data type: "FLOAT" (default), "DOUBLE", or "INT"}
@@ -57,21 +57,21 @@ The HDF5 file structure created is:
 \examples{
 \dontrun{
 # Create example NeuroVec objects with different time dimensions
-vec1 <- NeuroVec(array(rnorm(10*10*5*20), dim=c(10,10,5,20)), 
-                 NeuroSpace(c(10,10,5,20)))
-vec2 <- NeuroVec(array(rnorm(10*10*5*30), dim=c(10,10,5,30)),
-                 NeuroSpace(c(10,10,5,30)))
+vec1 <- NeuroVec(array(rnorm(10 * 10 * 5 * 20), dim = c(10, 10, 5, 20)),
+  NeuroSpace(c(10, 10, 5, 20)))
+vec2 <- NeuroVec(array(rnorm(10 * 10 * 5 * 30), dim = c(10, 10, 5, 30)),
+  NeuroSpace(c(10, 10, 5, 30)))
 
 # Create NeuroVecSeq
 nvs <- NeuroVecSeq(vec1, vec2)
 
 # Convert to HDF5
-h5_file <- neurovecseq_to_h5(nvs, 
-                              scan_names = c("rest_run1", "task_run1"),
-                              scan_metadata = list(
-                                rest_run1 = list(TR = 2.0, task = "rest"),
-                                task_run1 = list(TR = 2.0, task = "motor")
-                              ))
+h5_file <- neurovecseq_to_h5(nvs,
+  scan_names = c("rest_run1", "task_run1"),
+  scan_metadata = list(
+    rest_run1 = list(TR = 2.0, task = "rest"),
+    task_run1 = list(TR = 2.0, task = "motor")
+))
 
 # File can later be read back (functionality to be implemented)
 unlink(h5_file)

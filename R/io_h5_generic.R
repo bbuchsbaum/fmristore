@@ -37,24 +37,26 @@ setMethod(
   }
 )
 
-#' @rdname as_h5-methods
-#' @export
-setMethod(
-  f = "as_h5",
-  signature = signature(object = "list"),
-  definition = function(object, file, scan_names, mask, clusters,
-                        scan_metadata, cluster_metadata = NULL,
-                        summary_only = FALSE, compression = 4,
-                        chunk_size = 1024) {
-    write_clustered_dataset(file = file, vecs = object, scan_names = scan_names,
-      mask = mask, clusters = clusters,
-      scan_metadata = scan_metadata,
-      cluster_metadata = cluster_metadata,
-      summary_only = summary_only,
-      compression = compression,
-      chunk_size = chunk_size)
-  }
-)
+# Deprecated: This method calls write_clustered_dataset which is deprecated
+# Use write_dataset() methods instead for list of NeuroVecs
+# #' @rdname as_h5-methods
+# #' @export
+# setMethod(
+#   f = "as_h5",
+#   signature = signature(object = "list"),
+#   definition = function(object, file, scan_names, mask, clusters,
+#                         scan_metadata, cluster_metadata = NULL,
+#                         summary_only = FALSE, compression = 4,
+#                         chunk_size = 1024) {
+#     write_clustered_dataset(file = file, vecs = object, scan_names = scan_names,
+#       mask = mask, clusters = clusters,
+#       scan_metadata = scan_metadata,
+#       cluster_metadata = cluster_metadata,
+#       summary_only = summary_only,
+#       compression = compression,
+#       chunk_size = chunk_size)
+#   }
+# )
 
 #' @rdname as_h5-methods
 #' @export

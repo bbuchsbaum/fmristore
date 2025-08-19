@@ -56,10 +56,10 @@ navbar:
         href: articles/H5Neuro.html
       - text: "Labeled Volume Sets"
         href: articles/LabeledVolumeSet.html
-      - text: "Cluster Experiments"
-        href: articles/H5ClusterExperiment.html
-      - text: "Cluster Runs"
-        href: articles/H5ClusterRun.html
+      - text: "Parcellated Multi-Scan Data"
+        href: articles/H5ParcellatedMultiScan.html
+      - text: "Parcellated Scan Data"
+        href: articles/H5ParcellatedScan.html
     reference:
       text: "Reference"
       href: reference/index.html
@@ -76,10 +76,10 @@ navbar:
         href: articles/LabeledVolumeSet.html
       - text: "---"
       - text: "Advanced Usage"
-      - text: "Cluster Experiments"
-        href: articles/H5ClusterExperiment.html
-      - text: "Cluster Runs"
-        href: articles/H5ClusterRun.html
+      - text: "Parcellated Multi-Scan Data"
+        href: articles/H5ParcellatedMultiScan.html
+      - text: "Parcellated Scan Data"
+        href: articles/H5ParcellatedScan.html
 
 
 
@@ -93,8 +93,8 @@ articles:
 - title: "Advanced Topics"
   navbar: ~
   contents:
-  - H5ClusterExperiment
-  - H5ClusterRun
+  - H5ParcellatedMultiScan
+  - H5ParcellatedScan
 
 news:
   releases:

@@ -86,7 +86,7 @@
 #' unlink(temp_file)
 #' }
 #'
-#' @importFrom hdf5r H5File h5file is.h5file
+#' @importFrom hdf5r H5File is.h5file
 #' @importFrom neuroim2 spacing space origin trans matrixToQuatern DenseNeuroVol
 #' @importFrom hdf5r H5T_STRING H5S
 #' @importFrom lifecycle deprecate_warn
@@ -341,7 +341,7 @@ write_labeled_vec <- function(vec,
 #' # Important: Close the handle when done
 #' close(lvs)
 #' }
-#' @importFrom hdf5r H5File h5file is.h5file
+#' @importFrom hdf5r H5File is.h5file
 #' @export
 read_labeled_vec <- function(file_path) {
   # --- 1. Handle File Source ---

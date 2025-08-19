@@ -137,12 +137,56 @@ assert_h5_path <- function(h5, path, desc = "Path") {
 #'
 #' @return The data read from the dataset, or `NULL` if `missing_ok=TRUE` and the dataset is not found.
 #' @keywords internal
-h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
+#' Check dataset size and warn about memory usage if large
+#'
+#' @param h5 H5File object
+#' @param path Dataset path
+#' @param warn_threshold_mb Memory threshold in MB for warnings (default: 100MB)
+#' @keywords internal
+#' @noRd
+.check_memory_usage <- function(h5, path, warn_threshold_mb = 100) {
+  tryCatch({
+    if (h5$exists(path)) {
+      dset <- h5[[path]]
+      tryCatch({
+        dims <- dset$dims
+        dtype <- dset$get_type()
+        
+        # Estimate size
+        element_size <- tryCatch(
+          dtype$get_size(),
+          error = function(e) 8  # Default to 8 bytes if size can't be determined
+        )
+        
+        total_elements <- prod(dims)
+        estimated_size_mb <- (total_elements * element_size) / (1024^2)
+        
+        if (estimated_size_mb > warn_threshold_mb) {
+          warning(sprintf(
+            "[fmristore] Large dataset operation: ~%.1f MB will be loaded into memory. Consider subsetting for large datasets.",
+            estimated_size_mb
+          ), call. = FALSE)
+        }
+      }, finally = {
+        if (dset$is_valid) try(dset$close(), silent = TRUE)
+      })
+    }
+  }, error = function(e) {
+    # Silently ignore memory check errors to avoid breaking data operations
+  })
+}
+
+h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL, warn_memory = TRUE) {
   if (!inherits(h5, "H5File") || !h5$is_valid) {
     stop("h5_read: 'h5' must be a valid and open H5File object.")
   }
   if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
     stop("h5_read: 'path' must be a single, non-empty character string.")
+  }
+  
+  # Check memory usage if enabled
+  if (warn_memory && getOption("fmristore.warn_memory", TRUE)) {
+    .check_memory_usage(h5, path, getOption("fmristore.memory_threshold_mb", 100))
   }
 
   path_exists <- tryCatch(
@@ -209,12 +253,61 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL) {
 #'   \code{index} argument.
 #' @return The subset of data read from the dataset.
 #' @keywords internal
-h5_read_subset <- function(h5, path, index = NULL) {
+h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
   if (!inherits(h5, "H5File") || !h5$is_valid) {
     stop("h5_read_subset: 'h5' must be a valid open H5File object.")
   }
   if (!is.character(path) || length(path) != 1L || !nzchar(path)) {
     stop("h5_read_subset: 'path' must be a single, non-empty character string.")
+  }
+  
+  # Check memory usage for subset operations if enabled
+  if (warn_memory && getOption("fmristore.warn_memory", TRUE) && !is.null(index)) {
+    # For subsets, estimate based on requested indices
+    tryCatch({
+      if (h5$exists(path)) {
+        dset <- h5[[path]]
+        tryCatch({
+          dims <- dset$dims
+          dtype <- dset$get_type()
+          
+          # Estimate subset size
+          element_size <- tryCatch(dtype$get_size(), error = function(e) 8)
+          
+          if (is.list(index)) {
+            # Calculate subset dimensions
+            subset_elements <- 1
+            for (i in seq_along(index)) {
+              if (i <= length(dims)) {
+                subset_elements <- subset_elements * length(index[[i]])
+              }
+            }
+            # Add remaining dimensions not specified in index
+            for (j in (length(index) + 1):length(dims)) {
+              if (j <= length(dims)) {
+                subset_elements <- subset_elements * dims[j]
+              }
+            }
+          } else {
+            subset_elements <- prod(dims)  # Fallback to full size
+          }
+          
+          estimated_size_mb <- (subset_elements * element_size) / (1024^2)
+          threshold <- getOption("fmristore.memory_threshold_mb", 100)
+          
+          if (estimated_size_mb > threshold) {
+            warning(sprintf(
+              "[fmristore] Large subset operation: ~%.1f MB will be loaded into memory.",
+              estimated_size_mb
+            ), call. = FALSE)
+          }
+        }, finally = {
+          if (dset$is_valid) try(dset$close(), silent = TRUE)
+        })
+      }
+    }, error = function(e) {
+      # Silently ignore memory check errors
+    })
   }
 
   if (!h5$exists(path)) {

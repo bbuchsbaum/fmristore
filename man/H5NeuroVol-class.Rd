@@ -34,9 +34,9 @@ representing the underlying HDF5 file containing the brain image data.}
 \examples{
 \dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
-    requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5NeuroVol", where = "package:fmristore") && # Check if constructor is available
-    !is.null(fmristore:::create_minimal_h5_for_H5NeuroVol)) { # Check helper
+  requireNamespace("hdf5r", quietly = TRUE) &&
+  exists("H5NeuroVol", where = "package:fmristore") && # Check if constructor is available
+  !is.null(fmristore:::create_minimal_h5_for_H5NeuroVol)) { # Check helper
 
   # Setup: Create a temporary HDF5 file using a helper
   # The helper creates a dataset named "data/elements" by default.

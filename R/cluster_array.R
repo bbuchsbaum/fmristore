@@ -1,5 +1,5 @@
 #' @include all_class.R
-#' @importFrom hdf5r H5File h5file is.h5file
+#' @importFrom hdf5r H5File is.h5file
 #' @importFrom neuroim2 NeuroSpace space
 #' @importFrom withr defer
 #' @importFrom methods new is
@@ -12,16 +12,21 @@ NULL
 
 #' @rdname mask-methods
 #' @export
-setMethod("mask", "H5ClusteredArray", function(x) x@mask)
+setMethod("mask", "H5ParcellatedArray", function(x) x@mask)
 
 #' @rdname clusters-methods
 #' @export
-setMethod("clusters", "H5ClusteredArray", function(x) x@clusters)
+setMethod("clusters", "H5ParcellatedArray", function(x) x@clusters)
 
 
 #' @rdname h5file-methods
 #' @export
-setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
+setMethod("h5file", "H5ParcellatedArray", function(x) {
+  if (is.null(x@obj)) {
+    stop("H5File object is NULL")
+  }
+  x@obj$filename
+})
 
 
 #' Get Cluster Time Series by Mask Index (Internal Helper)
@@ -31,11 +36,11 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
 #' (specified by mask-relative indices) from their corresponding cluster datasets
 #' in an HDF5 file.
 #'
-#' This function is designed to work with objects inheriting from `H5ClusteredArray`.
+#' This function is designed to work with objects inheriting from `H5ParcellatedArray`.
 #' It uses the `.dataset_path` generic method (which must be implemented by concrete subclasses)
 #' to locate the correct HDF5 dataset for each cluster.
 #'
-#' @param x An object inheriting from `H5ClusteredArray`.
+#' @param x An object inheriting from `H5ParcellatedArray`.
 #' @param mask_indices An integer vector of voxel indices relative to the mask (1 to `x@n_voxels`).
 #' @param time_indices An integer vector specifying which time points to retrieve.
 #'   If `NULL`, all time points are retrieved.
@@ -45,9 +50,28 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
 #'         containing the requested time series data.
 #' @keywords internal
 #' @noRd
+.get_cluster_data_cached <- function(obj, cluster_ids) {
+  # Implementation would go here but this function seems incomplete
+  stop("Function not implemented")
+}
+
+#' Pre-compute cluster index mappings for efficient access
+#'
+#' @description
+#' Creates a mapping from cluster IDs to their corresponding voxel indices.
+#' This avoids repeated calls to `which()` for each cluster during data retrieval.
+#'
+#' @param clusters_vector Integer vector of cluster assignments
+#' @return Named list where names are cluster IDs and values are integer vectors of indices
+#' @keywords internal
+#' @noRd
+.precompute_cluster_indices <- function(clusters_vector) {
+  split(seq_along(clusters_vector), clusters_vector)
+}
+
 .get_cluster_timeseries_by_mask_index <- function(x, mask_indices, time_indices = NULL, n_time) {
   # 1. Validate spatial indices 'mask_indices' (relative to mask)
-  nVoxMask <- x@n_voxels # Use stored voxel count from H5ClusteredArray
+  nVoxMask <- x@n_voxels # Use stored voxel count from H5ParcellatedArray
   if (any(mask_indices < 1 | mask_indices > nVoxMask)) {
     stop(sprintf("[.get_cluster_timeseries] Indices in 'mask_indices' are out of the valid mask range [1..%d]", nVoxMask))
   }
@@ -75,7 +99,7 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
   result_mat <- matrix(NA_real_, nrow = n_request, ncol = n_time_request)
 
   # 4. Get cluster assignments for *all* requested indices ONCE
-  # Accessing clusters slot from H5ClusteredArray
+  # Accessing clusters slot from H5ParcellatedArray
   clus_ids_req <- tryCatch(x@clusters@clusters[mask_indices], error = function(e) {
     stop(sprintf("[.get_cluster_timeseries] Failed to get cluster assignments for provided indices. Error: %s", e$message))
   })
@@ -83,9 +107,11 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
   # 5. Group requested indices by their cluster ID
   index_groups <- split(seq_len(n_request), clus_ids_req)
   needed_cluster_ids <- names(index_groups)
-  # Removed base_path calculation
+  
+  # 6. Pre-compute cluster index map once for all clusters
+  cluster_index_map <- .precompute_cluster_indices(x@clusters@clusters)
 
-  # 6. Loop through needed clusters and read data
+  # 7. Loop through needed clusters and read data
   for (cid_str in needed_cluster_ids) {
     cid <- as.integer(cid_str) # Cluster ID should be integer
     row_indices_in_result <- index_groups[[cid_str]]
@@ -100,7 +126,11 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
 
     tryCatch(
       {
-        all_mask_indices_in_this_cluster <- which(x@clusters@clusters == cid)
+        # Use pre-computed cluster indices instead of which()
+        all_mask_indices_in_this_cluster <- cluster_index_map[[cid_str]]
+        if (is.null(all_mask_indices_in_this_cluster)) {
+          stop(sprintf("Cluster %d not found in pre-computed index map", cid))
+        }
         row_offsets_in_dataset <- match(mask_indices_this_cluster_req, all_mask_indices_in_this_cluster)
 
         if (any(is.na(row_offsets_in_dataset))) {
@@ -154,37 +184,37 @@ setMethod("h5file", "H5ClusteredArray", function(x) x@obj)
 
 #' @keywords internal
 #' @noRd
-setMethod(".dataset_path", "H5ClusteredArray",
+setMethod(".dataset_path", "H5ParcellatedArray",
   function(x, cid, ...) {
     stop(sprintf("Internal Error: .dataset_path method not implemented for class '%s'. Subclass must provide a method.", class(x)[1]))
   })
 
-#' Get HDF5 Dataset Path for H5ClusterRun
+#' Get HDF5 Dataset Path for H5ParcellatedScan
 #'
 #' @description
-#' Implementation of the `.dataset_path` generic for `H5ClusterRun` objects.
+#' Implementation of the `.dataset_path` generic for `H5ParcellatedScan` objects.
 #' Constructs the path to a specific cluster dataset within the run's group in the HDF5 file,
 #' typically `/scans/<scan_name>/clusters/cluster_<cid>`.
 #'
-#' @param x An `H5ClusterRun` object.
+#' @param x An `H5ParcellatedScan` object.
 #' @param cid The cluster ID (integer).
 #' @param ... Additional arguments (not used).
 #'
 #' @return A character string representing the HDF5 dataset path.
 #' @keywords internal
 #' @noRd
-setMethod(".dataset_path", "H5ClusterRun",
+setMethod(".dataset_path", "H5ParcellatedScan",
   function(x, cid) {
     # Basic validation
     if (!is.numeric(cid) || length(cid) != 1 || floor(cid) != cid || cid <= 0) {
-      stop("['.dataset_path', H5ClusterRun] Cluster ID 'cid' must be a single positive integer.")
+      stop("['.dataset_path', H5ParcellatedScan] Cluster ID 'cid' must be a single positive integer.")
     }
     if (!is.character(x@scan_name) || length(x@scan_name) != 1 || nchar(x@scan_name) == 0) {
-      stop("['.dataset_path', H5ClusterRun] Invalid 'scan_name' slot.")
+      stop("['.dataset_path', H5ParcellatedScan] Invalid 'scan_name' slot.")
     }
 
-    # Construct the standard path
-    sprintf("/scans/%s/clusters/cluster_%d", x@scan_name, as.integer(cid))
+    # Construct the standard path using constants
+    sprintf(H5_PATHS$CLUSTER_DSET_TPL, x@scan_name, as.integer(cid))
   })
 
 
@@ -192,11 +222,11 @@ setMethod(".dataset_path", "H5ClusterRun",
 #' @keywords internal
 #' @noRd
 .subset_h5crunfull <- function(x, i, j, k, l, drop = TRUE) {
-  # Inherits obj, mask, clusters, n_voxels from H5ClusteredArray
-  # Uses scan_name, n_time from H5ClusterRun
+  # Inherits obj, mask, clusters, n_voxels from H5ParcellatedArray
+  # Uses scan_name, n_time from H5ParcellatedScan
   dims   <- dim(x@mask)
   nvox   <- x@n_voxels
-  nt     <- x@n_time # Use n_time from H5ClusterRun
+  nt     <- x@n_time # Use n_time from H5ParcellatedScan
 
   # ---------- 1.  default / normalise inputs -----------------------
   if (missing(j) || is.null(j)) j <- NULL
@@ -222,16 +252,16 @@ setMethod(".dataset_path", "H5ClusterRun",
   if (is.null(k)) k <- seq_len(dims[3])
 
   if (!is.numeric(i) || !is.numeric(j) || !is.numeric(k) || !is.numeric(l)) {
-    stop("[',H5ClusterRun'] Subscripts must be numeric or NULL.")
+    stop("[',H5ParcellatedScan'] Subscripts must be numeric or NULL.")
   }
 
   if (any(i < 1L | i > dims[1L]) ||
     any(j < 1L | j > dims[2L]) ||
     any(k < 1L | k > dims[3L]))
-    stop("[',H5ClusterRun'] Spatial subscript out of bounds")
+    stop("[',H5ParcellatedScan'] Spatial subscript out of bounds")
 
   if (any(l < 1L | l > nt))
-    stop("[',H5ClusterRun'] Time subscript out of bounds")
+    stop("[',H5ParcellatedScan'] Time subscript out of bounds")
 
   out <- array(0, dim = c(length(i), length(j), length(k), length(l)))
 
@@ -260,13 +290,13 @@ setMethod(".dataset_path", "H5ClusterRun",
   if (drop) drop(out) else out
 }
 
-#' Subset an H5ClusterRun Object
+#' Subset an H5ParcellatedScan Object
 #'
 #' @description
-#' Extracts data from an \code{H5ClusterRun} object using array-like indexing.
+#' Extracts data from an \code{H5ParcellatedScan} object using array-like indexing.
 #' Handles both coordinate-based and mask-index-based subsetting.
 #'
-#' @param x An \code{H5ClusterRun} object.
+#' @param x An \code{H5ParcellatedScan} object.
 #' @param i Row index (x-coordinate or mask index).
 #' @param j Column index (y-coordinate).
 #' @param k Slice index (z-coordinate).
@@ -278,18 +308,18 @@ setMethod(".dataset_path", "H5ClusterRun",
 #' @export
 #' @family H5Cluster
 setMethod("[",
-  signature(x = "H5ClusterRun", i = "ANY", j = "ANY", drop = "ANY"),
+  signature(x = "H5ParcellatedScan", i = "ANY", j = "ANY", drop = "ANY"),
   function(x, i, j, k, l, ..., drop = TRUE)
     .subset_h5crunfull(x, i, j, k, l, drop))
 
 
-#' Extract data from H5ClusterRun with missing j parameter
+#' Extract data from H5ParcellatedScan with missing j parameter
 #'
 #' @description
-#' Extracts data from an \code{H5ClusterRun} object when only the first index is provided.
+#' Extracts data from an \code{H5ParcellatedScan} object when only the first index is provided.
 #' Can handle mask indices, coordinate matrices, or pass through to coordinate-based indexing.
 #'
-#' @param x An \code{H5ClusterRun} object
+#' @param x An \code{H5ParcellatedScan} object
 #' @param i Row index (x-coordinate), mask indices, or coordinate matrix
 #' @param j Missing (not provided)
 #' @param k Slice index (z-coordinate) - optional, passed via ...
@@ -303,7 +333,7 @@ setMethod("[",
 #' @family H5Cluster
 #' @rdname extract-methods
 setMethod("[",
-  signature(x = "H5ClusterRun", i = "ANY", j = "missing", drop = "ANY"),
+  signature(x = "H5ParcellatedScan", i = "ANY", j = "missing", drop = "ANY"),
   definition = function(x, i, j, ..., drop = TRUE) {
     # Handle cases: x[mask_indices], x[coords_matrix], x[i,j,k] (falls through if l missing)
     # Let the main helper sort it out.
@@ -314,11 +344,11 @@ setMethod("[",
 #' @export
 #' @family H5Cluster
 #' @rdname dim-methods
-setMethod("dim", "H5ClusterRun",
+setMethod("dim", "H5ParcellatedScan",
   function(x) {
     n_time <- x@n_time
     if (is.null(n_time) || is.na(n_time) || length(n_time) != 1 || n_time <= 0 || floor(n_time) != n_time) {
-      stop(sprintf("[dim,H5ClusterRun] Slot 'n_time' (%s) is invalid.", as.character(n_time)))
+      stop(sprintf("[dim,H5ParcellatedScan] Slot 'n_time' (%s) is invalid.", as.character(n_time)))
     }
     c(dim(x@mask), n_time)
   }
@@ -330,7 +360,7 @@ setMethod("dim", "H5ClusterRun",
 #' @family H5Cluster
 setMethod(
   f = "series",
-  signature = signature(x = "H5ClusterRun", i = "numeric"),
+  signature = signature(x = "H5ParcellatedScan", i = "numeric"),
   definition = function(x, i, j, k, ...) {
 
     dims_mask <- dim(x@mask)
@@ -342,12 +372,12 @@ setMethod(
       # Case 1: i is numeric mask indices
       mask_indices_req <- as.integer(i)
       if (any(mask_indices_req < 1 | mask_indices_req > n_vox_mask)) {
-        stop(sprintf("[series,H5ClusterRun] Mask indices out of range [1..%d]", n_vox_mask))
+        stop(sprintf("[series,H5ParcellatedScan] Mask indices out of range [1..%d]", n_vox_mask))
       }
     } else if (!missing(j) && !missing(k)) {
       # Case 2: i, j, k are single coordinates
       if (length(i) != 1 || length(j) != 1 || length(k) != 1) {
-        stop("[series,H5ClusterRun] If providing i, j, k, they must be single values.")
+        stop("[series,H5ParcellatedScan] If providing i, j, k, they must be single values.")
       }
       coords <- matrix(c(i, j, k), nrow = 1, ncol = 3)
       # --- Convert coordinate to mask index ---
@@ -356,20 +386,20 @@ setMethod(
       if (any(coords[, 1] < 1 | coords[, 1] > dims_mask[1]) ||
         any(coords[, 2] < 1 | coords[, 2] > dims_mask[2]) ||
         any(coords[, 3] < 1 | coords[, 3] > dims_mask[3])) {
-        stop("[series,H5ClusterRun] Coordinates are out of bounds.")
+        stop("[series,H5ParcellatedScan] Coordinates are out of bounds.")
       }
       linear_idx_full <- coords[, 1] + (coords[, 2] - 1) * dims_mask[1] + (coords[, 3] - 1) * dims_mask[1] * dims_mask[2]
       if (!mask_array[linear_idx_full]) {
-        warning("[series,H5ClusterRun] Requested coordinate falls outside the mask.")
+        warning("[series,H5ParcellatedScan] Requested coordinate falls outside the mask.")
         return(matrix(numeric(0), nrow = nt, ncol = 0))
       }
       mask_indices_req <- match(linear_idx_full, global_mask_indices)
       if (is.na(mask_indices_req)) {
-        stop("[series,H5ClusterRun] Internal error: Failed to map valid coordinate to mask index.")
+        stop("[series,H5ParcellatedScan] Internal error: Failed to map valid coordinate to mask index.")
       }
       # --- End conversion ---
     } else {
-      stop("[series,H5ClusterRun] Invalid arguments. Provide numeric mask indices (i), a 3-col matrix (i), or single coordinates (i, j, k).")
+      stop("[series,H5ParcellatedScan] Invalid arguments. Provide numeric mask indices (i), a 3-col matrix (i), or single coordinates (i, j, k).")
     }
 
     if (is.null(mask_indices_req) || length(mask_indices_req) == 0) {
@@ -388,11 +418,11 @@ setMethod(
 #' @family H5Cluster
 setMethod(
   f = "series",
-  signature = signature(x = "H5ClusterRun", i = "matrix"),
+  signature = signature(x = "H5ParcellatedScan", i = "matrix"),
   definition = function(x, i, ...) {
     coords <- i
     if (ncol(coords) != 3) {
-      stop("[series,H5ClusterRun] Coordinate matrix 'i' must have 3 columns.")
+      stop("[series,H5ParcellatedScan] Coordinate matrix 'i' must have 3 columns.")
     }
 
     dims_mask <- dim(x@mask)
@@ -404,14 +434,14 @@ setMethod(
     if (any(coords[, 1] < 1 | coords[, 1] > dims_mask[1]) ||
       any(coords[, 2] < 1 | coords[, 2] > dims_mask[2]) ||
       any(coords[, 3] < 1 | coords[, 3] > dims_mask[3])) {
-      stop("[series,H5ClusterRun] Coordinates are out of bounds.")
+      stop("[series,H5ParcellatedScan] Coordinates are out of bounds.")
     }
 
     linear_idx_full <- coords[, 1] + (coords[, 2] - 1) * dims_mask[1] + (coords[, 3] - 1) * dims_mask[1] * dims_mask[2]
     in_mask_subset <- mask_array[linear_idx_full]
 
     if (!all(in_mask_subset)) {
-      warning("[series,H5ClusterRun] Some coordinates fall outside mask and will be ignored.")
+      warning("[series,H5ParcellatedScan] Some coordinates fall outside mask and will be ignored.")
       coords <- coords[in_mask_subset, , drop = FALSE]
       linear_idx_full <- linear_idx_full[in_mask_subset]
       if (length(linear_idx_full) == 0) {
@@ -421,7 +451,7 @@ setMethod(
 
     mask_indices_req <- match(linear_idx_full, global_mask_indices)
     if (any(is.na(mask_indices_req))) {
-      stop("[series,H5ClusterRun] Internal error: Failed to map valid coordinates to mask indices.")
+      stop("[series,H5ParcellatedScan] Internal error: Failed to map valid coordinates to mask indices.")
     }
     if (length(mask_indices_req) == 0) {
       return(matrix(numeric(0), nrow = nt, ncol = 0))
@@ -444,11 +474,11 @@ setMethod(
 #' @export
 #' @family H5Cluster
 #' @rdname linear_access-methods
-#' @description Provides 4D linear access to data in an \code{H5ClusterRun} object.
+#' @description Provides 4D linear access to data in an \code{H5ParcellatedScan} object.
 #' It reconstructs voxel values on the fly from the HDF5 file based on their cluster assignments.
 #' Values for voxels outside the mask are returned as 0.
 #'
-#' @param x An \code{H5ClusterRun} object.
+#' @param x An \code{H5ParcellatedScan} object.
 #' @param i A numeric vector of 4D linear indices.
 #' @param ... Additional arguments (not used for this method).
 #'
@@ -458,25 +488,25 @@ setMethod(
 #' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'   requireNamespace("hdf5r", quietly = TRUE) &&
-#'   exists("H5ClusterExperiment", where = "package:fmristore") &&
+#'   exists("H5ParcellatedMultiScan", where = "package:fmristore") &&
 #'   exists("linear_access", where = "package:neuroim2") &&
-#'   !is.null(fmristore:::create_minimal_h5_for_H5ClusterExperiment)) {
+#'   !is.null(fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan)) {
 #'
 #'   temp_exp_file <- NULL
 #'   exp_obj <- NULL
 #'   run_full <- NULL
 #'
 #'   tryCatch({
-#'     # Create a minimal H5ClusterExperiment
-#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(
+#'     # Create a minimal H5ParcellatedMultiScan
+#'     temp_exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(
 #'       master_mask_dims = c(3L, 3L, 2L), # Small dimensions
 #'       num_master_clusters = 2L,
 #'       n_time_run1 = 4L, # For Run1_Full
 #'       n_time_run2 = 0   # No need for Run2_Summary here
 #'     )
-#'     exp_obj <- fmristore::H5ClusterExperiment(file_path = temp_exp_file)
+#'     exp_obj <- fmristore::H5ParcellatedMultiScan(file_path = temp_exp_file)
 #'
-#'     # Access the H5ClusterRun object (helper creates "Run1_Full")
+#'     # Access the H5ParcellatedScan object (helper creates "Run1_Full")
 #'     # The runs() method should give access to the list of runs
 #'     available_runs <- runs(exp_obj)
 #'     run_full <- available_runs[["Run1_Full"]] # Assuming helper creates this scan name
@@ -495,7 +525,7 @@ setMethod(
 #'
 #'       if (length(indices_to_access) > 0) {
 #'         accessed_values <- neuroim2::linear_access(run_full, indices_to_access)
-#'         cat("Accessed values for H5ClusterRun:\n")
+#'         cat("Accessed values for H5ParcellatedScan:\n")
 #'         print(accessed_values)
 #'         cat("Number of values accessed:", length(accessed_values), "\n")
 #'       } else {
@@ -506,7 +536,7 @@ setMethod(
 #'     }
 #'
 #'   }, error = function(e) {
-#'     message("linear_access example for H5ClusterRun failed: ", e$message)
+#'     message("linear_access example for H5ParcellatedScan failed: ", e$message)
 #'     if (!is.null(temp_exp_file)) message("Temporary file was: ", temp_exp_file)
 #'   }, finally = {
 #'     if (!is.null(exp_obj)) try(close(exp_obj), silent = TRUE)
@@ -516,22 +546,22 @@ setMethod(
 #'     }
 #'   })
 #' } else {
-#'   message("Skipping linear_access H5ClusterRun example: dependencies/helpers not available.")
+#'   message("Skipping linear_access H5ParcellatedScan example: dependencies/helpers not available.")
 #' }
 #' }
 setMethod(
   f = "linear_access",
-  signature = signature(x = "H5ClusterRun", i = "numeric"),
+  signature = signature(x = "H5ParcellatedScan", i = "numeric"),
   definition = function(x, i, ...) {
 
-    full_dims <- dim(x) # Uses dim method for H5ClusterRun
+    full_dims <- dim(x) # Uses dim method for H5ParcellatedScan
     nt <- full_dims[4]
     n_request <- length(i)
     if (n_request == 0) return(numeric(0))
 
     max_elements <- prod(full_dims)
     if (any(i < 1 | i > max_elements)) {
-      stop(sprintf("[linear_access,H5ClusterRun] 4D indices out of range [1..%d]", max_elements))
+      stop(sprintf("[linear_access,H5ParcellatedScan] 4D indices out of range [1..%d]", max_elements))
     }
 
     coords4d <- arrayInd(i, .dim = full_dims)
@@ -576,14 +606,14 @@ setMethod(
 #' @family H5Cluster
 setMethod(
   f = "show",
-  signature = "H5ClusterRun",
+  signature = "H5ParcellatedScan",
   definition = function(object) {
-    cat("\n", crayon::bold(crayon::blue("H5ClusterRun")), "\n", sep = "")
+    cat("\n", crayon::bold(crayon::blue("H5ParcellatedScan")), "\n", sep = "")
     cat(crayon::silver("----------------------------------------\n"))
     cat(crayon::bold(crayon::yellow("Run Info")), "\n")
     cat(crayon::silver(" * "), crayon::green("Scan Name:"), object@scan_name, "\n")
     cat(crayon::silver(" * "), crayon::green("Time points:"), object@n_time, "\n")
-    cat(crayon::bold("\nShared Info (from H5ClusteredArray)"), "\n")
+    cat(crayon::bold("\nShared Info (from H5ParcellatedArray)"), "\n")
     cat(crayon::silver(" * "), crayon::green("Active voxels in mask:"), object@n_voxels, "\n")
     if (!is.null(object@clusters) && length(object@clusters@clusters) > 0) {
       cluster_ids <- unique(object@clusters@clusters)
@@ -617,10 +647,10 @@ setMethod(
 )
 
 
-#' Constructor for H5ClusterRun Objects
+#' Constructor for H5ParcellatedScan Objects
 #'
 #' @description
-#' Creates a new `H5ClusterRun` object, representing a single run of full
+#' Creates a new `H5ParcellatedScan` object, representing a single run of full
 #' voxel-level clustered data from an HDF5 file.
 #'
 #' It performs necessary validation and can read metadata like `n_time` directly
@@ -635,15 +665,15 @@ setMethod(
 #'   or `/scans/<scan_name>/metadata/n_time`).
 #' @param compress (Optional) Logical indicating compression status (metadata).
 #'
-#' @return A new `H5ClusterRun` object.
+#' @return A new `H5ParcellatedScan` object.
 #'
 #' @examples
 #' \dontrun{
-#' # Note: This function is deprecated in favor of H5ClusterRun()
+#' # Note: This function is deprecated in favor of H5ParcellatedScan()
 #'
 #' # Create temporary HDF5 file
 #' temp_file <- tempfile(fileext = ".h5")
-#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(file_path = temp_file)
 #'
 #' # Create mask and clusters
 #' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
@@ -669,7 +699,7 @@ make_run_full <- function(file_source, scan_name,
   lifecycle::deprecate_warn(
     when = "0.2.0",
     what = "make_run_full()",
-    with = "H5ClusterRun()",
+    with = "H5ParcellatedScan()",
     details = "The make_run_* functions are deprecated in favor of direct H5* constructors."
   )
 
@@ -704,7 +734,7 @@ make_run_full <- function(file_source, scan_name,
   # --- 3. Determine n_time ---
   if (is.null(n_time)) {
     # Try to read n_time from HDF5 attributes or metadata dataset
-    scan_group_path <- paste0("/scans/", scan_name)
+    scan_group_path <- sprintf(H5_PATHS$SCAN_GROUP_TPL, scan_name)
     scan_group <- NULL
     ds <- NULL # Ensure ds is NULL initially for cleanup
 
@@ -745,10 +775,10 @@ make_run_full <- function(file_source, scan_name,
             first_cid <- clusters@clusters[1]
             if (!is.null(first_cid)) {
               # Construct path directly, avoiding dummy object creation
-              dset_path_cid1 <- sprintf("/scans/%s/clusters/cluster_%d", scan_name, as.integer(first_cid))
+              dset_path_cid1 <- sprintf(H5_PATHS$CLUSTER_DSET_TPL, scan_name, as.integer(first_cid))
 
               # Use .dataset_path to get the correct path for the first cluster
-              # dset_path_cid1 <- tryCatch(.dataset_path(new("H5ClusterRun", scan_name=scan_name), first_cid), # Create dummy obj for path gen
+              # dset_path_cid1 <- tryCatch(.dataset_path(new("H5ParcellatedScan", scan_name=scan_name), first_cid), # Create dummy obj for path gen
               #                        error=function(e) NULL)
               if (!is.null(dset_path_cid1) && tryCatch(h5obj$exists(dset_path_cid1), error = function(e) {
                 warning(sprintf("Suppressed HDF5 error checking %s: %s", dset_path_cid1, conditionMessage(e)))
@@ -798,7 +828,7 @@ make_run_full <- function(file_source, scan_name,
   n_time <- as.integer(n_time)
 
   # --- 4. Create the object ---
-  run_obj <- new("H5ClusterRun",
+  run_obj <- new("H5ParcellatedScan",
     obj       = h5obj,
     scan_name = scan_name,
     mask      = mask,
@@ -838,24 +868,24 @@ make_run_full <- function(file_source, scan_name,
 #' @family H5Cluster
 setMethod(
   f = "as.matrix",
-  signature = signature(x = "H5ClusterRunSummary"),
+  signature = signature(x = "H5ParcellatedScanSummary"),
   definition = function(x) {
     summary_grp <- NULL
     ds <- NULL
     mat_data <- NULL
 
     # Validate inputs from the object
-    if (is.null(x@obj) || !x@obj$is_valid) stop("[as.matrix,H5ClusterRunSummary] HDF5 file handle is invalid or closed.")
-    if (!is.character(x@scan_name) || !nzchar(x@scan_name)) stop("[as.matrix,H5ClusterRunSummary] Invalid 'scan_name' slot.")
-    if (!is.character(x@summary_dset) || !nzchar(x@summary_dset)) stop("[as.matrix,H5ClusterRunSummary] Invalid 'summary_dset' slot.")
+    if (is.null(x@obj) || !x@obj$is_valid) stop("[as.matrix,H5ParcellatedScanSummary] HDF5 file handle is invalid or closed.")
+    if (!is.character(x@scan_name) || !nzchar(x@scan_name)) stop("[as.matrix,H5ParcellatedScanSummary] Invalid 'scan_name' slot.")
+    if (!is.character(x@summary_dset) || !nzchar(x@summary_dset)) stop("[as.matrix,H5ParcellatedScanSummary] Invalid 'summary_dset' slot.")
 
     # Construct path to the specific summary dataset
-    dset_path <- file.path("/scans", x@scan_name, "clusters_summary", x@summary_dset)
+    dset_path <- sprintf(H5_PATHS$SUMMARY_DSET_TPL, x@scan_name, x@summary_dset)
 
     tryCatch(
       {
         assert_h5_path(x@obj, dset_path,
-          "[as.matrix,H5ClusterRunSummary] Summary dataset")
+          "[as.matrix,H5ParcellatedScanSummary] Summary dataset")
         ds <- x@obj[[dset_path]]
         on.exit(if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) close_h5_safely(ds), add = TRUE)
 
@@ -867,12 +897,12 @@ setMethod(
         if (!is.null(ds) && inherits(ds, "H5D") && ds$is_valid) {
           close_h5_safely(ds)
         }
-        stop(sprintf("[as.matrix,H5ClusterRunSummary] Failed to read summary data for scan '%s' from '%s'. Original error: %s",
+        stop(sprintf("[as.matrix,H5ParcellatedScanSummary] Failed to read summary data for scan '%s' from '%s'. Original error: %s",
           x@scan_name, dset_path, e$message))
       })
 
     if (is.null(mat_data)) {
-      stop(sprintf("[as.matrix,H5ClusterRunSummary] Failed to retrieve summary data matrix for scan '%s'. Result is NULL.", x@scan_name))
+      stop(sprintf("[as.matrix,H5ParcellatedScanSummary] Failed to retrieve summary data matrix for scan '%s'. Result is NULL.", x@scan_name))
     }
 
     # Optional: Validate dimensions against n_time if available?
@@ -883,7 +913,7 @@ setMethod(
       if (length(x@cluster_names) == ncol(mat_data)) {
         colnames(mat_data) <- x@cluster_names
       } else {
-        warning(sprintf("[as.matrix,H5ClusterRunSummary] Length of cluster_names (%d) != number of columns (%d) for scan '%s'. Names not set.",
+        warning(sprintf("[as.matrix,H5ParcellatedScanSummary] Length of cluster_names (%d) != number of columns (%d) for scan '%s'. Names not set.",
           length(x@cluster_names), ncol(mat_data), x@scan_name))
       }
     }
@@ -897,9 +927,9 @@ setMethod(
 #' @family H5Cluster
 setMethod(
   f = "as.data.frame",
-  signature = signature(x = "H5ClusterRunSummary"),
+  signature = signature(x = "H5ParcellatedScanSummary"),
   definition = function(x, row.names = NULL, optional = FALSE, ...) {
-    # Calls the as.matrix method defined above for H5ClusterRunSummary
+    # Calls the as.matrix method defined above for H5ParcellatedScanSummary
     mat_data <- as.matrix(x)
     df <- as.data.frame(mat_data, row.names = row.names, optional = optional, ...)
     df
@@ -913,9 +943,9 @@ setMethod(
 #' @family H5Cluster
 #' @rdname extract-methods
 setMethod("[",
-  signature(x = "H5ClusterRunSummary", i = "ANY", j = "ANY", drop = "ANY"),
+  signature(x = "H5ParcellatedScanSummary", i = "ANY", j = "ANY", drop = "ANY"),
   function(x, i, j, k, l, ..., drop = TRUE) {
-    stop("Voxel-level subsetting ([i,j,k,l]) is not available for H5ClusterRunSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
+    stop("Voxel-level subsetting ([i,j,k,l]) is not available for H5ParcellatedScanSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
   })
 
 
@@ -923,9 +953,9 @@ setMethod("[",
 #' @family H5Cluster
 #' @rdname extract-methods
 setMethod("[",
-  signature(x = "H5ClusterRunSummary", i = "ANY", j = "missing", drop = "ANY"),
+  signature(x = "H5ParcellatedScanSummary", i = "ANY", j = "missing", drop = "ANY"),
   definition = function(x, i, ..., drop = TRUE) {
-    stop("Voxel-level subsetting (e.g., x[indices]) is not available for H5ClusterRunSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
+    stop("Voxel-level subsetting (e.g., x[indices]) is not available for H5ParcellatedScanSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
   })
 
 #' @rdname series-methods
@@ -933,9 +963,9 @@ setMethod("[",
 #' @family H5Cluster
 setMethod(
   f = "series",
-  signature = signature(x = "H5ClusterRunSummary", i = "ANY"), # Catch numeric or matrix
+  signature = signature(x = "H5ParcellatedScanSummary", i = "ANY"), # Catch numeric or matrix
   definition = function(x, i, ...) {
-    stop("Voxel-level time series extraction (series()) is not available for H5ClusterRunSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
+    stop("Voxel-level time series extraction (series()) is not available for H5ParcellatedScanSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
   }
 )
 
@@ -946,16 +976,16 @@ setMethod(
 #' @importFrom neuroim2 linear_access
 setMethod(
   f = "linear_access",
-  signature = signature(x = "H5ClusterRunSummary", i = "numeric"),
+  signature = signature(x = "H5ParcellatedScanSummary", i = "numeric"),
   definition = function(x, i, ...) {
-    stop("Voxel-level linear access (linear_access()) is not available for H5ClusterRunSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
+    stop("Voxel-level linear access (linear_access()) is not available for H5ParcellatedScanSummary objects. Use as.matrix() or as.data.frame() to access summary data.")
   }
 )
 
-#' Constructor for H5ClusterRunSummary Objects
+#' Constructor for H5ParcellatedScanSummary Objects
 #'
 #' @description
-#' Creates a new `H5ClusterRunSummary` object, representing a single run of
+#' Creates a new `H5ParcellatedScanSummary` object, representing a single run of
 #' summary cluster time-series data from an HDF5 file.
 #'
 #' It performs validation, checks for the existence of the summary dataset,
@@ -971,15 +1001,15 @@ setMethod(
 #' @param summary_dset (Optional) The name of the dataset within the run's summary group
 #'   (default: "summary_data").
 #'
-#' @return A new `H5ClusterRunSummary` object.
+#' @return A new `H5ParcellatedScanSummary` object.
 #'
 #' @examples
 #' \dontrun{
-#' # Note: This function is deprecated in favor of H5ClusterRunSummary()
+#' # Note: This function is deprecated in favor of H5ParcellatedScanSummary()
 #'
 #' # Create temporary HDF5 file
 #' temp_file <- tempfile(fileext = ".h5")
-#' exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+#' exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(file_path = temp_file)
 #'
 #' # Create mask
 #' mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
@@ -1006,7 +1036,7 @@ make_run_summary <- function(file_source, scan_name,
   lifecycle::deprecate_warn(
     when = "0.2.0",
     what = "make_run_summary()",
-    with = "H5ClusterRunSummary()",
+    with = "H5ParcellatedScanSummary()",
     details = "The make_run_* functions are deprecated in favor of direct H5* constructors."
   )
 
@@ -1048,7 +1078,7 @@ make_run_summary <- function(file_source, scan_name,
   }
 
   # --- 3. Validate summary dataset and get n_time ---
-  dset_path <- file.path("/scans", scan_name, "clusters_summary", summary_dset)
+  dset_path <- sprintf(H5_PATHS$SUMMARY_DSET_TPL, scan_name, summary_dset)
   n_time <- NA_integer_
   n_clusters_in_dset <- NA_integer_
   ds <- NULL
@@ -1153,7 +1183,7 @@ make_run_summary <- function(file_source, scan_name,
   })
 
   # --- 4. Create the object ---
-  run_obj <- new("H5ClusterRunSummary",
+  run_obj <- new("H5ParcellatedScanSummary",
     obj           = h5obj,
     scan_name     = scan_name,
     mask          = mask,
@@ -1172,8 +1202,8 @@ make_run_summary <- function(file_source, scan_name,
   return(run_obj)
 }
 
-#' Show Method for H5ClusterRunSummary
-#' @param object An H5ClusterRunSummary object
+#' Show Method for H5ParcellatedScanSummary
+#' @param object An H5ParcellatedScanSummary object
 #' @importFrom cli cli_h1 cli_h2 cli_li col_blue col_green col_yellow col_silver
 #' @importFrom cli col_red col_magenta symbol cli_text cli_alert_info
 #' @importFrom utils head
@@ -1183,10 +1213,10 @@ make_run_summary <- function(file_source, scan_name,
 #' @rdname show-methods
 setMethod(
   f = "show",
-  signature = "H5ClusterRunSummary",
+  signature = "H5ParcellatedScanSummary",
   definition = function(object) {
 
-    cli::cli_h1(cli::col_blue("H5ClusterRunSummary"))
+    cli::cli_h1(cli::col_blue("H5ParcellatedScanSummary"))
 
     cli::cli_h2(cli::col_yellow("Run Summary Info"))
     cli::cli_li(items = c(
@@ -1214,7 +1244,7 @@ setMethod(
     }
 
 
-    cli::cli_h2(cli::col_yellow("Shared Info (from H5ClusteredArray)"))
+    cli::cli_h2(cli::col_yellow("Shared Info (from H5ParcellatedArray)"))
     # Check if clusters slot is valid and has data
     has_clusters <- !is.null(object@clusters) && inherits(object@clusters, "ClusteredNeuroVol") && length(object@clusters@clusters) > 0
     n_clusters_from_slot <- if (has_clusters) length(unique(object@clusters@clusters)) else NA
@@ -1228,7 +1258,7 @@ setMethod(
     h5_valid <- !is.null(object@obj) && inherits(object@obj, "H5File") && object@obj$is_valid
     if (h5_valid) {
       filename <- tryCatch(object@obj$get_filename(), error = function(e) "Error getting name")
-      summary_path <- file.path("/scans", object@scan_name, "clusters_summary", object@summary_dset)
+      summary_path <- sprintf(H5_PATHS$SUMMARY_DSET_TPL, object@scan_name, object@summary_dset)
       path_exists <- tryCatch(object@obj$exists(summary_path), error = function(e) FALSE)
       cli::cli_li(items = c(
         "{cli::col_green(\'Path\')} : {cli::col_magenta(filename)}",

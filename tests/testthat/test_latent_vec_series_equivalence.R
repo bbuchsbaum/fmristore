@@ -246,11 +246,16 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - drop p
   dvec <- test_data$dense
   mask <- test_data$mask
 
-  # Test single voxel extraction with drop=TRUE and drop=FALSE
-  coords <- c(3L, 3L, 1L)
-  i <- coords[1]
-  j <- coords[2]
-  k <- coords[3]
+  # Find coordinates that are actually in the mask
+  mask_indices <- which(mask@.Data, arr.ind = TRUE)
+  if (nrow(mask_indices) == 0) {
+    skip("No voxels in mask - cannot test drop parameter")
+  }
+  
+  # Use the first voxel that's in the mask
+  i <- mask_indices[1, 1]
+  j <- mask_indices[1, 2]
+  k <- mask_indices[1, 3]
 
   if (mask[i, j, k]) {
     # Test with drop=TRUE (default)

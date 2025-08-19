@@ -1,5 +1,6 @@
 #' @importFrom neuroim2 matricized_access concat axes indices space origin spacing trans
 #' @importFrom Matrix tcrossprod
+#' @importFrom methods setMethod signature
 NULL
 
 #' Latent Space Representation of Neuroimaging Data
@@ -1902,7 +1903,9 @@ setMethod(
       # Add the single offset value
       out_vec <- out_vec + x@offset[mr]
 
-      if (drop) as.vector(out_vec) else out_vec
+      # Always return a vector for single voxel case
+      # This matches the behavior of DenseNeuroVec
+      as.vector(out_vec)
     }
   }
 )
@@ -2364,10 +2367,8 @@ setMethod("map", "LatentNeuroVec", function(x) x@map)
 #' for each time point, where values outside the mask are set to zero.
 #'
 #' @export
-setMethod(
-  f = "as.array",
-  signature = signature(x = "LatentNeuroVec"),
-  definition = function(x, ...) {
+#' @method as.array LatentNeuroVec
+as.array.LatentNeuroVec <- function(x, ...) {
     # Get dimensions from the space
     space_dims <- dim(x)
 
@@ -2388,7 +2389,8 @@ setMethod(
       b1 <- basis_t
       b2 <- x@loadings
       # Matrix objects already - no need to convert
-      values_in_mask <- as.vector(b1 %*% t(b2)) + x@offset
+      # Ensure we get a standard numeric vector
+      values_in_mask <- as.numeric(as.matrix(b1 %*% t(b2))) + x@offset
 
       # Map these values back to 3D space using the mask
       # Initialize a 3D array for this time point
@@ -2402,5 +2404,4 @@ setMethod(
     }
 
     return(result_array)
-  }
-)
+}

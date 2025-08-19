@@ -28,6 +28,10 @@ it opens the specified HDF5 file and maintains an open handle to it.
 object is no longer needed to release system resources. This can be done by calling
 \code{close(your_h5neurovol_object)}.
 
+As a safety net, a finalizer is registered on the internal HDF5 handle so
+it will be closed if the object is garbage collected. Explicitly calling
+\code{close()} is still recommended.
+
 Failure to close the handle may lead to issues such as reaching file handle
 limits or problems with subsequent access to the file.
 }

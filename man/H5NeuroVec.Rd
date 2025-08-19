@@ -4,7 +4,7 @@
 \alias{H5NeuroVec}
 \title{H5NeuroVec Constructor}
 \usage{
-H5NeuroVec(file_name)
+H5NeuroVec(file_name, dataset_name = "data")
 }
 \arguments{
 \item{file_name}{The path to an existing 4D HDF5 neuroimaging file.}
@@ -14,7 +14,7 @@ A new \code{\link{H5NeuroVec-class}} instance with an open HDF5 file handle.
 }
 \description{
 Constructs an \code{\link{H5NeuroVec}} object, which represents a 4D brain image
-stored in an HDF5 file. The HDF5 file is opened explicitly in read-only mode using \code{hdf5r::H5File$new(file_name, mode = "r")}.
+stored in an HDF5 file. The HDF5 file is opened in read-only mode.
 }
 \details{
 This constructor is used for reading existing HDF5 files that conform

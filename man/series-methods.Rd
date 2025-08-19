@@ -3,9 +3,9 @@
 %   R/h5neurovec.R, R/latent_vec.R
 \name{series}
 \alias{series}
-\alias{series,H5ClusterRun,numeric-method}
-\alias{series,H5ClusterRun,matrix-method}
-\alias{series,H5ClusterRunSummary,ANY-method}
+\alias{series,H5ParcellatedScan,numeric-method}
+\alias{series,H5ParcellatedScan,matrix-method}
+\alias{series,H5ParcellatedScanSummary,ANY-method}
 \alias{series,H5NeuroVec,integer-method}
 \alias{series,H5NeuroVec,numeric-method}
 \alias{series,H5NeuroVec,matrix-method}
@@ -16,11 +16,11 @@
 \usage{
 series(x, i, ...)
 
-\S4method{series}{H5ClusterRun,numeric}(x, i, j, k, ...)
+\S4method{series}{H5ParcellatedScan,numeric}(x, i, j, k, ...)
 
-\S4method{series}{H5ClusterRun,matrix}(x, i, ...)
+\S4method{series}{H5ParcellatedScan,matrix}(x, i, ...)
 
-\S4method{series}{H5ClusterRunSummary,ANY}(x, i, ...)
+\S4method{series}{H5ParcellatedScanSummary,ANY}(x, i, ...)
 
 \S4method{series}{H5NeuroVec,integer}(x, i, j, k, drop = TRUE)
 
@@ -32,11 +32,11 @@ series(x, i, ...)
 
 \S4method{series}{H5NeuroVec,numeric}(x, i, j, k, drop = TRUE)
 
-\S4method{series}{LatentNeuroVec,integer}(x, i, ...)
+\S4method{series}{LatentNeuroVec,integer}(x, i, j, k, ..., drop = TRUE)
 
-\S4method{series}{LatentNeuroVec,numeric}(x, i, ...)
+\S4method{series}{LatentNeuroVec,numeric}(x, i, j, k, ..., drop = TRUE)
 
-\S4method{series}{LatentNeuroVec,ANY}(x, i, ...)
+\S4method{series}{LatentNeuroVec,ANY}(x, i, j, k, ..., drop = TRUE)
 }
 \arguments{
 \item{x}{The object from which to extract series data.}
@@ -65,92 +65,47 @@ and the indices provided.
 }
 \examples{
 # This is a generic function; examples are provided with its specific methods.
-# For example, see help("series,H5ClusterRun-method")
+# For example, see help("series,H5ParcellatedScan-method")
 
 }
 \seealso{
 Methods for this generic are available for classes like
-  \code{\link{H5ClusterRun}}.
+  \code{\link{H5ParcellatedScan}}.
 
 Other H5Cluster: 
-\code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusterExperiment}},
-\code{\link{H5ClusterExperiment-class}},
-\code{\link{H5ClusterRun-class}},
-\code{\link{H5ClusterRunSummary-class}},
-\code{\link{H5ClusteredArray-class}},
-\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
-\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
+\code{\link{H5ParcellatedMultiScan-class}},
+\code{\link{[,H5ParcellatedScan,ANY,ANY,ANY-method}},
+\code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{close}()},
-\code{\link{cluster_metadata,H5ClusterExperiment-method}},
-\code{\link{clusters}()},
 \code{\link{dim}()},
-\code{\link{h5file,H5ClusteredArray-method}},
 \code{\link{linear_access-methods}},
 \code{\link{make_run_full}()},
 \code{\link{make_run_summary}()},
-\code{\link{mask}()},
-\code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusterExperiment-method}},
-\code{\link{scan_metadata,H5ClusterExperiment-method}},
-\code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series_concat}()},
-\code{\link{show,H5ClusterRun-method}}
+\code{\link{show,H5ParcellatedScan-method}}
 
 Other H5Cluster: 
-\code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusterExperiment}},
-\code{\link{H5ClusterExperiment-class}},
-\code{\link{H5ClusterRun-class}},
-\code{\link{H5ClusterRunSummary-class}},
-\code{\link{H5ClusteredArray-class}},
-\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
-\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
+\code{\link{H5ParcellatedMultiScan-class}},
+\code{\link{[,H5ParcellatedScan,ANY,ANY,ANY-method}},
+\code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{close}()},
-\code{\link{cluster_metadata,H5ClusterExperiment-method}},
-\code{\link{clusters}()},
 \code{\link{dim}()},
-\code{\link{h5file,H5ClusteredArray-method}},
 \code{\link{linear_access-methods}},
 \code{\link{make_run_full}()},
 \code{\link{make_run_summary}()},
-\code{\link{mask}()},
-\code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusterExperiment-method}},
-\code{\link{scan_metadata,H5ClusterExperiment-method}},
-\code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series_concat}()},
-\code{\link{show,H5ClusterRun-method}}
+\code{\link{show,H5ParcellatedScan-method}}
 
 Other H5Cluster: 
-\code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusterExperiment}},
-\code{\link{H5ClusterExperiment-class}},
-\code{\link{H5ClusterRun-class}},
-\code{\link{H5ClusterRunSummary-class}},
-\code{\link{H5ClusteredArray-class}},
-\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
-\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
+\code{\link{H5ParcellatedMultiScan-class}},
+\code{\link{[,H5ParcellatedScan,ANY,ANY,ANY-method}},
+\code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{close}()},
-\code{\link{cluster_metadata,H5ClusterExperiment-method}},
-\code{\link{clusters}()},
 \code{\link{dim}()},
-\code{\link{h5file,H5ClusteredArray-method}},
 \code{\link{linear_access-methods}},
 \code{\link{make_run_full}()},
 \code{\link{make_run_summary}()},
-\code{\link{mask}()},
-\code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusterExperiment-method}},
-\code{\link{scan_metadata,H5ClusterExperiment-method}},
-\code{\link{scan_names,H5ClusterExperiment-method}},
-\code{\link{series_concat}()},
-\code{\link{show,H5ClusterRun-method}}
+\code{\link{show,H5ParcellatedScan-method}}
 }
 \concept{H5Cluster}

@@ -74,9 +74,8 @@ where:
 \examples{
 \dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
-    requireNamespace("Matrix", quietly = TRUE) &&
-    !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-
+  requireNamespace("Matrix", quietly = TRUE) &&
+  !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
   # Create a LatentNeuroVec object using the helper
   # The helper creates a mask, basis, and loadings internally.
   # It uses new("LatentNeuroVec", ...) after creating constituent parts if not directly calling
@@ -84,28 +83,30 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   # Our helper fmristore:::create_minimal_LatentNeuroVec returns a LatentNeuroVec.
 
   latent_vec <- NULL
-  tryCatch({
-    latent_vec <- fmristore:::create_minimal_LatentNeuroVec(
-      space_dims = c(5L, 5L, 3L),
-      n_time = 8L,
-      n_comp = 2L
-    )
+  tryCatch(
+    {
+      latent_vec <- fmristore:::create_minimal_LatentNeuroVec(
+        space_dims = c(5L, 5L, 3L),
+        n_time = 8L,
+        n_comp = 2L
+      )
 
-    print(latent_vec)
+      print(latent_vec)
 
-    # Access slots (example)
-    # print(dim(latent_vec@basis))
-    # print(dim(latent_vec@loadings))
+      # Access slots (example)
+      # print(dim(latent_vec@basis))
+      # print(dim(latent_vec@loadings))
 
-    # Example of accessing data (reconstruction for a voxel would be more complex)
-    # This class is more about representation; direct element access is usually via methods.
-    # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
-    # For a simple demonstration, we can show its dimensions:
-    print(dim(latent_vec)) # from NeuroVec inheritance
+      # Example of accessing data (reconstruction for a voxel would be more complex)
+      # This class is more about representation; direct element access is usually via methods.
+      # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
+      # For a simple demonstration, we can show its dimensions:
+      print(dim(latent_vec)) # from NeuroVec inheritance
 
-  }, error = function(e) {
-    message("LatentNeuroVec example failed: ", e$message)
-  })
+    },
+    error = function(e) {
+      message("LatentNeuroVec example failed: ", e$message)
+    })
 
 } else {
   message("Skipping LatentNeuroVec example: neuroim2, Matrix, or helper not available.")

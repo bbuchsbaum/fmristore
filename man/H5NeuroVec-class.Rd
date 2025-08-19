@@ -34,10 +34,9 @@ representing the underlying HDF5 file containing the 4D brain image data.}
 \examples{
 \dontrun{
 if (requireNamespace("neuroim2", quietly = TRUE) &&
-    requireNamespace("hdf5r", quietly = TRUE) &&
-    exists("H5NeuroVec", where = "package:fmristore") &&
-    !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) {
-
+  requireNamespace("hdf5r", quietly = TRUE) &&
+  exists("H5NeuroVec", where = "package:fmristore") &&
+  !is.null(fmristore:::create_minimal_h5_for_H5NeuroVec)) {
   # Setup: Create a temporary HDF5 file using a helper
   temp_h5_path <- NULL
   h5_vec <- NULL

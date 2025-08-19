@@ -2,12 +2,12 @@
 % Please edit documentation in R/all_generic.R, R/cluster_array.R
 \name{as.data.frame}
 \alias{as.data.frame}
-\alias{as.data.frame,H5ClusterRunSummary-method}
+\alias{as.data.frame,H5ParcellatedScanSummary-method}
 \title{Convert to Data Frame}
 \usage{
 as.data.frame(x, row.names = NULL, optional = FALSE, ...)
 
-\S4method{as.data.frame}{H5ClusterRunSummary}(x, row.names = NULL, optional = FALSE, ...)
+\S4method{as.data.frame}{H5ParcellatedScanSummary}(x, row.names = NULL, optional = FALSE, ...)
 }
 \arguments{
 \item{x}{An object for which a `as.data.frame` method is defined.}
@@ -25,30 +25,15 @@ implementing the S4 generic function \code{\link[base]{as.data.frame}} from the 
 }
 \seealso{
 Other H5Cluster: 
-\code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusterExperiment}},
-\code{\link{H5ClusterExperiment-class}},
-\code{\link{H5ClusterRun-class}},
-\code{\link{H5ClusterRunSummary-class}},
-\code{\link{H5ClusteredArray-class}},
-\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
-\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
+\code{\link{H5ParcellatedMultiScan-class}},
+\code{\link{[,H5ParcellatedScan,ANY,ANY,ANY-method}},
+\code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.matrix}()},
-\code{\link{close}()},
-\code{\link{cluster_metadata,H5ClusterExperiment-method}},
-\code{\link{clusters}()},
 \code{\link{dim}()},
-\code{\link{h5file,H5ClusteredArray-method}},
 \code{\link{linear_access-methods}},
 \code{\link{make_run_full}()},
 \code{\link{make_run_summary}()},
-\code{\link{mask}()},
-\code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusterExperiment-method}},
-\code{\link{scan_metadata,H5ClusterExperiment-method}},
-\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series}()},
-\code{\link{series_concat}()},
-\code{\link{show,H5ClusterRun-method}}
+\code{\link{show,H5ParcellatedScan-method}}
 }
 \concept{H5Cluster}

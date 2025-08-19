@@ -1,5 +1,5 @@
 #' @include all_class.R io_h5_helpers.R
-#' @importFrom hdf5r H5File h5file is.h5file H5S H5D H5T_STRING h5attr h5attr_names
+#' @importFrom hdf5r H5File is.h5file H5S H5D H5T_STRING h5attr h5attr_names
 #' @importFrom neuroim2 NeuroSpace space spacing origin trans matrixToQuatern
 #' @importFrom methods is
 #' @importFrom utils write.table
@@ -22,14 +22,26 @@ validate_runs_data <- function(rd) {
     )
     if (el$type == "full" && !is.list(el$data)) stop(sprintf("Run %d ('%s'): type is 'full' but data is not a list.", i, el$scan_name))
     if (el$type == "summary" && !is.matrix(el$data)) stop(sprintf("Run %d ('%s'): type is 'summary' but data is not a matrix.", i, el$scan_name))
-    # TODO: Could add validation that full data list names match cluster IDs expected
+    
+    # Validate that full data list names match cluster_XXX pattern
+    if (el$type == "full" && is.list(el$data)) {
+      data_names <- names(el$data)
+      if (!is.null(data_names) && length(data_names) > 0) {
+        cluster_pattern <- "^cluster_[0-9]+$"
+        if (!all(grepl(cluster_pattern, data_names))) {
+          invalid_names <- data_names[!grepl(cluster_pattern, data_names)]
+          stop(sprintf("Run %d ('%s'): full data list contains invalid cluster names: %s. Expected pattern: cluster_<ID>", 
+                      i, el$scan_name, paste(invalid_names, collapse = ", ")))
+        }
+      }
+    }
   }
 }
 
-#' Write Clustered Experiment Data to HDF5
+#' Write Parcellated Experiment Data to HDF5
 #'
 #' @description
-#' Writes neuroimaging data structured according to the H5ClusterExperiment
+#' Writes neuroimaging data structured according to the H5ParcellatedMultiScan
 #' specification into an HDF5 file.
 #'
 #' This function takes R objects representing the mask, cluster definitions,
@@ -71,7 +83,7 @@ validate_runs_data <- function(rd) {
 #' \dontrun{
 #' if (requireNamespace("neuroim2", quietly = TRUE) &&
 #'   requireNamespace("hdf5r", quietly = TRUE) &&
-#'   exists("write_clustered_experiment_h5", where = "package:fmristore") &&
+#'   exists("write_parcellated_experiment_h5", where = "package:fmristore") &&
 #'   !is.null(fmristore:::create_minimal_LogicalNeuroVol) &&
 #'   !is.null(fmristore:::create_minimal_ClusteredNeuroVol)) {
 #'
@@ -149,7 +161,7 @@ validate_runs_data <- function(rd) {
 #'     }
 #'
 #'     # 5. Call the function
-#'     write_clustered_experiment_h5(
+#'     write_parcellated_experiment_h5(
 #'       filepath = temp_h5_file,
 #'       mask = mask_vol,
 #'       clusters = clust_vol,
@@ -161,7 +173,7 @@ validate_runs_data <- function(rd) {
 #'
 #'     # Verify file was created
 #'     if (file.exists(temp_h5_file)) {
-#'       cat("Successfully wrote clustered experiment to:", temp_h5_file, "\\n")
+#'       cat("Successfully wrote parcellated experiment to:", temp_h5_file, "\\n")
 #'       # Optional: Basic check of the HDF5 file structure
 #'       # h5f <- hdf5r::H5File$new(temp_h5_file, mode="r")
 #'       # print(h5f$ls(recursive=TRUE))
@@ -169,7 +181,7 @@ validate_runs_data <- function(rd) {
 #'     }
 #'
 #'   }, error = function(e) {
-#'     message("write_clustered_experiment_h5 example failed: ", e$message)
+#'     message("write_parcellated_experiment_h5 example failed: ", e$message)
 #'     if (!is.null(temp_h5_file)) message("Temporary file was: ", temp_h5_file)
 #'   }, finally = {
 #'     # Clean up temporary file
@@ -178,10 +190,11 @@ validate_runs_data <- function(rd) {
 #'     }
 #'   })
 #' } else {
-#'   message("Skipping write_clustered_experiment_h5 example: dependencies or helpers not available.")
+#'   message("Skipping write_parcellated_experiment_h5 example: dependencies or helpers not available.")
 #' }
 #' }
-write_clustered_experiment_h5 <- function(filepath,
+#' @export
+write_parcellated_experiment_h5 <- function(filepath,
                                           mask,
                                           clusters,
                                           runs_data,
@@ -211,7 +224,24 @@ write_clustered_experiment_h5 <- function(filepath,
   if (!is.null(cluster_metadata)) {
     if (!is.data.frame(cluster_metadata)) stop("`cluster_metadata` must be a data.frame.")
     if (!("cluster_id" %in% names(cluster_metadata))) stop("`cluster_metadata` must contain a 'cluster_id' column.")
-    # TODO: Check if cluster_ids in metadata match unique(clusters@clusters)?
+    
+    # Check if cluster_ids in metadata match unique(clusters@clusters)
+    unique_cluster_ids_actual <- sort(unique(clusters@clusters))
+    metadata_cluster_ids <- sort(unique(cluster_metadata$cluster_id))
+    
+    if (!identical(metadata_cluster_ids, unique_cluster_ids_actual)) {
+      missing_in_metadata <- setdiff(unique_cluster_ids_actual, metadata_cluster_ids)
+      extra_in_metadata <- setdiff(metadata_cluster_ids, unique_cluster_ids_actual)
+      
+      error_msg <- "Cluster IDs in metadata do not match those in clusters object."
+      if (length(missing_in_metadata) > 0) {
+        error_msg <- paste0(error_msg, " Missing from metadata: ", paste(missing_in_metadata, collapse = ", "), ".")
+      }
+      if (length(extra_in_metadata) > 0) {
+        error_msg <- paste0(error_msg, " Extra in metadata: ", paste(extra_in_metadata, collapse = ", "), ".")
+      }
+      stop(error_msg)
+    }
   }
 
   # --- File Creation ---
@@ -221,6 +251,10 @@ write_clustered_experiment_h5 <- function(filepath,
   tryCatch({
     if (verbose) message("Creating HDF5 file: ", filepath)
     h5f <- hdf5r::H5File$new(filepath, mode = "w")
+    
+    # Add class attribute for type detection
+    hdf5r::h5attr(h5f, "fmristore_class") <- "H5ParcellatedMultiScan"
+    hdf5r::h5attr(h5f, "fmristore_version") <- as.character(packageVersion("fmristore"))
 
     # --- Write Global Structures ---
     if (verbose) message("Writing global structures (mask, clusters, header)... ")
@@ -310,9 +344,9 @@ write_clustered_experiment_h5 <- function(filepath,
 
       # Set class attribute based on type
       if (stype == "full") {
-        hdf5r::h5attr(scan_grp, "class") <- "H5ClusterRun"
+        hdf5r::h5attr(scan_grp, "class") <- "H5ParcellatedScan"
       } else if (stype == "summary") {
-        hdf5r::h5attr(scan_grp, "class") <- "H5ClusterRunSummary"
+        hdf5r::h5attr(scan_grp, "class") <- "H5ParcellatedScanSummary"
       }
 
       # Write metadata using h5_write
@@ -429,4 +463,28 @@ write_clustered_experiment_h5 <- function(filepath,
   })
 
   invisible(NULL)
+}
+
+#' @rdname write_parcellated_experiment_h5
+#' @export
+write_clustered_experiment_h5 <- function(filepath,
+                                          mask,
+                                          clusters,
+                                          runs_data,
+                                          cluster_metadata = NULL,
+                                          overwrite = FALSE,
+                                          compress = TRUE,
+                                          verbose = TRUE) {
+  .Deprecated("write_parcellated_experiment_h5", 
+              package = "fmristore",
+              msg = "write_clustered_experiment_h5 is deprecated. Please use write_parcellated_experiment_h5 instead.")
+  
+  write_parcellated_experiment_h5(filepath = filepath,
+                                   mask = mask,
+                                   clusters = clusters,
+                                   runs_data = runs_data,
+                                   cluster_metadata = cluster_metadata,
+                                   overwrite = overwrite,
+                                   compress = compress,
+                                   verbose = verbose)
 }

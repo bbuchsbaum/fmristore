@@ -2,7 +2,7 @@
 % Please edit documentation in R/cluster_array.R
 \name{make_run_summary}
 \alias{make_run_summary}
-\title{Constructor for H5ClusterRunSummary Objects}
+\title{Constructor for H5ParcellatedScanSummary Objects}
 \usage{
 make_run_summary(
   file_source,
@@ -32,10 +32,10 @@ for consistency and reference, even though summary data is accessed.}
 (default: "summary_data").}
 }
 \value{
-A new `H5ClusterRunSummary` object.
+A new `H5ParcellatedScanSummary` object.
 }
 \description{
-Creates a new `H5ClusterRunSummary` object, representing a single run of
+Creates a new `H5ParcellatedScanSummary` object, representing a single run of
 summary cluster time-series data from an HDF5 file.
 
 It performs validation, checks for the existence of the summary dataset,
@@ -43,11 +43,11 @@ and determines `n_time` from the dataset dimensions.
 }
 \examples{
 \dontrun{
-# Note: This function is deprecated in favor of H5ClusterRunSummary()
+# Note: This function is deprecated in favor of H5ParcellatedScanSummary()
 
 # Create temporary HDF5 file
 temp_file <- tempfile(fileext = ".h5")
-exp_file <- fmristore:::create_minimal_h5_for_H5ClusterExperiment(file_path = temp_file)
+exp_file <- fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(file_path = temp_file)
 
 # Create mask
 mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(5, 5, 4))
@@ -64,30 +64,15 @@ unlink(temp_file)
 }
 \seealso{
 Other H5Cluster: 
-\code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusterExperiment}},
-\code{\link{H5ClusterExperiment-class}},
-\code{\link{H5ClusterRun-class}},
-\code{\link{H5ClusterRunSummary-class}},
-\code{\link{H5ClusteredArray-class}},
-\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
-\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
+\code{\link{H5ParcellatedMultiScan-class}},
+\code{\link{[,H5ParcellatedScan,ANY,ANY,ANY-method}},
+\code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{close}()},
-\code{\link{cluster_metadata,H5ClusterExperiment-method}},
-\code{\link{clusters}()},
 \code{\link{dim}()},
-\code{\link{h5file,H5ClusteredArray-method}},
 \code{\link{linear_access-methods}},
 \code{\link{make_run_full}()},
-\code{\link{mask}()},
-\code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusterExperiment-method}},
-\code{\link{scan_metadata,H5ClusterExperiment-method}},
-\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series}()},
-\code{\link{series_concat}()},
-\code{\link{show,H5ClusterRun-method}}
+\code{\link{show,H5ParcellatedScan-method}}
 }
 \concept{H5Cluster}

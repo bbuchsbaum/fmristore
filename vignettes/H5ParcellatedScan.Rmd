@@ -1,10 +1,10 @@
 ---
-title: "Understanding H5ClusterRun and H5ClusterRunSummary"
+title: "Understanding H5ParcellatedScan and H5ParcellatedScanSummary"
 author: "fmristore Package"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Understanding H5ClusterRun and H5ClusterRunSummary}
+  %\VignetteIndexEntry{Understanding H5ParcellatedScan and H5ParcellatedScanSummary}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 ---
@@ -27,8 +27,8 @@ library(neuroim2)
 
 When working with clustered fMRI data, you have two storage options:
 
-1. **H5ClusterRun**: Stores complete time series for every voxel
-2. **H5ClusterRunSummary**: Stores only averaged time series per cluster
+1. **H5ParcellatedScan**: Stores complete time series for every voxel
+2. **H5ParcellatedScanSummary**: Stores only averaged time series per cluster
 
 This vignette explains when to use each and how they work.
 
@@ -48,11 +48,11 @@ text(6.5, 2.5, "Cluster 2\n(Motor)", cex = 0.8)
 text(4, 6.5, "Cluster 3\n(Default)", cex = 0.8)
 ```
 
-## H5ClusterRun: Full Voxel Data
+## H5ParcellatedScan: Full Voxel Data
 
 ### When to Use
 
-Use `H5ClusterRun` when you need:
+Use `H5ParcellatedScan` when you need:
 - Voxel-level precision
 - Spatial patterns within clusters
 - Individual voxel time series
@@ -133,7 +133,7 @@ write_clustered_experiment_h5(
 )
 
 # Load and explore
-experiment <- H5ClusterExperiment(h5_file)
+experiment <- H5ParcellatedMultiScan(h5_file)
 full_run <- experiment@runs[["task_run"]]
 
 print(full_run)
@@ -155,11 +155,11 @@ legend("topright", legend = paste("Voxel", voxel_indices),
   col = 1:3, lty = 1)
 ```
 
-## H5ClusterRunSummary: Averaged Data
+## H5ParcellatedScanSummary: Averaged Data
 
 ### When to Use
 
-Use `H5ClusterRunSummary` when you need:
+Use `H5ParcellatedScanSummary` when you need:
 - Regional averages only
 - Reduced storage space
 - Faster processing
@@ -203,7 +203,7 @@ write_clustered_experiment_h5(
 )
 
 # Load and access summary run
-experiment <- H5ClusterExperiment(h5_file)
+experiment <- H5ParcellatedMultiScan(h5_file)
 summary_run <- experiment@runs[["rest_run"]]
 
 print(summary_run)
@@ -246,7 +246,7 @@ cat("Compression ratio:", round(full_elements / summary_elements, 1), ":1\n")
 
 ## Practical Guidelines
 
-### Choose H5ClusterRun when:
+### Choose H5ParcellatedScan when:
 
 1. **Analyzing spatial patterns**
    ```{r spatial-pattern, eval=FALSE}
@@ -267,7 +267,7 @@ all_voxel_ts <- series(full_run, i = 1:n_voxels)
 correlations <- cor(task_regressor, all_voxel_ts)
    ```
 
-### Choose H5ClusterRunSummary when:
+### Choose H5ParcellatedScanSummary when:
 
 1. **Connectivity analysis**
    ```{r connectivity, eval=FALSE}
@@ -304,15 +304,15 @@ unlink(h5_file)
 
 ## Key Takeaways
 
-1. **H5ClusterRun** = Full resolution, larger storage
-2. **H5ClusterRunSummary** = Regional averages, compact storage
-3. Both can coexist in the same H5ClusterExperiment
+1. **H5ParcellatedScan** = Full resolution, larger storage
+2. **H5ParcellatedScanSummary** = Regional averages, compact storage
+3. Both can coexist in the same H5ParcellatedMultiScan
 4. Choose based on your analysis needs
 5. Summary runs are perfect for connectivity and network analyses
 6. Full runs are essential for voxel-level statistics
 
 ## Next Steps
 
-- See `vignette("H5ClusterExperiment")` for working with multiple runs
+- See `vignette("H5ParcellatedMultiScan")` for working with multiple runs
 - Explore connectivity analyses with summary data
 - Learn about mixed designs (some runs full, some summary)

@@ -2,10 +2,10 @@
 % Please edit documentation in R/all_generic.R, R/cluster_array.R
 \name{dim}
 \alias{dim}
-\alias{dim,H5ClusterRun-method}
+\alias{dim,H5ParcellatedScan-method}
 \title{Get Dimensions of an Object (Methods for base R Generic)}
 \usage{
-\S4method{dim}{H5ClusterRun}(x)
+\S4method{dim}{H5ParcellatedScan}(x)
 }
 \arguments{
 \item{x}{An object for which a `dim` method is defined.}
@@ -23,34 +23,19 @@ vector indicating the size of each dimension (e.g., X, Y, Z, Time).
 }
 \seealso{
 \code{base::\link[base]{dim}}, specific methods like
-  \code{dim,H5ClusterRun-method} (if defined and exported).
+  \code{dim,H5ParcellatedScan-method} (if defined and exported).
 
 Other H5Cluster: 
-\code{\link{$,H5ClusterExperiment-method}},
-\code{\link{H5ClusterExperiment}},
-\code{\link{H5ClusterExperiment-class}},
-\code{\link{H5ClusterRun-class}},
-\code{\link{H5ClusterRunSummary-class}},
-\code{\link{H5ClusteredArray-class}},
-\code{\link{[,H5ClusterRun,ANY,ANY,ANY-method}},
-\code{\link{[,H5ClusterRun,ANY,missing,ANY-method}},
+\code{\link{H5ParcellatedMultiScan-class}},
+\code{\link{[,H5ParcellatedScan,ANY,ANY,ANY-method}},
+\code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{close}()},
-\code{\link{cluster_metadata,H5ClusterExperiment-method}},
-\code{\link{clusters}()},
-\code{\link{h5file,H5ClusteredArray-method}},
 \code{\link{linear_access-methods}},
 \code{\link{make_run_full}()},
 \code{\link{make_run_summary}()},
-\code{\link{mask}()},
-\code{\link{matrix_concat}()},
-\code{\link{n_scans,H5ClusterExperiment-method}},
-\code{\link{scan_metadata,H5ClusterExperiment-method}},
-\code{\link{scan_names,H5ClusterExperiment-method}},
 \code{\link{series}()},
-\code{\link{series_concat}()},
-\code{\link{show,H5ClusterRun-method}}
+\code{\link{show,H5ParcellatedScan-method}}
 }
 \concept{H5Cluster}
 \keyword{internal}
