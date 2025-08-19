@@ -60,5 +60,6 @@ Collate:
     'memory_utils.R'
     'neurovecseq_h5.R'
     'read_dataset_methods.R'
+    'write_cluster_result.R'
     'write_dataset_methods.R'
     'zzz_example_helpers.R'

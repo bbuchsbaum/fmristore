@@ -161,14 +161,21 @@ setMethod("write_dataset",
     # Note: write_parcellated_experiment_h5 uses 'compress' not 'compression'
     # compression levels: 0 = none, 1-9 = increasing compression
     # convert to boolean for backward compatibility
-    write_parcellated_experiment_h5(
-      filepath = file,
-      mask = mask,
-      clusters = clusters,
-      runs_data = runs_data,
-      compress = compression > 0,
-      ...
-    )
+    # Don't pass scan_name/scan_names through as they're already in runs_data
+    dots <- list(...)
+    dots$scan_name <- NULL
+    dots$scan_names <- NULL
+    
+    do.call(write_parcellated_experiment_h5, c(
+      list(
+        filepath = file,
+        mask = mask,
+        clusters = clusters,
+        runs_data = runs_data,
+        compress = compression > 0
+      ),
+      dots
+    ))
     
     invisible(NULL)
   }
@@ -227,11 +234,11 @@ setMethod("write_dataset",
       stop("All NeuroVec objects must have the same spatial dimensions")
     }
     
-    # Extract mask from first element if not provided
+    # Extract mask from clusters if not provided
     if (is.null(mask)) {
-      mask <- mask(x[[1]])
+      mask <- clusters@mask
       if (!is(mask, "LogicalNeuroVol")) {
-        stop("Could not extract a valid LogicalNeuroVol mask from the first NeuroVec object")
+        stop("Could not extract a valid LogicalNeuroVol mask from the clusters object")
       }
     }
     
@@ -263,14 +270,20 @@ setMethod("write_dataset",
     # Note: write_parcellated_experiment_h5 uses 'compress' not 'compression'
     # compression levels: 0 = none, 1-9 = increasing compression
     # convert to boolean for backward compatibility
-    write_parcellated_experiment_h5(
-      filepath = file,
-      mask = mask,
-      clusters = clusters,
-      runs_data = runs_data,
-      compress = compression > 0,
-      ...
-    )
+    # Don't pass scan_names through as they're already in runs_data
+    dots <- list(...)
+    dots$scan_names <- NULL
+    
+    do.call(write_parcellated_experiment_h5, c(
+      list(
+        filepath = file,
+        mask = mask,
+        clusters = clusters,
+        runs_data = runs_data,
+        compress = compression > 0
+      ),
+      dots
+    ))
     
     invisible(NULL)
   }
