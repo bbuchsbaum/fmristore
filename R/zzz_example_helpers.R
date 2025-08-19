@@ -56,10 +56,14 @@ create_minimal_ClusteredNeuroVol <- function(mask_vol = NULL, num_clusters = 2L)
     stop("Package 'neuroim2' is needed for this helper function.")
   }
   if (is.null(mask_vol)) {
-    mask_vol <- create_minimal_LogicalNeuroVol(dims = c(4L, 4L, 3L),
-      true_voxels = list(c(1L, 1L, 1L), c(2L, 1L, 1L),
+    mask_vol <- create_minimal_LogicalNeuroVol(
+      dims = c(4L, 4L, 3L),
+      true_voxels = list(
+        c(1L, 1L, 1L), c(2L, 1L, 1L),
         c(1L, 2L, 1L), c(2L, 2L, 1L),
-        c(1L, 1L, 2L), c(2L, 1L, 2L)))
+        c(1L, 1L, 2L), c(2L, 1L, 2L)
+      )
+    )
   }
 
   n_vox_in_mask <- sum(mask_vol@.Data)
@@ -113,20 +117,27 @@ create_minimal_h5_for_H5NeuroVol <- function(dims = c(3L, 3L, 2L), file_path = N
     sp <- neuroim2::NeuroSpace(dims)
 
     space_grp <- h5f$create_group("space")
-    space_grp$create_dataset("dim", robj = as.integer(dim(sp)),
-      dtype = hdf5r::h5types$H5T_NATIVE_INT)
-    space_grp$create_dataset("origin", robj = as.double(neuroim2::origin(sp)),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
-    space_grp$create_dataset("trans", robj = neuroim2::trans(sp),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+    space_grp$create_dataset("dim",
+      robj = as.integer(dim(sp)),
+      dtype = hdf5r::h5types$H5T_NATIVE_INT
+    )
+    space_grp$create_dataset("origin",
+      robj = as.double(neuroim2::origin(sp)),
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
+    space_grp$create_dataset("trans",
+      robj = neuroim2::trans(sp),
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
     # space_grp$create_dataset("spacing", robj = as.double(neuroim2::spacing(sp)),
     #                          dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
 
     data_grp <- h5f$create_group("data")
     data_arr <- array(stats::rnorm(prod(dims)), dim = dims)
-    data_grp$create_dataset("elements", robj = data_arr,
-      dtype = hdf5r::h5types$H5T_NATIVE_FLOAT)
-
+    data_grp$create_dataset("elements",
+      robj = data_arr,
+      dtype = hdf5r::h5types$H5T_NATIVE_FLOAT
+    )
   }, error = function(e) {
     # Ensure file is closed if error occurs during creation, then rethrow
     if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
@@ -171,18 +182,25 @@ create_minimal_h5_for_H5NeuroVec <- function(dims = c(3L, 3L, 2L, 5L), file_path
     sp <- neuroim2::NeuroSpace(dims)
 
     space_grp <- h5f$create_group("space")
-    space_grp$create_dataset("dim", robj = as.integer(dim(sp)),
-      dtype = hdf5r::h5types$H5T_NATIVE_INT)
-    space_grp$create_dataset("origin", robj = as.double(neuroim2::origin(sp)),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
-    space_grp$create_dataset("trans", robj = neuroim2::trans(sp),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+    space_grp$create_dataset("dim",
+      robj = as.integer(dim(sp)),
+      dtype = hdf5r::h5types$H5T_NATIVE_INT
+    )
+    space_grp$create_dataset("origin",
+      robj = as.double(neuroim2::origin(sp)),
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
+    space_grp$create_dataset("trans",
+      robj = neuroim2::trans(sp),
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
 
     data_grp <- h5f$create_group("data")
     data_arr <- array(stats::rnorm(prod(dims)), dim = dims)
-    data_grp$create_dataset("elements", robj = data_arr,
-      dtype = hdf5r::h5types$H5T_NATIVE_FLOAT)
-
+    data_grp$create_dataset("elements",
+      robj = data_arr,
+      dtype = hdf5r::h5types$H5T_NATIVE_FLOAT
+    )
   }, error = function(e) {
     if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     stop(sprintf("Error creating minimal HDF5 for H5NeuroVec at %s: %s", out_file, e$message))
@@ -231,7 +249,8 @@ create_minimal_LatentNeuroVec <- function(space_dims = c(6L, 6L, 3L),
   }
   if (actual_n_mask_voxels > 0) {
     loadings_mat <- matrix(stats::rnorm(actual_n_mask_voxels * n_comp),
-      nrow = actual_n_mask_voxels, ncol = n_comp)
+      nrow = actual_n_mask_voxels, ncol = n_comp
+    )
   } else {
     # Handle case of empty mask (e.g. if n_mask_voxels was 0)
     loadings_mat <- matrix(0, nrow = 0, ncol = n_comp)
@@ -241,10 +260,12 @@ create_minimal_LatentNeuroVec <- function(space_dims = c(6L, 6L, 3L),
   # The constructor takes the full NeuroSpace for the 4D representation, not just the mask's space.
   # The 4th dimension is n_time.
   full_space_dims <- c(space_dims, n_time)
-  full_space <- neuroim2::NeuroSpace(dim = full_space_dims,
+  full_space <- neuroim2::NeuroSpace(
+    dim = full_space_dims,
     spacing = neuroim2::spacing(mask_space),
     origin = neuroim2::origin(mask_space),
-    axes = neuroim2::axes(mask_space)) # Retain spatial axes info
+    axes = neuroim2::axes(mask_space)
+  ) # Retain spatial axes info
 
   # The LatentNeuroVec constructor from neuroim2 might be:
   # LatentNeuroVec(mask, loadings, basis, space)
@@ -255,10 +276,12 @@ create_minimal_LatentNeuroVec <- function(space_dims = c(6L, 6L, 3L),
   # From R/latent_vec.R, the constructor seems to be new("LatentNeuroVec", ...) or LatentNeuroVec(...),
   # which takes `mask`, `loadings`, `basis`, `space`.
 
-  return(LatentNeuroVec(mask = mask_vol,
+  return(LatentNeuroVec(
+    mask = mask_vol,
     loadings = loadings_mat,
     basis = basis_mat,
-    space = full_space))
+    space = full_space
+  ))
 }
 
 #' Create a minimal HDF5 file suitable for LabeledVolumeSet examples (via read_labeled_vec)
@@ -322,8 +345,11 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
     h5f$create_dataset("labels", robj = labels, dtype = str_type)
 
     # /data group
-    if (!h5f$exists("data")) data_grp <- h5f$create_group("data")
-    else data_grp <- h5f[["data"]]
+    if (!h5f$exists("data")) {
+      data_grp <- h5f$create_group("data")
+    } else {
+      data_grp <- h5f[["data"]]
+    }
 
     # Create one dataset per label under /data/
     # This dataset will contain the 1D masked data for that label.
@@ -341,7 +367,8 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
 
       # Path like /data/Label1, /data/Label2
       dataset_path <- file.path("data", safe_lab_name)
-      data_grp$create_dataset(safe_lab_name, robj = label_vol_data_1d,
+      data_grp$create_dataset(safe_lab_name,
+        robj = label_vol_data_1d,
         dtype = hdf5r::h5types$H5T_NATIVE_FLOAT, # Consistent with write_labeled_vec default
         chunk_dims = if (n_vox_in_mask > 0) min(1024L, n_vox_in_mask) else NULL,
         gzip_level = 0L # Minimal example, no compression needed
@@ -349,8 +376,11 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
     }
 
     # Minimal NIfTI-like header information (required by read_labeled_vec to build the space)
-    if (!h5f$exists("header")) header_grp <- h5f$create_group("header")
-    else header_grp <- h5f[["header"]]
+    if (!h5f$exists("header")) {
+      header_grp <- h5f$create_group("header")
+    } else {
+      header_grp <- h5f[["header"]]
+    }
 
     sp <- neuroim2::NeuroSpace(vol_dims) # Basic space for one volume
     # nVols in header/dim should match length of /labels
@@ -382,7 +412,6 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
     header_grp$create_dataset("sform_code", robj = as.integer(1), dtype = hdf5r::h5types$H5T_NATIVE_INT)
     header_grp$create_dataset("sizeof_hdr", robj = as.integer(348), dtype = hdf5r::h5types$H5T_NATIVE_INT)
     header_grp$create_dataset("magic", robj = "n+1", dtype = hdf5r::H5T_STRING$new(type = "c", size = 4L))
-
   }, error = function(e) {
     if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     stop(sprintf("Error creating aligned HDF5 for LabeledVolumeSet at %s: %s", out_file, e$message))
@@ -409,11 +438,11 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
 #' @keywords internal
 #' @return Invisibly returns TRUE on success, or stops on error.
 populate_H5ParcellatedScan_in_h5file <- function(h5obj,
-                                            scan_name,
-                                            mask_vol,
-                                            cluster_map_vol,
-                                            n_time,
-                                            compress = FALSE) {
+                                                 scan_name,
+                                                 mask_vol,
+                                                 cluster_map_vol,
+                                                 n_time,
+                                                 compress = FALSE) {
   if (!inherits(h5obj, "H5File") || !h5obj$is_valid) {
     stop("'h5obj' must be a valid, open H5File object.")
   }
@@ -443,8 +472,10 @@ populate_H5ParcellatedScan_in_h5file <- function(h5obj,
 
       # Write mask for this run (can be different from experiment master mask in general)
       # For simplicity, using the mask_vol@.Data which is a 3D array
-      run_grp$create_dataset("mask", robj = mask_vol@.Data, dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
-        chunk_dims = "auto", gzip_level = if (compress) 4L else 0L)
+      run_grp$create_dataset("mask",
+        robj = mask_vol@.Data, dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
+        chunk_dims = "auto", gzip_level = if (compress) 4L else 0L
+      )
 
       # Extract cluster information from ClusteredNeuroVol
       # cluster_map is a vector of cluster IDs for voxels *within the mask_vol*
@@ -464,12 +495,16 @@ populate_H5ParcellatedScan_in_h5file <- function(h5obj,
         run_grp$create_group("clusters") # Empty group
       } else {
         # Write cluster_map (dense vector for voxels within the mask)
-        run_grp$create_dataset("cluster_map", robj = as.integer(cluster_assignments_in_mask),
-          dtype = hdf5r::h5types$H5T_NATIVE_INT)
+        run_grp$create_dataset("cluster_map",
+          robj = as.integer(cluster_assignments_in_mask),
+          dtype = hdf5r::h5types$H5T_NATIVE_INT
+        )
 
         # Write cluster_ids
-        run_grp$create_dataset("cluster_ids", robj = as.integer(unique_cluster_ids),
-          dtype = hdf5r::h5types$H5T_NATIVE_INT)
+        run_grp$create_dataset("cluster_ids",
+          robj = as.integer(unique_cluster_ids),
+          dtype = hdf5r::h5types$H5T_NATIVE_INT
+        )
 
         # Write cluster_names (try to get from ClusteredNeuroVol's label_map)
         # Match unique_cluster_ids to names. Default to "Cluster_<id>" if not found.
@@ -512,21 +547,24 @@ populate_H5ParcellatedScan_in_h5file <- function(h5obj,
             # The H5ParcellatedScan constructor: data for each cluster is loaded as: dset[,]
             # Let's use n_time x n_vox_in_cluster on disk.
             cluster_ts_data <- matrix(stats::rnorm(n_time * n_vox_in_this_cluster),
-              nrow = n_time, ncol = n_vox_in_this_cluster)
-            clusters_data_grp$create_dataset(paste("cluster_", id, sep = ""), robj = cluster_ts_data,
+              nrow = n_time, ncol = n_vox_in_this_cluster
+            )
+            clusters_data_grp$create_dataset(paste("cluster_", id, sep = ""),
+              robj = cluster_ts_data,
               dtype = hdf5r::h5types$H5T_NATIVE_FLOAT,
-              chunk_dims = "auto", gzip_level = if (compress) 4L else 0L)
+              chunk_dims = "auto", gzip_level = if (compress) 4L else 0L
+            )
           } else {
             # Should not happen if id is from unique_cluster_ids > 0 and cluster_assignments_in_mask is not all 0
             warning(sprintf("Scan '%s', Cluster '%s': No voxels found. Skipping data dataset.", scan_name, id))
           }
         }
       }
-
     },
     error = function(e) {
       stop(sprintf("Error populating H5ParcellatedScan for scan '%s': %s", scan_name, e$message))
-    })
+    }
+  )
 
   invisible(TRUE)
 }
@@ -546,11 +584,11 @@ populate_H5ParcellatedScan_in_h5file <- function(h5obj,
 #' @keywords internal
 #' @return Invisibly returns TRUE on success, or stops on error.
 populate_H5ParcellatedScanSummary_in_h5file <- function(h5obj,
-                                                   scan_name,
-                                                   mask_vol,
-                                                   cluster_map_vol,
-                                                   n_time,
-                                                   compress = FALSE) {
+                                                        scan_name,
+                                                        mask_vol,
+                                                        cluster_map_vol,
+                                                        n_time,
+                                                        compress = FALSE) {
   if (!inherits(h5obj, "H5File") || !h5obj$is_valid) {
     stop("'h5obj' must be a valid, open H5File object.")
   }
@@ -578,8 +616,10 @@ populate_H5ParcellatedScanSummary_in_h5file <- function(h5obj,
       hdf5r::h5attr(run_grp, "n_time") <- as.integer(n_time)
 
       # Write mask, cluster_map, cluster_ids, cluster_names (same as H5ParcellatedScan part)
-      run_grp$create_dataset("mask", robj = mask_vol@.Data, dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
-        chunk_dims = "auto", gzip_level = if (compress) 4L else 0L)
+      run_grp$create_dataset("mask",
+        robj = mask_vol@.Data, dtype = hdf5r::h5types$H5T_NATIVE_HBOOL,
+        chunk_dims = "auto", gzip_level = if (compress) 4L else 0L
+      )
 
       cluster_assignments_in_mask <- cluster_map_vol@clusters
       unique_cluster_ids <- sort(unique(cluster_assignments_in_mask[cluster_assignments_in_mask > 0]))
@@ -593,13 +633,19 @@ populate_H5ParcellatedScanSummary_in_h5file <- function(h5obj,
         clusters_summary_grp <- run_grp$create_group("clusters_summary")
         # Empty matrix with 0 columns
         empty_mat <- matrix(numeric(0), nrow = n_time, ncol = 0)
-        clusters_summary_grp$create_dataset("summary_data", robj = empty_mat,
-          dtype = hdf5r::h5types$H5T_NATIVE_FLOAT)
+        clusters_summary_grp$create_dataset("summary_data",
+          robj = empty_mat,
+          dtype = hdf5r::h5types$H5T_NATIVE_FLOAT
+        )
       } else {
-        run_grp$create_dataset("cluster_map", robj = as.integer(cluster_assignments_in_mask),
-          dtype = hdf5r::h5types$H5T_NATIVE_INT)
-        run_grp$create_dataset("cluster_ids", robj = as.integer(unique_cluster_ids),
-          dtype = hdf5r::h5types$H5T_NATIVE_INT)
+        run_grp$create_dataset("cluster_map",
+          robj = as.integer(cluster_assignments_in_mask),
+          dtype = hdf5r::h5types$H5T_NATIVE_INT
+        )
+        run_grp$create_dataset("cluster_ids",
+          robj = as.integer(unique_cluster_ids),
+          dtype = hdf5r::h5types$H5T_NATIVE_INT
+        )
 
         cl_names <- character(length(unique_cluster_ids))
         if (!is.null(cluster_map_vol@label_map) && length(cluster_map_vol@label_map) > 0) {
@@ -624,20 +670,23 @@ populate_H5ParcellatedScanSummary_in_h5file <- function(h5obj,
         # /scans/<scan_name>/clusters_summary/summary_data
         # Create a matrix with shape [n_time, n_clusters]
         summary_mat <- matrix(stats::rnorm(n_time * length(unique_cluster_ids)),
-          nrow = n_time, ncol = length(unique_cluster_ids))
+          nrow = n_time, ncol = length(unique_cluster_ids)
+        )
         # Add column names to match cluster names
         colnames(summary_mat) <- cl_names
 
         clusters_summary_grp <- run_grp$create_group("clusters_summary")
-        clusters_summary_grp$create_dataset("summary_data", robj = summary_mat,
+        clusters_summary_grp$create_dataset("summary_data",
+          robj = summary_mat,
           dtype = hdf5r::h5types$H5T_NATIVE_FLOAT,
-          chunk_dims = "auto", gzip_level = if (compress) 4L else 0L)
+          chunk_dims = "auto", gzip_level = if (compress) 4L else 0L
+        )
       }
-
     },
     error = function(e) {
       stop(sprintf("Error populating H5ParcellatedScanSummary for scan '%s': %s", scan_name, e$message))
-    })
+    }
+  )
 
   invisible(TRUE)
 }
@@ -660,9 +709,7 @@ create_minimal_h5_for_H5ParcellatedMultiScan <- function(
     master_mask_dims = c(5L, 5L, 4L),
     num_master_clusters = 3L,
     n_time_run1 = 10L,
-    n_time_run2 = 12L
-    ) {
-
+    n_time_run2 = 12L) {
   if (!requireNamespace("neuroim2", quietly = TRUE) || !requireNamespace("hdf5r", quietly = TRUE)) {
     stop("Packages 'neuroim2' and 'hdf5r' are needed for this helper function.")
   }
@@ -694,8 +741,10 @@ create_minimal_h5_for_H5ParcellatedMultiScan <- function(
     master_mask_vol <- create_minimal_LogicalNeuroVol(dims = master_mask_dims, true_voxels = list(c(1L, 1L, 1L)))
     if (sum(master_mask_vol@.Data) == 0) stop("Failed to create a non-empty master_mask_vol.")
   }
-  master_cluster_map_vol <- create_minimal_ClusteredNeuroVol(mask_vol = master_mask_vol,
-    num_clusters = num_master_clusters)
+  master_cluster_map_vol <- create_minimal_ClusteredNeuroVol(
+    mask_vol = master_mask_vol,
+    num_clusters = num_master_clusters
+  )
 
   if (is.null(file_path)) {
     out_file <- tempfile(fileext = ".h5exp_example.h5")
@@ -711,8 +760,10 @@ create_minimal_h5_for_H5ParcellatedMultiScan <- function(
     h5f <- h5info$h5
 
     # 3. Write master mask to /mask
-    h5f$create_dataset("mask", robj = master_mask_vol@.Data,
-      dtype = hdf5r::h5types$H5T_NATIVE_HBOOL)
+    h5f$create_dataset("mask",
+      robj = master_mask_vol@.Data,
+      dtype = hdf5r::h5types$H5T_NATIVE_HBOOL
+    )
     # Write space information for the master mask (as H5ParcellatedMultiScan constructor uses it)
     # The constructor calls .read_space(h5obj, "/")
     master_space_grp <- h5f$create_group("space") # Should be at root if path is "/"
@@ -728,10 +779,14 @@ create_minimal_h5_for_H5ParcellatedMultiScan <- function(
     master_unique_ids <- sort(unique(master_cluster_assignments_in_mask[master_cluster_assignments_in_mask > 0]))
 
     if (length(master_unique_ids) > 0) {
-      h5f$create_dataset("cluster_map", robj = as.integer(master_cluster_assignments_in_mask),
-        dtype = hdf5r::h5types$H5T_NATIVE_INT)
-      h5f$create_dataset("cluster_ids", robj = as.integer(master_unique_ids),
-        dtype = hdf5r::h5types$H5T_NATIVE_INT)
+      h5f$create_dataset("cluster_map",
+        robj = as.integer(master_cluster_assignments_in_mask),
+        dtype = hdf5r::h5types$H5T_NATIVE_INT
+      )
+      h5f$create_dataset("cluster_ids",
+        robj = as.integer(master_unique_ids),
+        dtype = hdf5r::h5types$H5T_NATIVE_INT
+      )
 
       master_cl_names <- character(length(master_unique_ids))
       if (!is.null(master_cluster_map_vol@label_map) && length(master_cluster_map_vol@label_map) > 0) {
@@ -750,8 +805,10 @@ create_minimal_h5_for_H5ParcellatedMultiScan <- function(
       } else {
         master_cl_names <- paste0("MasterCluster_", master_unique_ids)
       }
-      h5f$create_dataset("cluster_names", robj = master_cl_names,
-        dtype = hdf5r::H5T_STRING$new(type = "c"))
+      h5f$create_dataset("cluster_names",
+        robj = master_cl_names,
+        dtype = hdf5r::H5T_STRING$new(type = "c")
+      )
     } else {
       # Create empty datasets if no clusters, to satisfy constructor expectations if it reads them unconditionally
       h5f$create_dataset("cluster_map", robj = integer(0), dtype = hdf5r::h5types$H5T_NATIVE_INT)
@@ -761,33 +818,40 @@ create_minimal_h5_for_H5ParcellatedMultiScan <- function(
     }
 
     # 5. Populate a full run
-    populate_H5ParcellatedScan_in_h5file(h5obj = h5f,
+    populate_H5ParcellatedScan_in_h5file(
+      h5obj = h5f,
       scan_name = "Run1_Full",
       mask_vol = master_mask_vol, # Using master mask for run
       cluster_map_vol = master_cluster_map_vol, # Using master clusters for run
-      n_time = n_time_run1)
+      n_time = n_time_run1
+    )
 
     # 6. Populate a summary run
-    populate_H5ParcellatedScanSummary_in_h5file(h5obj = h5f,
+    populate_H5ParcellatedScanSummary_in_h5file(
+      h5obj = h5f,
       scan_name = "Run2_Summary",
       mask_vol = master_mask_vol,
       cluster_map_vol = master_cluster_map_vol,
-      n_time = n_time_run2)
+      n_time = n_time_run2
+    )
 
     # 7. Create header group (required by H5ParcellatedMultiScan constructor)
     header_grp <- h5f$create_group("header")
     # dim: [4, X, Y, Z, ...] where 4 indicates NIfTI volume
-    header_grp$create_dataset("dim", robj = as.integer(c(4L, master_mask_dims, 1L, 1L, 1L, 1L)),
-      dtype = hdf5r::h5types$H5T_NATIVE_INT)
+    header_grp$create_dataset("dim",
+      robj = as.integer(c(4L, master_mask_dims, 1L, 1L, 1L, 1L)),
+      dtype = hdf5r::h5types$H5T_NATIVE_INT
+    )
     # pixdim: [qfac, x_spacing, y_spacing, z_spacing, ...]
-    header_grp$create_dataset("pixdim", robj = as.double(c(0.0, neuroim2::spacing(master_sp_obj), rep(0, 4))),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+    header_grp$create_dataset("pixdim",
+      robj = as.double(c(0.0, neuroim2::spacing(master_sp_obj), rep(0, 4))),
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
 
     # 8. Set root class attribute
     hdf5r::h5attr(h5f, "class") <- "H5ParcellatedMultiScan"
     # Potentially add fmristore_version attribute if constructor checks it
     # hdf5r::h5attr(h5f, "fmristore_version") <- as.character(utils::packageVersion("fmristore"))
-
   }, error = function(e) {
     if (!is.null(h5info) && h5info$owns && !is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     stop(sprintf("Error creating minimal HDF5 for H5ParcellatedMultiScan at %s: %s", out_file, e$message))

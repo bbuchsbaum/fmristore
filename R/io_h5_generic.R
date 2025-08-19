@@ -6,8 +6,10 @@ setMethod(
   definition = function(object, file = NULL, data_type = "FLOAT",
                         chunk_dim = c(4, 4, 4, dim(object)[4]),
                         compression = 6) {
-    to_nih5_vec(object, file_name = file, data_type = data_type,
-      chunk_dim = chunk_dim, compression = compression)
+    to_nih5_vec(object,
+      file_name = file, data_type = data_type,
+      chunk_dim = chunk_dim, compression = compression
+    )
   }
 )
 
@@ -18,8 +20,10 @@ setMethod(
   signature = signature(object = "LatentNeuroVec"),
   definition = function(object, file = NULL, data_type = "FLOAT",
                         compression = 6) {
-    to_h5_latentvec(object, file_name = file, data_type = data_type,
-      compression = compression)
+    to_h5_latentvec(object,
+      file_name = file, data_type = data_type,
+      compression = compression
+    )
   }
 )
 
@@ -31,9 +35,11 @@ setMethod(
   definition = function(object, file, mask, labels, compression = 4,
                         dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE,
                         chunk_size = 1024, header_values = list()) {
-    write_labeled_vec(vec = object, mask = mask, labels = labels, file = file,
+    write_labeled_vec(
+      vec = object, mask = mask, labels = labels, file = file,
       compression = compression, dtype = dtype,
-      chunk_size = chunk_size, header_values = header_values)
+      chunk_size = chunk_size, header_values = header_values
+    )
   }
 )
 
@@ -110,11 +116,14 @@ setMethod(
     # Write shared spatial information from first NeuroVec
     space_grp <- h5obj$create_group("space")
     h5_write(h5obj, "/space/dim", dim(first_space)[1:3],
-      dtype = hdf5r::h5types$H5T_NATIVE_INT32)
+      dtype = hdf5r::h5types$H5T_NATIVE_INT32
+    )
     h5_write(h5obj, "/space/origin", origin(first_space),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
     h5_write(h5obj, "/space/trans", trans(first_space),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
 
     # Create scans group
     scans_grp <- h5obj$create_group("scans")
@@ -144,14 +153,16 @@ setMethod(
         "FLOAT" = hdf5r::h5types$H5T_IEEE_F32LE,
         "DOUBLE" = hdf5r::h5types$H5T_IEEE_F64LE,
         "INT" = hdf5r::h5types$H5T_NATIVE_INT32,
-        stop("Unsupported data_type: ", data_type))
+        stop("Unsupported data_type: ", data_type)
+      )
 
       h5_write(h5obj,
         path = file.path("/scans", scan_name, "data"),
         data = as.array(vec),
         dtype = dtype,
         chunk_dims = scan_chunk_dim,
-        compression = compression)
+        compression = compression
+      )
 
       # Write scan-specific metadata if provided
       if (!is.null(scan_metadata) && scan_name %in% names(scan_metadata)) {
@@ -162,7 +173,8 @@ setMethod(
             h5_write(h5obj,
               path = file.path("/scans", scan_name, "metadata", key),
               data = meta[[key]],
-              dtype = guess_h5_type(meta[[key]]))
+              dtype = guess_h5_type(meta[[key]])
+            )
           }
         }
       }

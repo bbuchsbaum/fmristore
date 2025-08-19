@@ -48,20 +48,23 @@ create_full_rank_latent <- function(dims = c(8, 8, 4, 20), # x,y,z,t
   # SVD gives: masked_data = U %*% diag(d) %*% t(V)
   # We want: masked_data = loadings %*% t(basis) + offset
   # So: loadings = U %*% diag(d), basis = V
-  basis_mat <- Matrix(svd_result$v, sparse = FALSE)  # [nTime x k]
+  basis_mat <- Matrix(svd_result$v, sparse = FALSE) # [nTime x k]
   loadings_mat <- Matrix(svd_result$u %*% diag(svd_result$d[1:k]),
-    sparse = FALSE) # [nVox_mask x k]
+    sparse = FALSE
+  ) # [nVox_mask x k]
 
   # Use zero offset for perfect reconstruction
   offset_vec <- rep(0, nVox_mask)
 
   # Create LatentNeuroVec
-  lvec <- LatentNeuroVec(basis = basis_mat,
+  lvec <- LatentNeuroVec(
+    basis = basis_mat,
     loadings = loadings_mat,
     space = sp,
     mask = mask_vol,
     offset = offset_vec,
-    label = "full_rank_test")
+    label = "full_rank_test"
+  )
 
   # Create equivalent DenseNeuroVec
   dense_vec <- DenseNeuroVec(original_data, sp)
@@ -78,11 +81,11 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - intege
 
   # Test various integer coordinate combinations
   test_coords <- list(
-    c(1L, 1L, 1L),  # First voxel
-    c(3L, 3L, 2L),  # Middle voxel
-    c(6L, 6L, 3L),  # Last voxel
-    c(2L, 4L, 1L),  # Random voxel
-    c(5L, 2L, 3L)   # Another random voxel
+    c(1L, 1L, 1L), # First voxel
+    c(3L, 3L, 2L), # Middle voxel
+    c(6L, 6L, 3L), # Last voxel
+    c(2L, 4L, 1L), # Random voxel
+    c(5L, 2L, 3L) # Another random voxel
   )
 
   for (coords in test_coords) {
@@ -99,15 +102,20 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - intege
 
     if (is_in_mask) {
       # Should match exactly for masked voxels
-      expect_equal(latent_series, dense_series, tolerance = 1e-10,
-        info = sprintf("Series mismatch at coords (%d,%d,%d) - masked voxel", i, j, k))
+      expect_equal(latent_series, dense_series,
+        tolerance = 1e-10,
+        info = sprintf("Series mismatch at coords (%d,%d,%d) - masked voxel", i, j, k)
+      )
     } else {
       # Outside mask should be zeros for LatentNeuroVec
-      expect_equal(latent_series, rep(0, dim(lvec)[4]), tolerance = 1e-10,
-        info = sprintf("LatentNeuroVec should return zeros for unmasked voxel (%d,%d,%d)", i, j, k))
+      expect_equal(latent_series, rep(0, dim(lvec)[4]),
+        tolerance = 1e-10,
+        info = sprintf("LatentNeuroVec should return zeros for unmasked voxel (%d,%d,%d)", i, j, k)
+      )
       # Dense should return actual data
       expect_equal(dense_series, dense_series,
-        info = sprintf("DenseNeuroVec series extraction failed at (%d,%d,%d)", i, j, k))
+        info = sprintf("DenseNeuroVec series extraction failed at (%d,%d,%d)", i, j, k)
+      )
     }
   }
 })
@@ -122,7 +130,7 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - numeri
   test_coords <- list(
     c(1.0, 1.0, 1.0),
     c(3.0, 3.0, 2.0),
-    c(2.5, 3.5, 1.5),  # Non-integer coords (should be rounded/interpolated)
+    c(2.5, 3.5, 1.5), # Non-integer coords (should be rounded/interpolated)
     c(4.0, 4.0, 4.0)
   )
 
@@ -143,12 +151,13 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - numeri
     if (i_round >= 1 && i_round <= dim(mask)[1] &&
       j_round >= 1 && j_round <= dim(mask)[2] &&
       k_round >= 1 && k_round <= dim(mask)[3]) {
-
       is_in_mask <- mask[i_round, j_round, k_round]
 
       if (is_in_mask) {
-        expect_equal(latent_series, dense_series, tolerance = 1e-8,
-          info = sprintf("Series mismatch at numeric coords (%.1f,%.1f,%.1f)", i, j, k))
+        expect_equal(latent_series, dense_series,
+          tolerance = 1e-8,
+          info = sprintf("Series mismatch at numeric coords (%.1f,%.1f,%.1f)", i, j, k)
+        )
       }
     }
   }
@@ -175,7 +184,8 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - matrix
 
   # Both should return matrices with same dimensions
   expect_equal(dim(latent_series_mat), dim(dense_series_mat),
-    info = "Matrix dimensions should match between LatentNeuroVec and DenseNeuroVec")
+    info = "Matrix dimensions should match between LatentNeuroVec and DenseNeuroVec"
+  )
 
   # Check each voxel individually
   for (i in seq_len(nrow(roi_coords))) {
@@ -187,12 +197,16 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - matrix
     is_in_mask <- mask[x, y, z]
 
     if (is_in_mask) {
-      expect_equal(latent_series_mat[, i], dense_series_mat[, i], tolerance = 1e-10,
-        info = sprintf("Matrix ROI series mismatch at voxel %d coords (%d,%d,%d)", i, x, y, z))
+      expect_equal(latent_series_mat[, i], dense_series_mat[, i],
+        tolerance = 1e-10,
+        info = sprintf("Matrix ROI series mismatch at voxel %d coords (%d,%d,%d)", i, x, y, z)
+      )
     } else {
       # LatentNeuroVec should return zeros for unmasked voxels
-      expect_equal(latent_series_mat[, i], rep(0, dim(lvec)[4]), tolerance = 1e-10,
-        info = sprintf("LatentNeuroVec should return zeros for unmasked matrix ROI voxel %d", i))
+      expect_equal(latent_series_mat[, i], rep(0, dim(lvec)[4]),
+        tolerance = 1e-10,
+        info = sprintf("LatentNeuroVec should return zeros for unmasked matrix ROI voxel %d", i)
+      )
     }
   }
 })
@@ -214,7 +228,8 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - Logica
 
   # Both should return matrices with same dimensions
   expect_equal(dim(latent_series_logical), dim(dense_series_logical),
-    info = "LogicalNeuroVol mask series dimensions should match")
+    info = "LogicalNeuroVol mask series dimensions should match"
+  )
 
   # For voxels within both the ROI mask and the LatentNeuroVec mask, should match
   # For voxels in ROI but outside LatentNeuroVec mask, LatentNeuroVec should return zeros
@@ -230,12 +245,16 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - Logica
 
     if (test_data$mask[x, y, z]) {
       # In both masks - should match
-      expect_equal(latent_series_logical[, i], dense_series_logical[, i], tolerance = 1e-10,
-        info = sprintf("LogicalNeuroVol mask series mismatch at voxel %d", i))
+      expect_equal(latent_series_logical[, i], dense_series_logical[, i],
+        tolerance = 1e-10,
+        info = sprintf("LogicalNeuroVol mask series mismatch at voxel %d", i)
+      )
     } else {
       # In ROI mask but not in LatentNeuroVec mask - LatentNeuroVec should be zeros
-      expect_equal(latent_series_logical[, i], rep(0, dim(lvec)[4]), tolerance = 1e-10,
-        info = sprintf("LatentNeuroVec should return zeros for ROI voxel %d outside its mask", i))
+      expect_equal(latent_series_logical[, i], rep(0, dim(lvec)[4]),
+        tolerance = 1e-10,
+        info = sprintf("LatentNeuroVec should return zeros for ROI voxel %d outside its mask", i)
+      )
     }
   }
 })
@@ -251,7 +270,7 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - drop p
   if (nrow(mask_indices) == 0) {
     skip("No voxels in mask - cannot test drop parameter")
   }
-  
+
   # Use the first voxel that's in the mask
   i <- mask_indices[1, 1]
   j <- mask_indices[1, 2]
@@ -261,20 +280,26 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - drop p
     # Test with drop=TRUE (default)
     latent_drop_true <- series(lvec, i, j, k, drop = TRUE)
     dense_drop_true <- series(dvec, i, j, k, drop = TRUE)
-    expect_equal(latent_drop_true, dense_drop_true, tolerance = 1e-10,
-      info = "Series with drop=TRUE should match")
+    expect_equal(latent_drop_true, dense_drop_true,
+      tolerance = 1e-10,
+      info = "Series with drop=TRUE should match"
+    )
 
     # Test with drop=FALSE
     latent_drop_false <- series(lvec, i, j, k, drop = FALSE)
     dense_drop_false <- series(dvec, i, j, k, drop = FALSE)
-    expect_equal(latent_drop_false, dense_drop_false, tolerance = 1e-10,
-      info = "Series with drop=FALSE should match")
+    expect_equal(latent_drop_false, dense_drop_false,
+      tolerance = 1e-10,
+      info = "Series with drop=FALSE should match"
+    )
 
     # Check that dimensions are handled correctly
     expect_equal(class(latent_drop_true), class(dense_drop_true),
-      info = "Return types should match for drop=TRUE")
+      info = "Return types should match for drop=TRUE"
+    )
     expect_equal(class(latent_drop_false), class(dense_drop_false),
-      info = "Return types should match for drop=FALSE")
+      info = "Return types should match for drop=FALSE"
+    )
   } else {
     skip("Test coordinates not in mask - skipping drop parameter test")
   }
@@ -302,11 +327,15 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - single
     dense_single <- series(dvec, i, j, k)
 
     if (mask[i, j, k]) {
-      expect_equal(latent_single, dense_single, tolerance = 1e-10,
-        info = sprintf("Single coordinate series mismatch at coords (%d,%d,%d)", i, j, k))
+      expect_equal(latent_single, dense_single,
+        tolerance = 1e-10,
+        info = sprintf("Single coordinate series mismatch at coords (%d,%d,%d)", i, j, k)
+      )
     } else {
-      expect_equal(latent_single, rep(0, dim(lvec)[4]), tolerance = 1e-10,
-        info = sprintf("LatentNeuroVec should return zeros for unmasked coord (%d,%d,%d)", i, j, k))
+      expect_equal(latent_single, rep(0, dim(lvec)[4]),
+        tolerance = 1e-10,
+        info = sprintf("LatentNeuroVec should return zeros for unmasked coord (%d,%d,%d)", i, j, k)
+      )
     }
   }
 })
@@ -318,10 +347,10 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - edge c
 
   # Test boundary coordinates
   boundary_coords <- list(
-    c(1L, 1L, 1L),  # Min boundary
-    c(4L, 4L, 2L),  # Max boundary
-    c(1L, 4L, 1L),  # Mixed boundaries
-    c(4L, 1L, 2L)   # Mixed boundaries
+    c(1L, 1L, 1L), # Min boundary
+    c(4L, 4L, 2L), # Max boundary
+    c(1L, 4L, 1L), # Mixed boundaries
+    c(4L, 1L, 2L) # Mixed boundaries
   )
 
   for (coords in boundary_coords) {
@@ -335,14 +364,18 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - edge c
 
     # Length should always match time dimension
     expect_equal(length(latent_boundary), dim(lvec)[4],
-      info = sprintf("Latent series length should match time dimension at boundary (%d,%d,%d)", i, j, k))
+      info = sprintf("Latent series length should match time dimension at boundary (%d,%d,%d)", i, j, k)
+    )
     expect_equal(length(dense_boundary), dim(dvec)[4],
-      info = sprintf("Dense series length should match time dimension at boundary (%d,%d,%d)", i, j, k))
+      info = sprintf("Dense series length should match time dimension at boundary (%d,%d,%d)", i, j, k)
+    )
 
     # If in mask, should match
     if (test_data$mask[i, j, k]) {
-      expect_equal(latent_boundary, dense_boundary, tolerance = 1e-10,
-        info = sprintf("Boundary series should match at (%d,%d,%d)", i, j, k))
+      expect_equal(latent_boundary, dense_boundary,
+        tolerance = 1e-10,
+        info = sprintf("Boundary series should match at (%d,%d,%d)", i, j, k)
+      )
     }
   }
 })
@@ -373,13 +406,17 @@ test_that("LatentNeuroVec series() performance and consistency", {
       # Multiple extractions should be consistent
       series1 <- series(lvec, x, y, z)
       series2 <- series(lvec, x, y, z)
-      expect_equal(series1, series2, tolerance = 1e-12,
-        info = sprintf("Repeated series extraction should be identical at (%d,%d,%d)", x, y, z))
+      expect_equal(series1, series2,
+        tolerance = 1e-12,
+        info = sprintf("Repeated series extraction should be identical at (%d,%d,%d)", x, y, z)
+      )
 
       # Should match dense version
       dense_series <- series(dvec, x, y, z)
-      expect_equal(series1, dense_series, tolerance = 1e-10,
-        info = sprintf("Large-scale series should match dense at (%d,%d,%d)", x, y, z))
+      expect_equal(series1, dense_series,
+        tolerance = 1e-10,
+        info = sprintf("Large-scale series should match dense at (%d,%d,%d)", x, y, z)
+      )
     }
   }
 
@@ -389,14 +426,17 @@ test_that("LatentNeuroVec series() performance and consistency", {
 
   # Should have same structure
   expect_equal(dim(latent_matrix), dim(dense_matrix),
-    info = "Large matrix extractions should have same dimensions")
+    info = "Large matrix extractions should have same dimensions"
+  )
 
   # Check consistency across masked voxels
   for (i in seq_len(ncol(latent_matrix))) {
     coords <- test_coords[i, ]
     if (mask[coords[1], coords[2], coords[3]]) {
-      expect_equal(latent_matrix[, i], dense_matrix[, i], tolerance = 1e-10,
-        info = sprintf("Large matrix series should match at column %d", i))
+      expect_equal(latent_matrix[, i], dense_matrix[, i],
+        tolerance = 1e-10,
+        info = sprintf("Large matrix series should match at column %d", i)
+      )
     }
   }
 })
@@ -426,8 +466,10 @@ test_that("LatentNeuroVec series() with different k values", {
         # For full-rank (k=20), should match exactly
         # For lower k, should be a good approximation
         if (k == dims[4]) {
-          expect_equal(latent_series, dense_series, tolerance = 1e-10,
-            label = sprintf("Full-rank (k=%d) series should match exactly at (%d,%d,%d)", k, i, j, k_coord))
+          expect_equal(latent_series, dense_series,
+            tolerance = 1e-10,
+            label = sprintf("Full-rank (k=%d) series should match exactly at (%d,%d,%d)", k, i, j, k_coord)
+          )
         } else {
           # For reduced rank, check that they're reasonably close
           # Only check correlation if both series have variance
@@ -436,7 +478,8 @@ test_that("LatentNeuroVec series() with different k values", {
             # For very low rank approximations, correlation may be lower
             min_correlation <- if (k <= 5) 0.5 else if (k <= 10) 0.8 else 0.9
             expect_gt(correlation, min_correlation,
-              label = sprintf("Reduced-rank (k=%d) series should be correlated (>%.1f) at (%d,%d,%d)", k, min_correlation, i, j, k_coord))
+              label = sprintf("Reduced-rank (k=%d) series should be correlated (>%.1f) at (%d,%d,%d)", k, min_correlation, i, j, k_coord)
+            )
           }
         }
       }

@@ -79,24 +79,28 @@ LatentNeuroVecSource <- function(file_name) {
 #' # Create basis & loadings
 #' basis <- Matrix(rnorm(n_timepoints * n_components),
 #'   nrow = n_timepoints,
-#'   ncol = n_components)
+#'   ncol = n_components
+#' )
 #' loadings <- Matrix(rnorm(n_voxels * n_components),
 #'   nrow = n_voxels,
 #'   ncol = n_components,
-#'   sparse = TRUE)
+#'   sparse = TRUE
+#' )
 #'
 #' # Create space (10x10x10 volume, 100 timepoints)
 #' spc <- NeuroSpace(c(10, 10, 10, n_timepoints))
 #'
 #' # Create mask
 #' mask_array <- array(TRUE, dim = c(10, 10, 10))
-#' mask_vol   <- LogicalNeuroVol(mask_array, NeuroSpace(c(10, 10, 10)))
+#' mask_vol <- LogicalNeuroVol(mask_array, NeuroSpace(c(10, 10, 10)))
 #'
 #' # Construct LatentNeuroVec
-#' lvec <- LatentNeuroVec(basis = basis,
+#' lvec <- LatentNeuroVec(
+#'   basis = basis,
 #'   loadings = loadings,
 #'   space = spc,
-#'   mask = mask_vol)
+#'   mask = mask_vol
+#' )
 #' }
 #'
 #' @export
@@ -129,7 +133,8 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
     mask_space <- neuroim2::space(mask)
     # Use check_same_dims for the dimension check
     check_same_dims(mask_space, space_3d,
-      msg = "Space dimensions of provided mask do not match dimensions derived from the main 4D space.")
+      msg = "Space dimensions of provided mask do not match dimensions derived from the main 4D space."
+    )
     # Keep the check for space equality separate for now
     if (!isTRUE(all.equal(mask_space, space_3d))) {
       stop("Space object of provided mask does not match the space derived from the main 4D space. Cannot create IndexLookupVol.")
@@ -206,7 +211,8 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
     mask     = mask,
     map      = IndexLookupVol(space_for_map, as.integer(which(mask@.Data))), # Use determined space
     offset   = offset,
-    label    = label)
+    label    = label
+  )
 }
 
 #' Write LatentNeuroVec to HDF5 File
@@ -239,7 +245,6 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
 #'   requireNamespace("Matrix", quietly = TRUE) &&
 #'   exists("write_vec", where = "package:neuroim2") &&
 #'   !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'
 #'   lnv <- NULL
 #'   temp_h5_file <- NULL
 #'
@@ -261,7 +266,6 @@ LatentNeuroVec <- function(basis, loadings, space, mask, offset = NULL, label = 
 #'     if (file.exists(temp_h5_file)) {
 #'       cat("Successfully wrote LatentNeuroVec to:", temp_h5_file, "\n")
 #'     }
-#'
 #'   }, error = function(e) {
 #'     message("write_vec example failed: ", e$message)
 #'   }, finally = {
@@ -292,8 +296,8 @@ setMethod(
 
     # Call internal writer. It handles opening/closing the file via on.exit.
     h5obj <- to_h5_latentvec(
-      vec        = x,
-      file_name  = file_name,
+      vec = x,
+      file_name = file_name,
       compression = compression,
       nbit = nbit
     )
@@ -318,31 +322,34 @@ setMethod(
   f = "matricized_access",
   signature = signature(x = "LatentNeuroVec", i = "matrix"),
   definition = function(x, i) {
-    if (!is.numeric(i) || ncol(i) != 2L)
+    if (!is.numeric(i) || ncol(i) != 2L) {
       stop("`i` must be a numeric matrix with 2 columns (time, spatial-index)")
+    }
 
     ## -- 1. split and sanity-check the two index columns -------------------
-    t_idx <- as.integer(i[, 1L])                       # time rows in @basis
-    s_idx <- as.integer(i[, 2L])                       # spatial indices 1..X·Y·Z
+    t_idx <- as.integer(i[, 1L]) # time rows in @basis
+    s_idx <- as.integer(i[, 2L]) # spatial indices 1..X·Y·Z
 
-    nt  <- nrow(x@basis)
+    nt <- nrow(x@basis)
     nxy <- prod(dim(x)[1:3])
 
-    if (any(t_idx < 1L | t_idx > nt))
+    if (any(t_idx < 1L | t_idx > nt)) {
       stop("time index out of bounds")
-    if (any(s_idx < 1L | s_idx > nxy))
+    }
+    if (any(s_idx < 1L | s_idx > nxy)) {
       stop("spatial index out of bounds")
+    }
 
     ## -- 2. map spatial -> mask rows  (0 means 'outside the mask') ---------
-    v_idx <- lookup(x@map, s_idx)                      # 0 / 1..nVox
+    v_idx <- lookup(x@map, s_idx) # 0 / 1..nVox
 
     inside <- v_idx > 0L
-    out    <- numeric(length(t_idx))                   # zeros by default
+    out <- numeric(length(t_idx)) # zeros by default
 
     if (any(inside)) {
       ## -- 3. gather the relevant rows  --------------------------------------
-      b1 <- x@basis   [t_idx[inside], , drop = FALSE]   # n_inside × k
-      b2 <- x@loadings[v_idx[inside], , drop = FALSE]    # n_inside × k
+      b1 <- x@basis[t_idx[inside], , drop = FALSE] # n_inside × k
+      b2 <- x@loadings[v_idx[inside], , drop = FALSE] # n_inside × k
 
       ## -- 4. pair-wise dot product + offset  --------------------------------
       # Handle potential NA from sparse matrix multiplication
@@ -385,8 +392,10 @@ setMethod(
     tcrossprod <- Matrix::tcrossprod
 
     # Ensure component dimensions match
-    stopifnot("[matricized_access,LatentNeuroVec,integer] Number of components mismatch." =
-      ncol(x@basis) == ncol(x@loadings))
+    stopifnot(
+      "[matricized_access,LatentNeuroVec,integer] Number of components mismatch." =
+        ncol(x@basis) == ncol(x@loadings)
+    )
 
     if (any(i < 1) || any(i > nrow(x@loadings))) {
       stop("Index out of bounds for 'loadings'")
@@ -437,7 +446,6 @@ setMethod(
   f = "linear_access",
   signature = signature(x = "LatentNeuroVec", i = "integer"),
   definition = function(x, i) {
-
     dims_full <- dim(x) # Get 4D dimensions
     nels_4d <- prod(dims_full)
     nels_3d <- prod(dims_full[1:3])
@@ -573,7 +581,8 @@ setMethod(
 #' @rdname extract-methods
 #' @export
 # single volume at time i
-setMethod("[[", signature(x = "LatentNeuroVec", i = "numeric"),
+setMethod(
+  "[[", signature(x = "LatentNeuroVec", i = "numeric"),
   function(x, i) {
     if (length(i) != 1) stop("Index must be a single number")
     if (i < 1 || i > dim(x)[4]) stop("Index out of range")
@@ -588,7 +597,7 @@ setMethod("[[", signature(x = "LatentNeuroVec", i = "numeric"),
     b2 <- x@loadings
     # Matrix objects already - no need to convert
     dat <- as.numeric(b1 %*% t(b2))
-    dat <- dat + x@offset  # length p
+    dat <- dat + x@offset # length p
 
     # Now place them in a SparseNeuroVol with the known mask
     newdim <- dim(x)[1:3]
@@ -596,7 +605,8 @@ setMethod("[[", signature(x = "LatentNeuroVec", i = "numeric"),
       spacing = neuroim2::spacing(x),
       origin = neuroim2::origin(x),
       axes = neuroim2::axes(x@space),
-      trans = neuroim2::trans(x))
+      trans = neuroim2::trans(x)
+    )
 
     SparseNeuroVol(dat, bspace, indices = neuroim2::indices(x))
   }
@@ -652,14 +662,16 @@ setMethod(
     #    `rowmap` will have 0 for out-of-mask voxels.
     rowmap <- lookup(x@map, linear_idx_3d) # Length = n_vox_req
     valid_mask_indices <- rowmap[rowmap > 0] # Indices within loadings/offset needed
-    map_req_to_valid <- which(rowmap > 0)   # Mapping from requested voxel pos to valid pos
+    map_req_to_valid <- which(rowmap > 0) # Mapping from requested voxel pos to valid pos
 
     # Initialize result array with zeros
     result <- array(0, dim = out_dim)
 
     # 3. If no requested voxels are within the mask, return the zero array
     if (length(valid_mask_indices) == 0) {
-      if (drop) return(drop(result))
+      if (drop) {
+        return(drop(result))
+      }
       return(result)
     }
 
@@ -765,7 +777,7 @@ setMethod(
     x_dims_3d <- dim(x_space)[1:3]
     compatible_dims <- TRUE
 
-    for (obj in all_objects[-1]) {  # Skip x
+    for (obj in all_objects[-1]) { # Skip x
       obj_space <- space(obj)
       obj_dims_3d <- dim(obj_space)[1:3]
       # Use validate_same_dims and check if the result is NULL (success)
@@ -787,7 +799,7 @@ setMethod(
     x_mask_array <- as.array(mask(x))
     compatible_masks <- TRUE
 
-    for (obj in all_objects[-1]) {  # Skip x
+    for (obj in all_objects[-1]) { # Skip x
       obj_mask_array <- as.array(mask(obj))
       if (!identical(x_mask_array, obj_mask_array)) {
         compatible_masks <- FALSE
@@ -804,7 +816,7 @@ setMethod(
     x_k <- ncol(x@loadings)
     compatible_k <- TRUE
 
-    for (obj in all_objects[-1]) {  # Skip x
+    for (obj in all_objects[-1]) { # Skip x
       obj_k <- ncol(obj@loadings)
       if (x_k != obj_k) {
         compatible_k <- FALSE
@@ -821,7 +833,7 @@ setMethod(
     compatible_loadings <- TRUE
     x_loadings <- x@loadings
 
-    for (obj in all_objects[-1]) {  # Skip x
+    for (obj in all_objects[-1]) { # Skip x
       if (!identical(as.matrix(x_loadings), as.matrix(obj@loadings))) {
         compatible_loadings <- FALSE
         break
@@ -878,10 +890,10 @@ setMethod(
     # Create new LatentNeuroVec
     LatentNeuroVec(
       basis = new_basis,
-      loadings = x@loadings,  # Use loadings from the first object (all are identical)
+      loadings = x@loadings, # Use loadings from the first object (all are identical)
       space = new_space,
-      mask = x@mask,          # Use mask from the first object (all are identical)
-      offset = x@offset,      # Use offset from the first object (should check if identical?)
+      mask = x@mask, # Use mask from the first object (all are identical)
+      offset = x@offset, # Use offset from the first object (should check if identical?)
       label = new_label
     )
   }
@@ -892,7 +904,6 @@ setMethod(
 #' @noRd
 to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
                             compression = 6, nbit = FALSE) {
-
   assert_that(inherits(vec, "LatentNeuroVec"))
 
 
@@ -927,7 +938,8 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
         error = function(e) {
           warning("Failed to convert transform matrix to quaternions: ", e$message, ". Using default.")
           list(quaternion = c(0, 0, 0), qoffset = c(0, 0, 0), qfac = 1)
-        })
+        }
+      )
       sp_spacing <- spacing(sp)
       if (length(sp_spacing) < 3) sp_spacing <- c(sp_spacing, rep(1, 3 - length(sp_spacing)))
       TR <- attr(sp, "TR") %||% 0.0
@@ -935,18 +947,23 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
       h5dtype_internal <- switch(toupper(data_type),
         "FLOAT"   = hdf5r::h5types$H5T_NATIVE_FLOAT,
         "DOUBLE"  = hdf5r::h5types$H5T_NATIVE_DOUBLE,
-        hdf5r::h5types$H5T_NATIVE_FLOAT)
+        hdf5r::h5types$H5T_NATIVE_FLOAT
+      )
       if (is.null(h5dtype_internal)) stop(paste0("Invalid data_type specified: ", data_type))
 
       dtype_text <- h5dtype_internal$to_text()
-      nifti_dt_map <- list("H5T_NATIVE_FLOAT" = 16L, "H5T_IEEE_F32LE" = 16L,
+      nifti_dt_map <- list(
+        "H5T_NATIVE_FLOAT" = 16L, "H5T_IEEE_F32LE" = 16L,
         "H5T_NATIVE_DOUBLE" = 64L, "H5T_IEEE_F64LE" = 64L,
         "H5T_NATIVE_INT" = 8L, "H5T_STD_I32LE" = 8L,
-        "H5T_NATIVE_SHORT" = 4L)
-      nifti_bp_map <- list("H5T_NATIVE_FLOAT" = 32L, "H5T_IEEE_F32LE" = 32L,
+        "H5T_NATIVE_SHORT" = 4L
+      )
+      nifti_bp_map <- list(
+        "H5T_NATIVE_FLOAT" = 32L, "H5T_IEEE_F32LE" = 32L,
         "H5T_NATIVE_DOUBLE" = 64L, "H5T_IEEE_F64LE" = 64L,
         "H5T_NATIVE_INT" = 32L, "H5T_STD_I32LE" = 32L,
-        "H5T_NATIVE_SHORT" = 16L)
+        "H5T_NATIVE_SHORT" = 16L
+      )
       nifti_datatype_code <- nifti_dt_map[[dtype_text]] %||% 0L
       nifti_bitpix <- nifti_bp_map[[dtype_text]] %||% 0L
       if (nifti_datatype_code == 0L) {
@@ -983,21 +1000,25 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
 
       nvox <- .write_mask(h5obj, vec@mask, compression)
 
-      basis_info <- .write_basis(h5obj, vec@loadings, h5dtype_internal,
-        compression, vec@offset, nvox)
+      basis_info <- .write_basis(
+        h5obj, vec@loadings, h5dtype_internal,
+        compression, vec@offset, nvox
+      )
 
       scan_name <- vec@label %||% tools::file_path_sans_ext(basename(file_name))
-      .write_scans(h5obj, as.matrix(vec@basis), scan_name, TR,
-        basis_info$k, T_vec, h5dtype_internal, compression)
+      .write_scans(
+        h5obj, as.matrix(vec@basis), scan_name, TR,
+        basis_info$k, T_vec, h5dtype_internal, compression
+      )
 
       message("[to_h5_latentvec] HDF5 write SUCCESSFUL.")
       return(h5obj)
-
     },
     error = function(e) {
       warning(paste0("[to_h5_latentvec] ERROR during HDF5 write: ", e$message))
       return(NULL)
-    })
+    }
+  )
 }
 
 #' @keywords internal
@@ -1006,10 +1027,12 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
   message("[to_h5_latentvec] Writing Header Group...")
   for (nm in names(hdr_fields)) {
     h5_write(h5, file.path("/header", nm), hdr_fields[[nm]],
-      dtype = guess_h5_type(hdr_fields[[nm]]), overwrite = TRUE)
+      dtype = guess_h5_type(hdr_fields[[nm]]), overwrite = TRUE
+    )
   }
   h5_write(h5, "/header/qfac", qfac,
-    dtype = h5types$H5T_NATIVE_DOUBLE, overwrite = TRUE)
+    dtype = h5types$H5T_NATIVE_DOUBLE, overwrite = TRUE
+  )
   message("[to_h5_latentvec] Header Group DONE.")
 }
 
@@ -1017,15 +1040,17 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
 #' @noRd
 .write_mask <- function(h5, mask_vol, compression) {
   message("[to_h5_latentvec] Writing Mask Dataset...")
-  if (!inherits(mask_vol, "LogicalNeuroVol"))
+  if (!inherits(mask_vol, "LogicalNeuroVol")) {
     stop("vec@mask is not a LogicalNeuroVol")
+  }
   mask_arr <- array(as.integer(mask_vol@.Data), dim = dim(mask_vol))
   dims <- dim(mask_vol)
   mask_chunk_dim <- c(min(32, dims[1]), min(32, dims[2]), min(32, dims[3]))
   h5_write(h5, "/mask", mask_arr,
     dtype = hdf5r::h5types$H5T_NATIVE_UCHAR,
     chunk_dims = mask_chunk_dim, compression = compression,
-    overwrite = TRUE)
+    overwrite = TRUE
+  )
   nvox <- sum(mask_vol)
 
   message("[to_h5_latentvec] Writing Voxel Coords...")
@@ -1036,13 +1061,15 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
   } else {
     matrix(integer(), nrow = 0, ncol = 3)
   }
-  if (nrow(coords_to_write) != nvox)
+  if (nrow(coords_to_write) != nvox) {
     stop("Internal dimension mismatch: voxel_coords rows != non-zero count in mask")
+  }
   coord_chunk <- if (nrow(coords_to_write) > 0) c(min(1024, nrow(coords_to_write)), 3) else NULL
   h5_write(h5, "/voxel_coords", coords_to_write,
     dtype = hdf5r::h5types$H5T_NATIVE_INT32,
     chunk_dims = coord_chunk, compression = compression,
-    overwrite = TRUE)
+    overwrite = TRUE
+  )
   return(nvox)
 }
 
@@ -1054,25 +1081,32 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
   t_loadings <- Matrix::t(loadings)
   k <- nrow(t_loadings)
   nvox <- ncol(t_loadings)
-  if (nvox != nvox_mask)
-    stop(paste0("Internal dimension mismatch: spatial basis columns (", nvox,
-      ") != nVox in mask (", nvox_mask, ")"))
+  if (nvox != nvox_mask) {
+    stop(paste0(
+      "Internal dimension mismatch: spatial basis columns (", nvox,
+      ") != nVox in mask (", nvox_mask, ")"
+    ))
+  }
   density <- Matrix::nnzero(t_loadings) / length(t_loadings)
   write_sparse <- density < 0.30
-  message(paste0("  Spatial basis density: ", round(density * 100, 2),
-    "%. Writing as ", if (write_sparse) "SPARSE" else "DENSE", "."))
+  message(paste0(
+    "  Spatial basis density: ", round(density * 100, 2),
+    "%. Writing as ", if (write_sparse) "SPARSE" else "DENSE", "."
+  ))
   if (!write_sparse) {
     dense_chunk <- c(k, min(1024, nvox))
     h5_write(h5, "/basis/basis_matrix", as.matrix(t_loadings),
       dtype = h5dtype,
       chunk_dims = dense_chunk, compression = compression,
-      overwrite = TRUE)
+      overwrite = TRUE
+    )
   } else {
     sparse_grp <- h5$create_group("/basis/basis_matrix_sparse")
     hdf5r::h5attr(sparse_grp, "storage") <- "csc"
     hdf5r::h5attr(sparse_grp, "shape") <- dim(t_loadings)
-    if (!inherits(t_loadings, "dgCMatrix"))
+    if (!inherits(t_loadings, "dgCMatrix")) {
       t_loadings <- methods::as(t_loadings, "CsparseMatrix")
+    }
     nnz <- length(t_loadings@x)
     target_min_chunk <- 128 * 1024
     element_size <- h5dtype$get_size()
@@ -1080,23 +1114,29 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
     if (nnz > 0 && chunk_len > nnz) chunk_len <- nnz else if (nnz == 0) chunk_len <- NULL
     h5_write(h5, "/basis/basis_matrix_sparse/data", t_loadings@x, h5dtype,
       chunk_dims = chunk_len, compression = compression,
-      overwrite = TRUE)
+      overwrite = TRUE
+    )
     h5_write(h5, "/basis/basis_matrix_sparse/indices", as.integer(t_loadings@i),
       hdf5r::h5types$H5T_NATIVE_INT32,
       chunk_dims = chunk_len, compression = compression,
-      overwrite = TRUE)
+      overwrite = TRUE
+    )
     h5_write(h5, "/basis/basis_matrix_sparse/indptr", as.integer(t_loadings@p),
       hdf5r::h5types$H5T_NATIVE_INT32,
       chunk_dims = NULL, compression = 0,
-      overwrite = TRUE)
+      overwrite = TRUE
+    )
   }
   message("[to_h5_latentvec] Basis Group DONE.")
   message("[to_h5_latentvec] Writing Offset...")
   if (length(offset) > 0) {
-    if (length(offset) != nvox)
+    if (length(offset) != nvox) {
       stop(paste0("Offset length (", length(offset), ") does not match spatial basis nVox (", nvox, ")"))
-    h5_write(h5, "/offset", offset, dtype = h5dtype,
-      chunk_dims = NULL, compression = 0, overwrite = TRUE)
+    }
+    h5_write(h5, "/offset", offset,
+      dtype = h5dtype,
+      chunk_dims = NULL, compression = 0, overwrite = TRUE
+    )
   } else {
     message("  Offset is empty, skipping write.")
   }
@@ -1124,14 +1164,17 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
 
   message("  Writing embedding matrix...")
   embed_dims <- dim(embedding_matrix)
-  if (embed_dims[1] != T_vec)
+  if (embed_dims[1] != T_vec) {
     warning(paste0("Embedding time points (", embed_dims[1], ") does not match header time dim (", T_vec, "). Using embedding dim."))
-  if (embed_dims[2] != k)
+  }
+  if (embed_dims[2] != k) {
     stop(paste0("Embedding components (", embed_dims[2], ") mismatch spatial basis components (", k, ")"))
+  }
   embed_chunk <- c(min(128, embed_dims[1]), k)
   h5_write(h5, file.path("/scans", scan_name, "embedding"), embedding_matrix,
     dtype = h5dtype, chunk_dims = embed_chunk,
-    compression = compression, overwrite = TRUE)
+    compression = compression, overwrite = TRUE
+  )
   message("[to_h5_latentvec] Scans Group DONE.")
 }
 #' Internal helper to write each field from a list into an HDF5 group
@@ -1150,26 +1193,30 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
   if (is.character(val)) {
     stype <- hdf5r::H5T_STRING$new(size = Inf)
     on.exit(stype$close(), add = TRUE)
-    ds    <- hdr_grp$create_dataset(nm, dims = 1, dtype = stype)
+    ds <- hdr_grp$create_dataset(nm, dims = 1, dtype = stype)
     on.exit(if (!is.null(ds) && ds$is_valid) ds$close(), add = TRUE)
-    ds[]  <- if (length(val) > 1) paste(val, collapse = " ") else val
+    ds[] <- if (length(val) > 1) paste(val, collapse = " ") else val
   } else if (is.integer(val)) {
-    ds <- hdr_grp$create_dataset(nm, dims = length(val),
-      dtype = hdf5r::h5types$H5T_NATIVE_INT)
+    ds <- hdr_grp$create_dataset(nm,
+      dims = length(val),
+      dtype = hdf5r::h5types$H5T_NATIVE_INT
+    )
     on.exit(if (!is.null(ds) && ds$is_valid) ds$close(), add = TRUE)
     ds[] <- as.integer(val)
   } else if (is.numeric(val)) {
-    ds <- hdr_grp$create_dataset(nm, dims = length(val),
-      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+    ds <- hdr_grp$create_dataset(nm,
+      dims = length(val),
+      dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+    )
     on.exit(if (!is.null(ds) && ds$is_valid) ds$close(), add = TRUE)
     ds[] <- as.double(val)
   } else {
     warning("Writing field '", nm, "' as string due to unrecognized type: ", class(val))
     stype <- hdf5r::H5T_STRING$new(size = Inf)
     on.exit(stype$close(), add = TRUE)
-    ds    <- hdr_grp$create_dataset(nm, dims = 1, dtype = stype)
+    ds <- hdr_grp$create_dataset(nm, dims = 1, dtype = stype)
     on.exit(if (!is.null(ds) && ds$is_valid) ds$close(), add = TRUE)
-    ds[]  <- as.character(val)
+    ds[] <- as.character(val)
   }
 }
 
@@ -1218,27 +1265,31 @@ setMethod(
       version_attr <- hdf5r::h5attr(h5obj, "latent_spec_version")
     }
     if (is.null(version_attr)) {
-      warning("[load_data,LatentNeuroVecSource] HDF5 file '", x@file_name,
-        "' is missing the 'latent_spec_version' attribute. Assuming version 1.0 format.")
+      warning(
+        "[load_data,LatentNeuroVecSource] HDF5 file '", x@file_name,
+        "' is missing the 'latent_spec_version' attribute. Assuming version 1.0 format."
+      )
     } else if (version_attr != "1.0") {
-      warning("[load_data,LatentNeuroVecSource] HDF5 file '", x@file_name,
+      warning(
+        "[load_data,LatentNeuroVecSource] HDF5 file '", x@file_name,
         "' has unexpected 'latent_spec_version'='", version_attr,
-        "'. Attempting to load assuming version 1.0 format.")
+        "'. Attempting to load assuming version 1.0 format."
+      )
     }
 
     # --- 3. Read Header and Reconstruct Space ---
     .rd_hdr <- function(nm, required = TRUE) {
       h5_read(h5obj, file.path("/header", nm), missing_ok = !required)
     }
-    dims_hdr   <- .rd_hdr("dim", required = TRUE)
+    dims_hdr <- .rd_hdr("dim", required = TRUE)
     pixdim_hdr <- .rd_hdr("pixdim", required = FALSE) # Allow missing, default later
-    qb         <- .rd_hdr("quatern_b", required = FALSE)
-    qc         <- .rd_hdr("quatern_c", required = FALSE)
-    qd         <- .rd_hdr("quatern_d", required = FALSE)
-    qx         <- .rd_hdr("qoffset_x", required = FALSE)
-    qy         <- .rd_hdr("qoffset_y", required = FALSE)
-    qz         <- .rd_hdr("qoffset_z", required = FALSE)
-    qfac       <- .rd_hdr("qfac", required = FALSE) # Default to 1.0 if missing
+    qb <- .rd_hdr("quatern_b", required = FALSE)
+    qc <- .rd_hdr("quatern_c", required = FALSE)
+    qd <- .rd_hdr("quatern_d", required = FALSE)
+    qx <- .rd_hdr("qoffset_x", required = FALSE)
+    qy <- .rd_hdr("qoffset_y", required = FALSE)
+    qz <- .rd_hdr("qoffset_z", required = FALSE)
+    qfac <- .rd_hdr("qfac", required = FALSE) # Default to 1.0 if missing
 
     if (length(dims_hdr) < 5 || dims_hdr[1] != 4) {
       stop("Invalid '/header/dim' dimensions found.")
@@ -1251,9 +1302,11 @@ setMethod(
     qfac_val <- if (is.null(qfac)) 1.0 else qfac
     spacing_3d <- if (!is.null(pixdim_hdr) && length(pixdim_hdr) >= 4) pixdim_hdr[2:4] else c(1, 1, 1)
     # origin_3d <- c(qx %||% 0, qy %||% 0, qz %||% 0)
-    origin_3d <- c(if (is.null(qx)) 0 else qx,
+    origin_3d <- c(
+      if (is.null(qx)) 0 else qx,
       if (is.null(qy)) 0 else qy,
-      if (is.null(qz)) 0 else qz)
+      if (is.null(qz)) 0 else qz
+    )
 
     if (!all(sapply(list(qb, qc, qd), function(q) !is.null(q) && is.numeric(q)))) {
       warning("Missing or non-numeric quaternion b,c,d parameters. Using default orientation.")
@@ -1269,7 +1322,8 @@ setMethod(
           origin   = origin_3d,
           stepSize = spacing_3d,
           qfac     = qfac_val
-        ), error = function(e) {
+        ),
+        error = function(e) {
           warning("Error calling quaternToMatrix: ", e$message, ". Using default orientation.")
           mat_fallback <- diag(4)
           mat_fallback[1, 1] <- spacing_3d[1]
@@ -1277,21 +1331,26 @@ setMethod(
           mat_fallback[3, 3] <- spacing_3d[3]
           mat_fallback[1:3, 4] <- origin_3d
           mat_fallback
-        })
+        }
+      )
     }
 
     # Create 4D NeuroSpace (needed for LatentNeuroVec)
-    full_space <- NeuroSpace(dim = dims_hdr[2:5], # Use 4D dims + time
+    full_space <- NeuroSpace(
+      dim = dims_hdr[2:5], # Use 4D dims + time
       spacing = spacing_3d, # Use 3D spacing
       origin = origin_3d,
-      trans = trans_mat)
+      trans = trans_mat
+    )
     space_3d <- drop_dim(full_space) # 3D space for mask
 
     # --- 4. Read Mask ---
     mask_arr <- h5_read(h5obj, "/mask", missing_ok = FALSE)
     # Check dimensions of mask array against header dims - check_same_dims stops on error
-    check_same_dims(dim(mask_arr), dims_3d, dims_to_compare = 1:3,
-      msg = paste("load_data: Dimensions of /mask mismatch header dims"))
+    check_same_dims(dim(mask_arr), dims_3d,
+      dims_to_compare = 1:3,
+      msg = paste("load_data: Dimensions of /mask mismatch header dims")
+    )
 
     mask_vol <- LogicalNeuroVol(as.logical(mask_arr), space = space_3d)
     nVox_mask <- sum(mask_vol)
@@ -1303,8 +1362,10 @@ setMethod(
         warning("/voxel_coords dataset does not have dimensions [nVox, 3]. Discarding.")
         voxel_coords <- NULL
       } else if (nrow(voxel_coords) != nVox_mask) {
-        warning(paste0("/voxel_coords rows (", nrow(voxel_coords),
-          ") mismatch non-zero count in mask (", nVox_mask, "). Discarding."))
+        warning(paste0(
+          "/voxel_coords rows (", nrow(voxel_coords),
+          ") mismatch non-zero count in mask (", nVox_mask, "). Discarding."
+        ))
         voxel_coords <- NULL
       }
     }
@@ -1339,7 +1400,6 @@ setMethod(
       # NOTE: Mapping HDF5 /basis/basis_matrix (spatial, k x p) -> R @loadings (spatial, p x k)
       internal_loadings <- Matrix::Matrix(t(basis_matrix))
       message("[load_data] Dense spatial basis loaded.")
-
     } else if (has_sparse_grp) {
       sparse_grp <- h5obj[["/basis/basis_matrix_sparse"]]
       on.exit(if (!is.null(sparse_grp) && sparse_grp$is_valid) sparse_grp$close(), add = TRUE) # Keep this specific on.exit
@@ -1355,8 +1415,10 @@ setMethod(
       if (storage_fmt == "csc") {
         expected_indptr_len <- shape_attr[2] + 1
         if (length(indptr_data) != expected_indptr_len) stop("CSC indptr length mismatch.")
-        reconstructed_k_p <- Matrix::sparseMatrix(i = indices_data, p = indptr_data, x = data_data,
-          dims = shape_attr, index1 = FALSE) # Assume 0-based indices from HDF5
+        reconstructed_k_p <- Matrix::sparseMatrix(
+          i = indices_data, p = indptr_data, x = data_data,
+          dims = shape_attr, index1 = FALSE
+        ) # Assume 0-based indices from HDF5
       } else if (storage_fmt == "csr") {
         expected_indptr_len <- shape_attr[1] + 1
         if (length(indptr_data) != expected_indptr_len) stop("CSR indptr length mismatch.")
@@ -1368,11 +1430,13 @@ setMethod(
         # SIMPLER: Build the p x k matrix directly using CSR components
         #          (Need j = col_indices, p = row_pointers)
         message("  Reconstructing CSR matrix (p x k) from triplet...")
-        reconstructed_p_k <- Matrix::sparseMatrix(j = indices_data,
+        reconstructed_p_k <- Matrix::sparseMatrix(
+          j = indices_data,
           p = indptr_data,
           x = data_data,
           dims = rev(shape_attr), # Use p x k dimensions
-          index1 = FALSE) # HDF5 indices are 0-based
+          index1 = FALSE
+        ) # HDF5 indices are 0-based
         # Transpose is not needed here, as we built p x k directly
         # internal_loadings <- Matrix::t(reconstructed_p_k) # No! reconstructed_p_k is already p x k
         internal_loadings <- reconstructed_p_k # Use p x k directly
@@ -1381,7 +1445,6 @@ setMethod(
       }
 
       message("[load_data] Sparse spatial basis loaded.") # No transpose needed if built correctly
-
     } else {
       stop("No basis matrix found in '/basis'.")
     }
@@ -1410,8 +1473,10 @@ setMethod(
         warning("'scan_name' not specified, loading first scan found: ", target_scan_name)
       }
     } else if (!(target_scan_name %in% available_scans)) {
-      stop("Requested scan_name '", target_scan_name, "' not found in file. Available: ",
-        paste(available_scans, collapse = ", "))
+      stop(
+        "Requested scan_name '", target_scan_name, "' not found in file. Available: ",
+        paste(available_scans, collapse = ", ")
+      )
     }
 
     # No need to open scan_grp, h5_read handles full path
@@ -1431,12 +1496,14 @@ setMethod(
     }
 
     # --- 9. Construct LatentNeuroVec ---
-    LatentNeuroVec(basis    = Matrix::Matrix(internal_basis),
+    LatentNeuroVec(
+      basis = Matrix::Matrix(internal_basis),
       loadings = internal_loadings,
-      space    = full_space,
-      mask     = mask_vol,
-      offset   = offset_vec,
-      label    = target_scan_name)
+      space = full_space,
+      mask = mask_vol,
+      offset = offset_vec,
+      label = target_scan_name
+    )
     # --- END OF REMOVED TRY CATCH BLOCK ---
   } # End definition function
 ) # End setMethod
@@ -1596,7 +1663,8 @@ validate_latent_file <- function(file_path) {
             basis_dset <- h5obj[[basis_dense_path]]
             basis_dim <- basis_dset$dims
           },
-          finally = if (!is.null(basis_dset) && basis_dset$is_valid) try(basis_dset$close(), silent = TRUE))
+          finally = if (!is.null(basis_dset) && basis_dset$is_valid) try(basis_dset$close(), silent = TRUE)
+        )
       } else { # has_sparse_basis
         # Read shape attribute
         sparse_grp <- NULL
@@ -1606,7 +1674,8 @@ validate_latent_file <- function(file_path) {
             if (!"shape" %in% names(hdf5r::h5attributes(sparse_grp))) stop("Sparse basis group missing 'shape' attribute.")
             basis_dim <- hdf5r::h5attr(sparse_grp, "shape") # Should be [k, nVox_basis]
           },
-          finally = if (!is.null(sparse_grp) && sparse_grp$is_valid) try(sparse_grp$close(), silent = TRUE))
+          finally = if (!is.null(sparse_grp) && sparse_grp$is_valid) try(sparse_grp$close(), silent = TRUE)
+        )
       }
       if (is.null(basis_dim) || length(basis_dim) != 2) stop("Failed to read valid 2D dimensions for basis.")
       k_basis <- basis_dim[1]
@@ -1620,7 +1689,8 @@ validate_latent_file <- function(file_path) {
           embed_dset <- h5obj[[embed_path]]
           embed_dim <- embed_dset$dims # Should be [T_emb, k]
         },
-        finally = if (!is.null(embed_dset) && embed_dset$is_valid) try(embed_dset$close(), silent = TRUE))
+        finally = if (!is.null(embed_dset) && embed_dset$is_valid) try(embed_dset$close(), silent = TRUE)
+      )
       if (is.null(embed_dim) || length(embed_dim) != 2) stop("Failed to read valid 2D dimensions for embedding.")
       T_emb <- embed_dim[1]
       k_embed <- embed_dim[2]
@@ -1636,48 +1706,60 @@ validate_latent_file <- function(file_path) {
       # Check 2: Header spatial dims vs Mask dims
       dim_check_msg <- validate_same_dims(header_dim[2:4], mask_dim, dims_to_compare = 1:3)
       if (!is.null(dim_check_msg)) {
-        valid_checks$hdr_mask_dims <- paste0("'/header/dim[2:4]' (", paste(header_dim[2:4], collapse = ","),
-          ") mismatch '/mask' dims (", paste(mask_dim, collapse = ","), ")")
+        valid_checks$hdr_mask_dims <- paste0(
+          "'/header/dim[2:4]' (", paste(header_dim[2:4], collapse = ","),
+          ") mismatch '/mask' dims (", paste(mask_dim, collapse = ","), ")"
+        )
       }
       # Check 3: Basis components (k) vs Embedding components (k)
       if (k_basis != k_embed) {
-        valid_checks$k_mismatch <- paste0("Component dimension mismatch: basis k (", k_basis,
-          ") != embedding k (", k_embed, ")")
+        valid_checks$k_mismatch <- paste0(
+          "Component dimension mismatch: basis k (", k_basis,
+          ") != embedding k (", k_embed, ")"
+        )
       }
       # Check 4: Header time (T_hdr) vs Embedding time (T_emb)
       T_hdr <- header_dim[5]
       if (T_hdr != T_emb) {
-        valid_checks$time_mismatch <- paste0("Time dimension mismatch: header dim[5] (", T_hdr,
-          ") != embedding rows (", T_emb, ")")
+        valid_checks$time_mismatch <- paste0(
+          "Time dimension mismatch: header dim[5] (", T_hdr,
+          ") != embedding rows (", T_emb, ")"
+        )
       }
       # Check 5: Basis nVox vs Mask non-zero count
       nVox_mask <- sum(mask_data > 0) # Assuming mask is 0/1
       if (nVox_basis != nVox_mask) {
-        valid_checks$basis_nvox_mask <- paste0("Basis nVox mismatch: basis nVox (", nVox_basis,
-          ") != non-zero count in /mask (", nVox_mask, ")")
+        valid_checks$basis_nvox_mask <- paste0(
+          "Basis nVox mismatch: basis nVox (", nVox_basis,
+          ") != non-zero count in /mask (", nVox_mask, ")"
+        )
       }
       # Check 6: Optional Offset length
       offset_val <- h5_read(h5obj, "/offset", missing_ok = TRUE)
       if (!is.null(offset_val)) {
         offset_len <- length(offset_val)
         if (offset_len != nVox_basis) {
-          valid_checks$offset_len <- paste0("Offset length mismatch: offset length (", offset_len,
-            ") != basis nVox (", nVox_basis, ")")
+          valid_checks$offset_len <- paste0(
+            "Offset length mismatch: offset length (", offset_len,
+            ") != basis nVox (", nVox_basis, ")"
+          )
         }
       } # else: offset doesn't exist, no check needed
 
       if (length(valid_checks) > 0) {
         is_valid <- FALSE
-        warning("[validate_latent_file] Validation failed for '", file_path, "' with issues:\n",
-          paste("  - ", unlist(valid_checks), collapse = "\n"))
+        warning(
+          "[validate_latent_file] Validation failed for '", file_path, "' with issues:\n",
+          paste("  - ", unlist(valid_checks), collapse = "\n")
+        )
       }
-
     },
     error = function(e) {
       is_valid <<- FALSE # Modify variable in parent env
       error_message <<- e$message # Capture error message without prefix
       # Ensure h5obj is closed by on.exit, which should still trigger
-    })
+    }
+  )
 
   if (!is.null(error_message)) {
     # Re-throw the error to match test expectations
@@ -1737,8 +1819,8 @@ setMethod(
 
     if (length(valid_mask_idx) > 0) {
       # Extract the subset of basis and loadings we need
-      basis_sub <- x@basis[l, , drop = FALSE]  # [n_time_sub, k]
-      loadings_sub <- x@loadings[valid_mask_idx, , drop = FALSE]  # [n_valid_vox, k]
+      basis_sub <- x@basis[l, , drop = FALSE] # [n_time_sub, k]
+      loadings_sub <- x@loadings[valid_mask_idx, , drop = FALSE] # [n_valid_vox, k]
 
       # Calculate values: basis_sub %*% t(loadings_sub)
       # Result is [n_time_sub, n_valid_vox]
@@ -1789,24 +1871,30 @@ setMethod(
 
     # Create a SparseNeuroVol from the 3D result
     dims_3d <- dim(x)[1:3]
-    space_3d <- NeuroSpace(dim = dims_3d,
+    space_3d <- NeuroSpace(
+      dim = dims_3d,
       spacing = spacing(space(x))[1:3],
       origin = origin(space(x))[1:3],
-      trans = trans(space(x)))
+      trans = trans(space(x))
+    )
 
     # Find non-zero voxels
     vol_3d <- drop(result)
     non_zero_idx <- which(vol_3d != 0)
 
     if (length(non_zero_idx) > 0) {
-      SparseNeuroVol(data = vol_3d[non_zero_idx],
+      SparseNeuroVol(
+        data = vol_3d[non_zero_idx],
         space = space_3d,
-        indices = non_zero_idx)
+        indices = non_zero_idx
+      )
     } else {
       # Return empty SparseNeuroVol
-      SparseNeuroVol(data = numeric(0),
+      SparseNeuroVol(
+        data = numeric(0),
         space = space_3d,
-        indices = integer(0))
+        indices = integer(0)
+      )
     }
   }
 )
@@ -1830,7 +1918,7 @@ setMethod(
     has_j <- !is.null(j)
     has_k <- !is.null(k)
 
-    nTime  <- dim(x)[4]
+    nTime <- dim(x)[4]
     nels3d <- prod(dim(x)[1:3])
 
     # CASE A: user gave only i -> interpret as multiple 3D voxel indices
@@ -1844,7 +1932,7 @@ setMethod(
       # rowmap will have 0 for voxels outside the mask
       rowmap <- lookup(x@map, i)
       valid_mask_indices <- rowmap[rowmap > 0] # Indices within loadings/offset that are needed
-      map_req_to_valid <- which(rowmap > 0)   # Mapping from requested index pos to valid index pos
+      map_req_to_valid <- which(rowmap > 0) # Mapping from requested index pos to valid index pos
 
       if (length(valid_mask_indices) == 0) {
         # All requested voxels are outside the mask
@@ -1876,7 +1964,6 @@ setMethod(
       } else {
         return(out_mat)
       }
-
     } else {
       # CASE B: user gave i,j,k => each must be length 1 => single voxel
       if (!(length(i) == 1 && length(j) == 1 && length(k) == 1)) {
@@ -1985,67 +2072,87 @@ setMethod(
     first_basis_coeffs <- format(object@basis[1:min(5, nrow(object@basis)), 1], digits = 3)
     cat("\n", crayon::yellow("Components:"), "\n")
     cat(" ", crayon::silver("*"), " Number: ", crayon::green(n_components), "\n")
-    cat(" ", crayon::silver("*"), " First component, first 5 coeffs: ",
+    cat(
+      " ", crayon::silver("*"), " First component, first 5 coeffs: ",
       crayon::green(paste(first_basis_coeffs, collapse = ", ")),
-      if (length(first_basis_coeffs) < 5) "" else "...", "\n") # Adjusted description
+      if (length(first_basis_coeffs) < 5) "" else "...", "\n"
+    ) # Adjusted description
 
     # Memory Usage
-    basis_size    <- format(object.size(object@basis), units = "auto")
+    basis_size <- format(object.size(object@basis), units = "auto")
     loadings_size <- format(object.size(object@loadings), units = "auto")
-    total_size    <- format(object.size(object),          units = "auto")
+    total_size <- format(object.size(object), units = "auto")
 
     cat("\n", crayon::yellow("Memory Usage:"), "\n")
-    cat(" ", crayon::silver("*"), " Basis: ",    crayon::green(basis_size),    "\n")
+    cat(" ", crayon::silver("*"), " Basis: ", crayon::green(basis_size), "\n")
     cat(" ", crayon::silver("*"), " Loadings: ", crayon::green(loadings_size), "\n")
-    cat(" ", crayon::silver("*"), " Total: ",    crayon::green(total_size),    "\n")
+    cat(" ", crayon::silver("*"), " Total: ", crayon::green(total_size), "\n")
 
     # Sparsity
     n_nonzero <- sum(object@mask)
     sparsity <- round(100 * n_nonzero / prod(dims[1:3]), 2)
     cat("\n", crayon::yellow("Sparsity:"), "\n")
     cat(" ", crayon::silver("*"), " Non-zero voxels: ", crayon::green(n_nonzero), "\n")
-    cat(" ", crayon::silver("*"), " Coverage: ",       crayon::green(sparsity), "%\n")
+    cat(" ", crayon::silver("*"), " Coverage: ", crayon::green(sparsity), "%\n")
 
     # Space Info
     sp <- space(object)
     spacing_str <- paste(round(spacing(sp), 2), collapse = " x ")
-    origin_str  <- paste(round(origin(sp), 2), collapse = " x ")
+    origin_str <- paste(round(origin(sp), 2), collapse = " x ")
     cat("\n", crayon::yellow("Space Information:"), "\n")
     cat(" ", crayon::silver("*"), " Spacing: ", crayon::green(spacing_str), "\n")
-    cat(" ", crayon::silver("*"), " Origin:  ", crayon::green(origin_str),  "\n")
+    cat(" ", crayon::silver("*"), " Origin:  ", crayon::green(origin_str), "\n")
 
     # Footer
     cat("\n", crayon::bold("Data Access:"), "\n")
     cat("\n", crayon::yellow("Reconstructed Space Access:"), "\n")
-    cat(" ", crayon::silver("*"), " Extract volume: ",
+    cat(
+      " ", crayon::silver("*"), " Extract volume: ",
       crayon::blue("object[[i]]"),
-      crayon::silver("  # 3D volume at timepoint i\n"))
-    cat(" ", crayon::silver("*"), " Get value: ",
+      crayon::silver("  # 3D volume at timepoint i\n")
+    )
+    cat(
+      " ", crayon::silver("*"), " Get value: ",
       crayon::blue("object[i]"),
-      crayon::silver("  # Value at linear index i\n"))
-    cat(" ", crayon::silver("*"), " Subset: ",
+      crayon::silver("  # Value at linear index i\n")
+    )
+    cat(
+      " ", crayon::silver("*"), " Subset: ",
       crayon::blue("object[mask]"),
-      crayon::silver("  # Values at mask positions\n"))
+      crayon::silver("  # Values at mask positions\n")
+    )
 
     cat("\n", crayon::yellow("Latent Space Access:"), "\n")
-    cat(" ", crayon::silver("*"), " Basis vectors: ",
+    cat(
+      " ", crayon::silver("*"), " Basis vectors: ",
       crayon::blue("basis(object)"),
-      crayon::silver("  # nxk temporal basis\n"))
-    cat(" ", crayon::silver("*"), " Loadings: ",
+      crayon::silver("  # nxk temporal basis\n")
+    )
+    cat(
+      " ", crayon::silver("*"), " Loadings: ",
       crayon::blue("loadings(object)"),
-      crayon::silver("  # pxk spatial loadings\n"))
-    cat(" ", crayon::silver("*"), " Components: ",
+      crayon::silver("  # pxk spatial loadings\n")
+    )
+    cat(
+      " ", crayon::silver("*"), " Components: ",
       crayon::blue("components(object)"),
-      crayon::silver("  # List of k component volumes\n"))
+      crayon::silver("  # List of k component volumes\n")
+    )
 
     cat("\n", crayon::yellow("Conversions:"), "\n")
-    cat(" ", crayon::silver("*"), " as.array(object): ",
-      crayon::silver("4D reconstruction\n"))
-    cat(" ", crayon::silver("*"), " as.matrix(object): ",
-      crayon::silver("nxp matrix of reconstructed values\n"))
+    cat(
+      " ", crayon::silver("*"), " as.array(object): ",
+      crayon::silver("4D reconstruction\n")
+    )
+    cat(
+      " ", crayon::silver("*"), " as.matrix(object): ",
+      crayon::silver("nxp matrix of reconstructed values\n")
+    )
 
-    cat("\n", crayon::silver("Note: All access methods reconstruct data (X = B x L^T + offset)"),
-      "\n", crayon::silver("unless you're explicitly accessing latent space."), "\n\n")
+    cat(
+      "\n", crayon::silver("Note: All access methods reconstruct data (X = B x L^T + offset)"),
+      "\n", crayon::silver("unless you're explicitly accessing latent space."), "\n\n"
+    )
   }
 )
 
@@ -2056,7 +2163,6 @@ setMethod(
 #' @keywords internal
 #' @noRd
 .validate_LatentNeuroVec <- function(object) {
-
   errors <- character()
 
   # Check types
@@ -2091,13 +2197,17 @@ setMethod(
       errors <- c(errors, "Slot @space must have 4 dimensions.")
     } else {
       if (ncol(object@basis) != ncol(object@loadings)) {
-        errors <- c(errors, paste0("Component mismatch: ncol(@basis) = ", ncol(object@basis),
-          " != ncol(@loadings) = ", ncol(object@loadings)))
+        errors <- c(errors, paste0(
+          "Component mismatch: ncol(@basis) = ", ncol(object@basis),
+          " != ncol(@loadings) = ", ncol(object@loadings)
+        ))
       }
 
       if (nrow(object@basis) != s_dims[4]) {
-        errors <- c(errors, paste0("Time mismatch: nrow(@basis) = ", nrow(object@basis),
-          " != dim(@space)[4] = ", s_dims[4]))
+        errors <- c(errors, paste0(
+          "Time mismatch: nrow(@basis) = ", nrow(object@basis),
+          " != dim(@space)[4] = ", s_dims[4]
+        ))
       }
 
       dim_check_result <- validate_same_dims(
@@ -2113,18 +2223,24 @@ setMethod(
 
       nVox_mask <- sum(object@mask)
       if (nrow(object@loadings) != nVox_mask) {
-        errors <- c(errors, paste0("Loadings rows (", nrow(object@loadings),
-          ") mismatch non-zero count in mask (", nVox_mask, ")"))
+        errors <- c(errors, paste0(
+          "Loadings rows (", nrow(object@loadings),
+          ") mismatch non-zero count in mask (", nVox_mask, ")"
+        ))
       }
 
       if (length(object@offset) > 0 && length(object@offset) != nrow(object@loadings)) {
-        errors <- c(errors, paste0("Offset length (", length(object@offset),
-          ") mismatch number of rows in loadings (", nrow(object@loadings), ")"))
+        errors <- c(errors, paste0(
+          "Offset length (", length(object@offset),
+          ") mismatch number of rows in loadings (", nrow(object@loadings), ")"
+        ))
       }
 
       if (length(object@map@indices) != nVox_mask) {
-        errors <- c(errors, paste0("Map indices length (", length(object@map@indices),
-          ") mismatch non-zero count in mask (", nVox_mask, ")"))
+        errors <- c(errors, paste0(
+          "Map indices length (", length(object@map@indices),
+          ") mismatch non-zero count in mask (", nVox_mask, ")"
+        ))
       }
     }
   }
@@ -2194,28 +2310,28 @@ setMethod("map", "LatentNeuroVec", function(x) x@map)
       # Expanded handling of HDF5 types with additional type classes
       switch(dtype_class_char,
         # Float types (32-bit)
-        "H5T_FLOAT"      = 0.0,
+        "H5T_FLOAT" = 0.0,
         "H5T_NATIVE_FLOAT" = 0.0,
         "H5T_IEEE_F32LE" = 0.0,
         "H5T_IEEE_F32BE" = 0.0,
 
         # Double types (64-bit)
-        "H5T_DOUBLE"     = 0.0,
+        "H5T_DOUBLE" = 0.0,
         "H5T_NATIVE_DOUBLE" = 0.0,
         "H5T_IEEE_F64LE" = 0.0,
         "H5T_IEEE_F64BE" = 0.0,
 
         # Integer types
-        "H5T_INTEGER"    = 0L,
+        "H5T_INTEGER" = 0L,
         "H5T_NATIVE_INT" = 0L,
         "H5T_NATIVE_INT8" = 0L,
         "H5T_NATIVE_INT16" = 0L,
         "H5T_NATIVE_INT32" = 0L,
         "H5T_NATIVE_INT64" = 0L,
-        "H5T_STD_I8LE"   = 0L,
-        "H5T_STD_I16LE"  = 0L,
-        "H5T_STD_I32LE"  = 0L,
-        "H5T_STD_I64LE"  = 0L,
+        "H5T_STD_I8LE" = 0L,
+        "H5T_STD_I16LE" = 0L,
+        "H5T_STD_I32LE" = 0L,
+        "H5T_STD_I64LE" = 0L,
 
         # Unsigned integer types
         "H5T_NATIVE_UINT" = 0L,
@@ -2223,34 +2339,38 @@ setMethod("map", "LatentNeuroVec", function(x) x@map)
         "H5T_NATIVE_UINT16" = 0L,
         "H5T_NATIVE_UINT32" = 0L,
         "H5T_NATIVE_UINT64" = 0L,
-        "H5T_STD_U8LE"   = 0L,
-        "H5T_STD_U16LE"  = 0L,
-        "H5T_STD_U32LE"  = 0L,
-        "H5T_STD_U64LE"  = 0L,
+        "H5T_STD_U8LE" = 0L,
+        "H5T_STD_U16LE" = 0L,
+        "H5T_STD_U32LE" = 0L,
+        "H5T_STD_U64LE" = 0L,
 
         # Character/string types
-        "H5T_STRING"     = "",
-        "H5T_C_S1"       = "",
+        "H5T_STRING" = "",
+        "H5T_C_S1" = "",
 
         # Catch-all for other types
         {
           # More informative message with dtype info
           # Safely check for the existence of get_size method
           dtype_size <- if (is.function(dtype$get_size)) dtype$get_size() else "unknown"
-          message("Using default fill value 0 for HDF5 dtype: ", dtype_class_char,
-            " (", dtype_size, " bytes)")
-          0L  # Default to integer zero for unknown types
+          message(
+            "Using default fill value 0 for HDF5 dtype: ", dtype_class_char,
+            " (", dtype_size, " bytes)"
+          )
+          0L # Default to integer zero for unknown types
         }
       )
     },
     error = function(e) {
       # Improved error handling
       message(paste0("Could not determine HDF5 fill value, using default 0. Error: ", e$message))
-      0  # Default to numeric zero on error
-    })
+      0 # Default to numeric zero on error
+    }
+  )
 
   tryCatch(plist$set_fill_value(dtype = dtype, value = fill_val),
-    error = function(e) warning("Could not set fill value for HDF5 dataset: ", e$message))
+    error = function(e) warning("Could not set fill value for HDF5 dataset: ", e$message)
+  )
 
   # Set chunking if provided and valid
   if (!is.null(chunk_dims)) {
@@ -2327,7 +2447,8 @@ setMethod("map", "LatentNeuroVec", function(x) x@map)
       if (!is.null(plist) && plist$is_valid) plist$close() # Close the *copied* plist
       if (!is.null(space) && space$is_valid) space$close()
     },
-    add = TRUE)
+    add = TRUE
+  )
 
   space <- hdf5r::H5S$new(dims = dims, maxdims = dims)
   plist <- .create_dset_plist(dims, dtype, chunk_dims, compression, nbit) # Pass nbit
@@ -2369,39 +2490,39 @@ setMethod("map", "LatentNeuroVec", function(x) x@map)
 #' @export
 #' @method as.array LatentNeuroVec
 as.array.LatentNeuroVec <- function(x, ...) {
-    # Get dimensions from the space
-    space_dims <- dim(x)
+  # Get dimensions from the space
+  space_dims <- dim(x)
 
-    # Initialize the output array
-    result_array <- array(0, dim = space_dims)
+  # Initialize the output array
+  result_array <- array(0, dim = space_dims)
 
-    # Mask information
-    mask_array <- as.logical(as.array(x@mask))
-    mask_indices <- which(mask_array)
+  # Mask information
+  mask_array <- as.logical(as.array(x@mask))
+  mask_indices <- which(mask_array)
 
-    for (t in seq_len(space_dims[4])) {
-      # Get the basis vector for this time point
-      basis_t <- x@basis[t, , drop = FALSE]
+  for (t in seq_len(space_dims[4])) {
+    # Get the basis vector for this time point
+    basis_t <- x@basis[t, , drop = FALSE]
 
-      # Calculate time point using matrix multiplication: basis_t %*% t(loadings)
-      # tcrossprod is more efficient for this operation
-      # Ensure both are Matrix objects for tcrossprod
-      b1 <- basis_t
-      b2 <- x@loadings
-      # Matrix objects already - no need to convert
-      # Ensure we get a standard numeric vector
-      values_in_mask <- as.numeric(as.matrix(b1 %*% t(b2))) + x@offset
+    # Calculate time point using matrix multiplication: basis_t %*% t(loadings)
+    # tcrossprod is more efficient for this operation
+    # Ensure both are Matrix objects for tcrossprod
+    b1 <- basis_t
+    b2 <- x@loadings
+    # Matrix objects already - no need to convert
+    # Ensure we get a standard numeric vector
+    values_in_mask <- as.numeric(as.matrix(b1 %*% t(b2))) + x@offset
 
-      # Map these values back to 3D space using the mask
-      # Initialize a 3D array for this time point
-      vol_3d <- array(0, dim = space_dims[1:3])
+    # Map these values back to 3D space using the mask
+    # Initialize a 3D array for this time point
+    vol_3d <- array(0, dim = space_dims[1:3])
 
-      # Place values at the correct indices
-      vol_3d[mask_indices] <- values_in_mask
+    # Place values at the correct indices
+    vol_3d[mask_indices] <- values_in_mask
 
-      # Assign to the corresponding time slice in the result
-      result_array[, , , t] <- vol_3d
-    }
+    # Assign to the corresponding time slice in the result
+    result_array[, , , t] <- vol_3d
+  }
 
-    return(result_array)
+  return(result_array)
 }

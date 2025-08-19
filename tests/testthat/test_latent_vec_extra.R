@@ -3,11 +3,11 @@ library(hdf5r)
 library(neuroim2)
 library(Matrix)
 library(fmristore)
-library(methods)  # Ensure S4 methods are available
+library(methods) # Ensure S4 methods are available
 
 # Helper to create a simple deterministic LatentNeuroVec
 make_simple_lvec <- function() {
-  dims <- c(3, 3, 2, 4)  # small volume
+  dims <- c(3, 3, 2, 4) # small volume
   sp <- NeuroSpace(dims)
   mask <- array(FALSE, dim = dims[1:3])
   mask[2:3, , ] <- TRUE

@@ -14,7 +14,7 @@ test_that("LatentNeuroVec handles extremely sparse data correctly", {
 
   # Create mask with only 10% of voxels
   mask_array <- array(FALSE, dim = dims)
-  n_mask_voxels <- 100L  # Out of 1000 total
+  n_mask_voxels <- 100L # Out of 1000 total
   mask_indices <- sample(prod(dims), n_mask_voxels)
   mask_array[mask_indices] <- TRUE
   mask <- neuroim2::LogicalNeuroVol(mask_array, neuroim2::NeuroSpace(dims))
@@ -26,7 +26,7 @@ test_that("LatentNeuroVec handles extremely sparse data correctly", {
   # Create sparse matrix directly
   i_indices <- sample(n_mask_voxels, n_nonzero, replace = TRUE)
   j_indices <- sample(n_comp, n_nonzero, replace = TRUE)
-  values <- rnorm(n_nonzero, mean = 0, sd = 10)  # Large values to compensate for sparsity
+  values <- rnorm(n_nonzero, mean = 0, sd = 10) # Large values to compensate for sparsity
 
   loadings <- Matrix::sparseMatrix(
     i = i_indices,
@@ -77,14 +77,16 @@ test_that("LatentNeuroVec handles extremely sparse data correctly", {
   # Check file size - should be small due to sparsity
   file_size_mb <- file.info(actual_file)$size / 1024^2
   expect_true(file_size_mb < 1,
-    info = sprintf("Sparse file should be <1MB, got %.2f MB", file_size_mb))
+    info = sprintf("Sparse file should be <1MB, got %.2f MB", file_size_mb)
+  )
 
   # Read back and verify
   h5file <- hdf5r::H5File$new(actual_file, mode = "r")
 
   # Check that sparse format was used
   expect_true(h5file$exists("basis/basis_matrix_sparse"),
-    info = "Should use sparse storage for extremely sparse data")
+    info = "Should use sparse storage for extremely sparse data"
+  )
 
   # Read sparse components
   sparse_grp <- h5file[["basis/basis_matrix_sparse"]]
@@ -92,15 +94,17 @@ test_that("LatentNeuroVec handles extremely sparse data correctly", {
   sparse_indices <- sparse_grp[["indices"]][]
   sparse_indptr <- sparse_grp[["indptr"]][]
 
-  expect_equal(length(sparse_data), n_nonzero, tolerance = n_nonzero * 0.1,
-    info = "Sparse data should have approximately same number of non-zeros")
+  expect_equal(length(sparse_data), n_nonzero,
+    tolerance = n_nonzero * 0.1,
+    info = "Sparse data should have approximately same number of non-zeros"
+  )
 
   h5file$close()
 
   # Test 3: Edge case with all-zero components
   loadings_zero_col <- loadings
-  loadings_zero_col[, 1] <- 0  # First component all zeros
-  loadings_zero_col[, n_comp] <- 0  # Last component all zeros
+  loadings_zero_col[, 1] <- 0 # First component all zeros
+  loadings_zero_col[, n_comp] <- 0 # Last component all zeros
 
   lnv_zero <- LatentNeuroVec(
     basis = basis,
@@ -183,25 +187,26 @@ test_that("LatentNeuroVec handles numerical edge cases", {
 
   # Test 3: Very large and very small values (numerical precision)
   basis_extreme <- basis_normal
-  basis_extreme[, 1] <- basis_extreme[, 1] * 1e15  # Very large
-  basis_extreme[, 2] <- basis_extreme[, 2] * 1e-15  # Very small
+  basis_extreme[, 1] <- basis_extreme[, 1] * 1e15 # Very large
+  basis_extreme[, 2] <- basis_extreme[, 2] * 1e-15 # Very small
 
   loadings_extreme <- loadings_normal
-  loadings_extreme[, 1] <- loadings_extreme[, 1] * 1e-15  # Compensate
-  loadings_extreme[, 2] <- loadings_extreme[, 2] * 1e15   # Compensate
+  loadings_extreme[, 1] <- loadings_extreme[, 1] * 1e-15 # Compensate
+  loadings_extreme[, 2] <- loadings_extreme[, 2] * 1e15 # Compensate
 
   lnv_extreme <- LatentNeuroVec(
     basis = basis_extreme,
     loadings = loadings_extreme,
     space = space_4d,
     mask = mask,
-    offset = rep(1e10, n_mask_voxels)  # Large offset too
+    offset = rep(1e10, n_mask_voxels) # Large offset too
   )
 
   # Should handle extreme values without overflow
   series_extreme <- series(lnv_extreme, 1:5)
   expect_false(any(is.nan(series_extreme)),
-    info = "Should not produce NaN from extreme but valid values")
+    info = "Should not produce NaN from extreme but valid values"
+  )
 
   #   # Test 4: Write/read with special values
   #   temp_file <- tempfile(fileext = ".h5")
@@ -259,7 +264,7 @@ test_that("Sparse matrix format conversions and memory efficiency", {
     j = sample(n_comp, 100, replace = TRUE),
     x = rnorm(100),
     dims = c(n_mask_voxels, n_comp),
-    repr = "C"  # CSC format
+    repr = "C" # CSC format
   )
 
   basis <- matrix(rnorm(n_time * n_comp), nrow = n_time, ncol = n_comp)
@@ -287,7 +292,7 @@ test_that("Sparse matrix format conversions and memory efficiency", {
 
   # Test 4: Memory efficiency for very sparse data
   # Create increasingly sparse matrices and check memory usage
-  sparsity_levels <- c(0.001, 0.01, 0.1)  # 0.1%, 1%, 10% non-zero
+  sparsity_levels <- c(0.001, 0.01, 0.1) # 0.1%, 1%, 10% non-zero
 
   for (sparsity in sparsity_levels) {
     n_nonzero <- ceiling(n_mask_voxels * n_comp * sparsity)
@@ -305,8 +310,10 @@ test_that("Sparse matrix format conversions and memory efficiency", {
 
     expect_true(
       sparse_size < dense_size * 0.5,
-      info = sprintf("Sparse matrix with %.1f%% non-zeros should use less than half the memory of dense",
-        sparsity * 100)
+      info = sprintf(
+        "Sparse matrix with %.1f%% non-zeros should use less than half the memory of dense",
+        sparsity * 100
+      )
     )
 
     # Test write efficiency
@@ -321,7 +328,7 @@ test_that("Sparse matrix format conversions and memory efficiency", {
     on.exit(unlink(actual_file), add = TRUE)
 
     # Verify sparse storage was used for very sparse data
-    if (sparsity <= 0.01) {  # 1% or less
+    if (sparsity <= 0.01) { # 1% or less
       h5file <- hdf5r::H5File$new(actual_file, mode = "r")
       expect_true(
         h5file$exists("basis/basis_matrix_sparse"),

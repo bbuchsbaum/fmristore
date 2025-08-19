@@ -20,7 +20,7 @@ test_that("validate_same_dims returns NULL on matching dims", {
 })
 
 test_that("validate_same_dims reports prefix on mismatch", {
-  prefix <- "custom prefix:" 
+  prefix <- "custom prefix:"
   res <- fmristore:::validate_same_dims(c(2, 3, 4), c(2, 3, 5), msg = prefix)
   expect_true(!is.null(res))
   expect_true(grepl(prefix, res))

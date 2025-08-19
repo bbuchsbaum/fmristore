@@ -32,10 +32,12 @@ setMethod("n_scans", "H5NeuroVecSeq", function(x) length(x@vecs))
 setMethod("scan_names", "H5NeuroVecSeq", function(x) names(x@vecs))
 
 #' @export
-setMethod("[[", signature(x = "H5NeuroVecSeq", i = "ANY"),
+setMethod(
+  "[[", signature(x = "H5NeuroVecSeq", i = "ANY"),
   function(x, i, j, ...) {
     x@vecs[[i]]
-  })
+  }
+)
 
 #' @rdname h5file-methods
 #' @export

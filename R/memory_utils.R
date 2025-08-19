@@ -41,12 +41,12 @@ configure_memory_warnings <- function(enable = TRUE, threshold_mb = 100, verbose
   if (!is.logical(verbose) || length(verbose) != 1) {
     stop("'verbose' must be a single logical value.")
   }
-  
+
   options(
     fmristore.warn_memory = enable,
     fmristore.memory_threshold_mb = threshold_mb
   )
-  
+
   if (verbose) {
     message(sprintf(
       "[fmristore] Memory warnings %s. Threshold: %.1f MB",
@@ -54,7 +54,7 @@ configure_memory_warnings <- function(enable = TRUE, threshold_mb = 100, verbose
       threshold_mb
     ))
   }
-  
+
   invisible(list(
     enabled = enable,
     threshold_mb = threshold_mb

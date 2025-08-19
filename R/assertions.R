@@ -8,9 +8,11 @@
 #' @noRd
 assert_non_empty_numeric <- function(x, arg, fn) {
   if (is.null(x) || !is.numeric(x) || length(x) == 0L) {
-    stop(sprintf("[%s] Argument '%s' must be a non-empty numeric vector.",
+    stop(sprintf(
+      "[%s] Argument '%s' must be a non-empty numeric vector.",
       fn %||% "unknown function",
-      arg %||% "unknown argument"))
+      arg %||% "unknown argument"
+    ))
   }
   invisible(NULL)
 }
@@ -52,9 +54,11 @@ check_same_dims <- function(a, b, dims_to_compare = NULL, msg = NULL) {
     dim_b_str <- if (is.null(dim_b)) paste0("[", length(b), "]") else paste(dim_b, collapse = "x")
     compare_str <- if (is.null(dims_to_compare)) "all dims" else paste0("dims ", paste(dims_to_compare, collapse = ","))
 
-    stop(paste0(msg %||% "Dimension mismatch: ",
+    stop(paste0(
+      msg %||% "Dimension mismatch: ",
       "Object A dims [", dim_a_str, "] vs Object B dims [", dim_b_str, "]",
-      " (comparing ", compare_str, ")"))
+      " (comparing ", compare_str, ")"
+    ))
   }
   invisible(NULL)
 }
@@ -80,7 +84,8 @@ validate_same_dims <- function(a, b, dims_to_compare = NULL, msg = NULL) {
     },
     error = function(e) {
       conditionMessage(e) # Return the error message string on failure
-    })
+    }
+  )
   return(result)
 }
 

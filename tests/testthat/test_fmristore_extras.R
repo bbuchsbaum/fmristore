@@ -37,9 +37,9 @@ test_that("H5NeuroVol handles empty or single-slice subsetting", {
 
 test_that("H5NeuroVol error handling for out-of-range indices", {
   dims <- c(4, 4, 4)
-  spc  <- NeuroSpace(dims)
-  arr  <- array(runif(prod(dims)), dim = dims)
-  vol  <- NeuroVol(arr, spc)
+  spc <- NeuroSpace(dims)
+  arr <- array(runif(prod(dims)), dim = dims)
+  vol <- NeuroVol(arr, spc)
 
   tmp <- tempfile(fileext = ".h5")
   on.exit(unlink(tmp))
@@ -84,7 +84,7 @@ test_that("H5NeuroVec partial dimension subsetting and zero-size slices", {
 
   # negative or zero index => error
   expect_error(h5vec[-1, 1, 1, 1], "out of range")
-  expect_error(h5vec[0, 1, 1, 1],   "out of range")
+  expect_error(h5vec[0, 1, 1, 1], "out of range")
 })
 
 test_that("H5NeuroVec linear access corner cases", {
@@ -99,12 +99,12 @@ test_that("H5NeuroVec linear access corner cases", {
 
   # linear_access with all possible indices
   tot <- prod(dim(h5vec))
-  lv  <- linear_access(h5vec, 1:tot)
+  lv <- linear_access(h5vec, 1:tot)
   expect_equal(lv, as.vector(arr), tolerance = 1e-7)
 
   # random sample
   idx_samp <- c(1, 2, tot - 1, tot)
-  lv_samp  <- linear_access(h5vec, idx_samp)
+  lv_samp <- linear_access(h5vec, idx_samp)
   expect_equal(lv_samp, arr[idx_samp], tolerance = 1e-7)
 })
 
@@ -119,16 +119,18 @@ test_that("LatentNeuroVec partial subsetting and out-of-mask voxels", {
   basis <- Matrix(matrix(rnorm(n_time * n_basis), nrow = n_time, ncol = n_basis))
 
   # mask => 2x2x2 but let's mask only half
-  mask_arr <- array(c(TRUE, FALSE,
+  mask_arr <- array(c(
+    TRUE, FALSE,
     TRUE, FALSE,
     FALSE, TRUE,
-    FALSE, TRUE), dim = c(2, 2, 2))
+    FALSE, TRUE
+  ), dim = c(2, 2, 2))
   mask_vol <- LogicalNeuroVol(mask_arr, NeuroSpace(c(2, 2, 2)))
   # => sum(mask) = 4
 
   # loadings => [4 x 2]
   loadings <- Matrix(matrix(rnorm(4 * 2), nrow = 4, ncol = 2))
-  offset   <- rnorm(4)
+  offset <- rnorm(4)
 
   # Build LatentNeuroVec => space => 2,2,2,3
   spc <- NeuroSpace(dim = c(2, 2, 2, n_time))
@@ -157,15 +159,15 @@ test_that("LatentNeuroVec partial subsetting and out-of-mask voxels", {
   expect_true(any(s1 != 0), info = "In-mask voxel should have non-zero values")
 
   # Check that the voxel is indeed in the mask
-  idx_1d <- 1 + (2 - 1) * 2 + (1 - 1) * 2 * 2  # = 3 (linear index for voxel 1,2,1)
+  idx_1d <- 1 + (2 - 1) * 2 + (1 - 1) * 2 * 2 # = 3 (linear index for voxel 1,2,1)
   rowid <- lookup(lat@map, idx_1d)
   expect_true(rowid > 0, info = paste("Linear index", idx_1d, "should be in mask"))
 
 
   # A voxel that is out of mask => e.g. i=2, j=1, k=1 => check mask
-  idx_1d2 <- 2 + (1 - 1) * 2 + (1 - 1) * 2 * 2  # =2 => mask[2]=FALSE
+  idx_1d2 <- 2 + (1 - 1) * 2 + (1 - 1) * 2 * 2 # =2 => mask[2]=FALSE
   s2 <- series(lat, 2, 1, 1)
-  expect_equal(s2, c(0, 0, 0))  # entire time series zero
+  expect_equal(s2, c(0, 0, 0)) # entire time series zero
 })
 
 test_that("LatentNeuroVec error handling", {
@@ -179,7 +181,8 @@ test_that("LatentNeuroVec error handling", {
       mask_vol <- LogicalNeuroVol(mask_arr, NeuroSpace(c(2, 2, 2)))
       LatentNeuroVec(basis, loadings, spc, mask_vol)
     },
-    regexp = "must have")
+    regexp = "must have"
+  )
 
   # offset length mismatch
   expect_error(
@@ -191,7 +194,8 @@ test_that("LatentNeuroVec error handling", {
       mask_vol <- LogicalNeuroVol(mask_arr, NeuroSpace(c(2, 2, 1)))
       LatentNeuroVec(basis, loadings, spc, mask_vol, offset = rnorm(10))
     },
-    "must match")
+    "must match"
+  )
 })
 
 test_that("LabeledVolumeSet partial usage + memoise=TRUE", {

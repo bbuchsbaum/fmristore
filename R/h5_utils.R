@@ -42,7 +42,8 @@ open_h5 <- function(src, mode = "r") {
     },
     error = function(e) {
       stop("open_h5: failed to open HDF5 file '", src, "' in mode '", mode, "'. Original error: ", conditionMessage(e))
-    })
+    }
+  )
 
   # We opened it, so we 'own' it (caller is responsible for closing)
   return(list(h5 = h5, owns = TRUE))
@@ -76,8 +77,10 @@ ensure_mask <- function(mask, h5, space, path = "/mask") {
   }
 
   # Check spatial dimensions against the provided space using helper
-  check_same_dims(m, space, dims_to_compare = 1:3,
-    msg = "Mask dimensions do not match space dimensions")
+  check_same_dims(m, space,
+    dims_to_compare = 1:3,
+    msg = "Mask dimensions do not match space dimensions"
+  )
 
   # Ensure the mask's space matches the provided space object exactly
   if (!identical(space(m), space)) {
@@ -110,14 +113,18 @@ assert_h5_path <- function(h5, path, desc = "Path") {
   }
 
   exists <- tryCatch(h5$exists(path), error = function(e) {
-    stop(sprintf("assert_h5_path: Error checking existence of '%s': %s",
-      path, conditionMessage(e)))
+    stop(sprintf(
+      "assert_h5_path: Error checking existence of '%s': %s",
+      path, conditionMessage(e)
+    ))
   })
 
   if (!isTRUE(exists)) {
     fname <- tryCatch(h5$get_filename(), error = function(e) "<unknown>")
-    stop(sprintf("%s not found at path '%s' in HDF5 file '%s'",
-      desc, path, fname))
+    stop(sprintf(
+      "%s not found at path '%s' in HDF5 file '%s'",
+      desc, path, fname
+    ))
   }
 
   invisible(TRUE)
@@ -145,35 +152,38 @@ assert_h5_path <- function(h5, path, desc = "Path") {
 #' @keywords internal
 #' @noRd
 .check_memory_usage <- function(h5, path, warn_threshold_mb = 100) {
-  tryCatch({
-    if (h5$exists(path)) {
-      dset <- h5[[path]]
-      tryCatch({
-        dims <- dset$dims
-        dtype <- dset$get_type()
-        
-        # Estimate size
-        element_size <- tryCatch(
-          dtype$get_size(),
-          error = function(e) 8  # Default to 8 bytes if size can't be determined
-        )
-        
-        total_elements <- prod(dims)
-        estimated_size_mb <- (total_elements * element_size) / (1024^2)
-        
-        if (estimated_size_mb > warn_threshold_mb) {
-          warning(sprintf(
-            "[fmristore] Large dataset operation: ~%.1f MB will be loaded into memory. Consider subsetting for large datasets.",
-            estimated_size_mb
-          ), call. = FALSE)
-        }
-      }, finally = {
-        if (dset$is_valid) try(dset$close(), silent = TRUE)
-      })
+  tryCatch(
+    {
+      if (h5$exists(path)) {
+        dset <- h5[[path]]
+        tryCatch({
+          dims <- dset$dims
+          dtype <- dset$get_type()
+
+          # Estimate size
+          element_size <- tryCatch(
+            dtype$get_size(),
+            error = function(e) 8 # Default to 8 bytes if size can't be determined
+          )
+
+          total_elements <- prod(dims)
+          estimated_size_mb <- (total_elements * element_size) / (1024^2)
+
+          if (estimated_size_mb > warn_threshold_mb) {
+            warning(sprintf(
+              "[fmristore] Large dataset operation: ~%.1f MB will be loaded into memory. Consider subsetting for large datasets.",
+              estimated_size_mb
+            ), call. = FALSE)
+          }
+        }, finally = {
+          if (dset$is_valid) try(dset$close(), silent = TRUE)
+        })
+      }
+    },
+    error = function(e) {
+      # Silently ignore memory check errors to avoid breaking data operations
     }
-  }, error = function(e) {
-    # Silently ignore memory check errors to avoid breaking data operations
-  })
+  )
 }
 
 h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL, warn_memory = TRUE) {
@@ -183,7 +193,7 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL, warn_memory 
   if (!is.character(path) || length(path) != 1 || !nzchar(path)) {
     stop("h5_read: 'path' must be a single, non-empty character string.")
   }
-  
+
   # Check memory usage if enabled
   if (warn_memory && getOption("fmristore.warn_memory", TRUE)) {
     .check_memory_usage(h5, path, getOption("fmristore.memory_threshold_mb", 100))
@@ -197,14 +207,17 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL, warn_memory 
       # Handle cases where checking existence itself fails (e.g., permission issue, intermediate group missing)
       warning(sprintf("h5_read: Suppressed HDF5 error during existence check for path '%s': %s", path, conditionMessage(e)))
       FALSE
-    })
+    }
+  )
 
   if (!path_exists) {
     if (missing_ok) {
       return(NULL)
     } else {
-      stop(sprintf("h5_read: Dataset or group not found at path '%s' in HDF5 file '%s'",
-        path, h5$get_filename()))
+      stop(sprintf(
+        "h5_read: Dataset or group not found at path '%s' in HDF5 file '%s'",
+        path, h5$get_filename()
+      ))
     }
   }
 
@@ -217,8 +230,10 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL, warn_memory 
     if (obj_info$type != "H5L_TYPE_HARD") {
       # Could be a group or something else; h5[[path]] might work for groups but read() will fail.
       # Treat non-datasets as an error unless specifically handled.
-      stop(sprintf("Object at path '%s' is not a dataset (type: %s).",
-        path, obj_info$type))
+      stop(sprintf(
+        "Object at path '%s' is not a dataset (type: %s).",
+        path, obj_info$type
+      ))
     }
 
     dset <- h5[[path]] # Open the dataset
@@ -229,8 +244,10 @@ h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL, warn_memory 
       data <- do.call(dset$read, read_args)
     }
   }, error = function(e) {
-    stop(sprintf("h5_read: Failed to read data from path '%s'. Original error: %s",
-      path, conditionMessage(e)))
+    stop(sprintf(
+      "h5_read: Failed to read data from path '%s'. Original error: %s",
+      path, conditionMessage(e)
+    ))
   }, finally = {
     # Ensure dataset handle is closed
     if (!is.null(dset) && inherits(dset, "H5D") && dset$is_valid) {
@@ -260,59 +277,64 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
   if (!is.character(path) || length(path) != 1L || !nzchar(path)) {
     stop("h5_read_subset: 'path' must be a single, non-empty character string.")
   }
-  
+
   # Check memory usage for subset operations if enabled
   if (warn_memory && getOption("fmristore.warn_memory", TRUE) && !is.null(index)) {
     # For subsets, estimate based on requested indices
-    tryCatch({
-      if (h5$exists(path)) {
-        dset <- h5[[path]]
-        tryCatch({
-          dims <- dset$dims
-          dtype <- dset$get_type()
-          
-          # Estimate subset size
-          element_size <- tryCatch(dtype$get_size(), error = function(e) 8)
-          
-          if (is.list(index)) {
-            # Calculate subset dimensions
-            subset_elements <- 1
-            for (i in seq_along(index)) {
-              if (i <= length(dims)) {
-                subset_elements <- subset_elements * length(index[[i]])
+    tryCatch(
+      {
+        if (h5$exists(path)) {
+          dset <- h5[[path]]
+          tryCatch({
+            dims <- dset$dims
+            dtype <- dset$get_type()
+
+            # Estimate subset size
+            element_size <- tryCatch(dtype$get_size(), error = function(e) 8)
+
+            if (is.list(index)) {
+              # Calculate subset dimensions
+              subset_elements <- 1
+              for (i in seq_along(index)) {
+                if (i <= length(dims)) {
+                  subset_elements <- subset_elements * length(index[[i]])
+                }
               }
-            }
-            # Add remaining dimensions not specified in index
-            for (j in (length(index) + 1):length(dims)) {
-              if (j <= length(dims)) {
-                subset_elements <- subset_elements * dims[j]
+              # Add remaining dimensions not specified in index
+              for (j in (length(index) + 1):length(dims)) {
+                if (j <= length(dims)) {
+                  subset_elements <- subset_elements * dims[j]
+                }
               }
+            } else {
+              subset_elements <- prod(dims) # Fallback to full size
             }
-          } else {
-            subset_elements <- prod(dims)  # Fallback to full size
-          }
-          
-          estimated_size_mb <- (subset_elements * element_size) / (1024^2)
-          threshold <- getOption("fmristore.memory_threshold_mb", 100)
-          
-          if (estimated_size_mb > threshold) {
-            warning(sprintf(
-              "[fmristore] Large subset operation: ~%.1f MB will be loaded into memory.",
-              estimated_size_mb
-            ), call. = FALSE)
-          }
-        }, finally = {
-          if (dset$is_valid) try(dset$close(), silent = TRUE)
-        })
+
+            estimated_size_mb <- (subset_elements * element_size) / (1024^2)
+            threshold <- getOption("fmristore.memory_threshold_mb", 100)
+
+            if (estimated_size_mb > threshold) {
+              warning(sprintf(
+                "[fmristore] Large subset operation: ~%.1f MB will be loaded into memory.",
+                estimated_size_mb
+              ), call. = FALSE)
+            }
+          }, finally = {
+            if (dset$is_valid) try(dset$close(), silent = TRUE)
+          })
+        }
+      },
+      error = function(e) {
+        # Silently ignore memory check errors
       }
-    }, error = function(e) {
-      # Silently ignore memory check errors
-    })
+    )
   }
 
   if (!h5$exists(path)) {
-    stop(sprintf("h5_read_subset: dataset '%s' not found in file '%s'",
-      path, h5$get_filename()))
+    stop(sprintf(
+      "h5_read_subset: dataset '%s' not found in file '%s'",
+      path, h5$get_filename()
+    ))
   }
 
   dset <- NULL
@@ -348,8 +370,10 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
       }
     }
   }, error = function(e) {
-    stop(sprintf("h5_read_subset: failed reading subset from '%s': %s",
-      path, conditionMessage(e)))
+    stop(sprintf(
+      "h5_read_subset: failed reading subset from '%s': %s",
+      path, conditionMessage(e)
+    ))
   }, finally = {
     close_h5_safely(dset)
   })
@@ -367,10 +391,12 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
 
 # Recursively create missing groups, preserving the leading "/"
 ensure_h5_groups <- function(h5, group_path) {
-  if (group_path == "/" || h5$exists(group_path)) return(invisible(TRUE))
+  if (group_path == "/" || h5$exists(group_path)) {
+    return(invisible(TRUE))
+  }
 
   parts <- strsplit(sub("^/", "", group_path), "/", fixed = TRUE)[[1]]
-  cur   <- ""                          # we build "/a", "/a/b", ...
+  cur <- "" # we build "/a", "/a/b", ...
   for (p in parts) {
     cur <- paste0(cur, "/", p)
     if (!h5$exists(cur)) h5$create_group(cur)
@@ -388,13 +414,13 @@ obj_dims <- function(x) {
 # -------------------------------------------------------------------------
 
 h5_write <- function(h5, path, data,
-                     dtype         = NULL,
-                     chunk_dims    = NULL,
-                     compression   = 0L,
-                     overwrite     = FALSE,
+                     dtype = NULL,
+                     chunk_dims = NULL,
+                     compression = 0L,
+                     overwrite = FALSE,
                      create_parent = TRUE,
-                     write_args    = list(),
-                     verbose       = getOption("h5.write.verbose", FALSE)) {
+                     write_args = list(),
+                     verbose = getOption("h5.write.verbose", FALSE)) {
   # -- 1. Validate --------------------------------------------------------
   if (!inherits(h5, "H5File")) {
     stop(sprintf("h5_write: 'h5' must be an H5File object, got class: %s", paste(class(h5), collapse = ", ")))
@@ -402,17 +428,21 @@ h5_write <- function(h5, path, data,
   if (!h5$is_valid) {
     stop("h5_write: H5File object is not valid (file may be closed)")
   }
-  if (!is.character(path) || length(path) != 1L || !nzchar(path) || substr(path, 1, 1) != "/")
+  if (!is.character(path) || length(path) != 1L || !nzchar(path) || substr(path, 1, 1) != "/") {
     stop("`path` must be an absolute HDF5 path (beginning with '/').")
-  if (!is.numeric(compression) || compression < 0 || compression > 9)
+  }
+  if (!is.numeric(compression) || compression < 0 || compression > 9) {
     stop("`compression` must be an integer 0-9.")
+  }
   compression <- as.integer(compression)
 
   # -- 2. Ensure parent groups -------------------------------------------
   parent_path <- dirname(path)
-  if (create_parent) ensure_h5_groups(h5, parent_path)
-  else if (!h5$exists(parent_path))
+  if (create_parent) {
+    ensure_h5_groups(h5, parent_path)
+  } else if (!h5$exists(parent_path)) {
     stop("Parent group '", parent_path, "' does not exist (create_parent = FALSE).")
+  }
 
   # -- 3. Overwrite logic -------------------------------------------------
   if (h5$exists(path)) {
@@ -424,7 +454,7 @@ h5_write <- function(h5, path, data,
   if (is.null(dtype)) dtype <- hdf5r::guess_dtype(data)
   if (!inherits(dtype, "H5T")) stop("`dtype` must be an 'H5T' object.")
 
-  dims   <- obj_dims(data)
+  dims <- obj_dims(data)
   scalar <- length(dims) == 0L
   if (scalar) {
     chunk_dims <- NULL
@@ -432,26 +462,28 @@ h5_write <- function(h5, path, data,
   } else if (compression > 0L && is.null(chunk_dims)) {
     ## simple heuristic: one chunk ≈ 4 MB
     dtype_size <- tryCatch(hdf5r::h5const$type_sizes[[dtype@name]], error = function(e) 8)
-    nk         <- max(1L, ceiling(prod(dims) * dtype_size / (4 * 1024^2)))
+    nk <- max(1L, ceiling(prod(dims) * dtype_size / (4 * 1024^2)))
     chunk_dims <- pmax(1L, floor(dims / nk))
   }
 
   # -- 5. Create + write --------------------------------------------------
-  dset <- h5$create_dataset(name       = path,
-    dims       = dims,
-    dtype      = dtype,
+  dset <- h5$create_dataset(
+    name = path,
+    dims = dims,
+    dtype = dtype,
     chunk_dims = chunk_dims,
-    gzip_level = compression)
+    gzip_level = compression
+  )
 
   if (length(write_args) == 0L) {
-    dset$write(NULL, value = data)                # full write
+    dset$write(NULL, value = data) # full write
   } else {
     if (is.null(write_args$robj)) write_args$robj <- data
     do.call(dset$write, write_args)
   }
 
   if (verbose) message("h5_write: wrote ", path)
-  invisible(dset)                           # leave open; caller may close
+  invisible(dset) # leave open; caller may close
 }
 
 # Internal helper to guess the HDF5 type from an R vector
@@ -535,17 +567,17 @@ map_dtype <- function(h5t) {
 
   switch(key,
     # Ints (is_float = FALSE)
-    "1 FALSE FALSE" = c(2L, 8L),    # DT_UINT8
-    "1 FALSE TRUE"  = c(256L, 8L),  # DT_INT8
+    "1 FALSE FALSE" = c(2L, 8L), # DT_UINT8
+    "1 FALSE TRUE" = c(256L, 8L), # DT_INT8
     "2 FALSE FALSE" = c(512L, 16L), # DT_UINT16
-    "2 FALSE TRUE"  = c(4L, 16L),   # DT_INT16
+    "2 FALSE TRUE" = c(4L, 16L), # DT_INT16
     "4 FALSE FALSE" = c(768L, 32L), # DT_UINT32
-    "4 FALSE TRUE"  = c(8L, 32L),   # DT_INT32
+    "4 FALSE TRUE" = c(8L, 32L), # DT_INT32
     "8 FALSE FALSE" = c(1280L, 64L), # DT_UINT64
-    "8 FALSE TRUE"  = c(1024L, 64L), # DT_INT64
+    "8 FALSE TRUE" = c(1024L, 64L), # DT_INT64
     # Floats (is_float = TRUE, assumed signed = TRUE)
-    "4 TRUE TRUE"   = c(16L, 32L),  # DT_FLOAT32
-    "8 TRUE TRUE"   = c(64L, 64L),  # DT_FLOAT64
+    "4 TRUE TRUE" = c(16L, 32L), # DT_FLOAT32
+    "8 TRUE TRUE" = c(64L, 64L), # DT_FLOAT64
     # Default case
     {
       warning(paste("Unhandled HDF5 type combination:", key, "(Size, IsFloat, IsSigned). Returning DT_UNKNOWN (0)."))

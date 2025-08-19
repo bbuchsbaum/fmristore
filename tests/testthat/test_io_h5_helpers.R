@@ -22,10 +22,14 @@ test_that("read_h5_mask_to_LogicalNeuroVol reads and validates masks", {
   expect_s4_class(m, "LogicalNeuroVol")
   expect_equal(as.logical(as.array(m@.Data)), as.logical(mask_arr))
 
-  expect_error(fmristore:::read_h5_mask_to_LogicalNeuroVol(h5, "mask_bad", sp),
-    "Mask dimensions in HDF5")
-  expect_error(fmristore:::read_h5_mask_to_LogicalNeuroVol(h5, "mask_2d", sp),
-    "expected 3 dimensions")
+  expect_error(
+    fmristore:::read_h5_mask_to_LogicalNeuroVol(h5, "mask_bad", sp),
+    "Mask dimensions in HDF5"
+  )
+  expect_error(
+    fmristore:::read_h5_mask_to_LogicalNeuroVol(h5, "mask_2d", sp),
+    "expected 3 dimensions"
+  )
   h5$close_all()
 })
 
@@ -47,7 +51,9 @@ test_that("read_h5_clusters_to_ClusteredNeuroVol enforces length match", {
   expect_s4_class(clus, "ClusteredNeuroVol")
   expect_equal(clus@clusters, 1:sum(mask))
 
-  expect_error(fmristore:::read_h5_clusters_to_ClusteredNeuroVol(h5, mask, "cluster_bad"),
-    "Length of")
+  expect_error(
+    fmristore:::read_h5_clusters_to_ClusteredNeuroVol(h5, mask, "cluster_bad"),
+    "Length of"
+  )
   h5$close_all()
 })

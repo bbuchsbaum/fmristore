@@ -39,28 +39,35 @@ test_that("writer + reader round-trip", {
   if (n_vox_c3 > 0) full_data_list$cluster_3 <- matrix(rnorm(n_vox_c3 * n_time1), n_vox_c3, n_time1)
 
   # Create summary run data matrix [nTime, nClusters]
-  summ_mat  <- matrix(rnorm(n_time2 * 3), n_time2, 3)
+  summ_mat <- matrix(rnorm(n_time2 * 3), n_time2, 3)
 
   # Create cluster metadata data.frame
-  clus_meta_df <- data.frame(cluster_id = 1:3,
+  clus_meta_df <- data.frame(
+    cluster_id = 1:3,
     desc = paste("Cluster", 1:3),
-    size = c(n_vox_c1, n_vox_c2, n_vox_c3))
+    size = c(n_vox_c1, n_vox_c2, n_vox_c3)
+  )
 
   # Create the runs_data list for the writer
   runs <- list(
-    list(scan_name = "run1",
+    list(
+      scan_name = "run1",
       type = "full",
       data = full_data_list,
-      metadata = list(TR = 2.0, Task = "RestingState", SubjectID = "Sub01")),
-    list(scan_name = "run2",
+      metadata = list(TR = 2.0, Task = "RestingState", SubjectID = "Sub01")
+    ),
+    list(
+      scan_name = "run2",
       type = "summary",
       data = summ_mat,
-      metadata = list(TR = 2.5, Task = "FingerTapping", SubjectID = "Sub01"))
+      metadata = list(TR = 2.5, Task = "FingerTapping", SubjectID = "Sub01")
+    )
   )
 
   # Write the file
   write_parcellated_experiment_h5(tf, mask, clus, runs,
-    cluster_metadata = clus_meta_df, overwrite = TRUE, verbose = FALSE)
+    cluster_metadata = clus_meta_df, overwrite = TRUE, verbose = FALSE
+  )
 
   # --- Test Reading ---
   # Can we open it?
@@ -190,7 +197,7 @@ test_that("reader validation works for provided mask and clusters", {
   msp <- NeuroSpace(c(2, 2, 2), c(1, 1, 1))
   mask_orig <- LogicalNeuroVol(array(c(rep(FALSE, 4), rep(TRUE, 4)), dim = c(2, 2, 2)), msp)
   # Ensure we have both clusters represented
-  cluster_ids <- c(1, 1, 2, 2)  # Guarantees both clusters are present
+  cluster_ids <- c(1, 1, 2, 2) # Guarantees both clusters are present
   clus_orig <- ClusteredNeuroVol(mask_orig, cluster_ids)
   runs <- list(list(scan_name = "run1", type = "summary", data = matrix(1:10, 5, 2)))
   # Write cluster metadata as well
@@ -227,7 +234,6 @@ test_that("reader validation works for provided mask and clusters", {
   # Can't create ClusteredNeuroVol with wrong length - it would fail at construction
   # So we'll skip this test as it's not a valid test case
   # Test removed - invalid test case as ClusteredNeuroVol constructor would fail
-
 })
 
 test_that("summary_preference defaults based on /scans attribute", {
@@ -238,7 +244,8 @@ test_that("summary_preference defaults based on /scans attribute", {
       unlink(tf1)
       unlink(tf2)
     },
-    add = TRUE)
+    add = TRUE
+  )
 
   mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2, 2, 2))
   clus <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 2)
@@ -293,7 +300,8 @@ test_that("dataset cluster_meta is read as data.frame", {
 
   write_parcellated_experiment_h5(tf, mask, clus, runs,
     cluster_metadata = meta_df,
-    overwrite = TRUE, verbose = FALSE)
+    overwrite = TRUE, verbose = FALSE
+  )
 
   h5f <- H5File$new(tf, mode = "r+")
   meta_grp <- h5f[["/clusters/cluster_meta"]]

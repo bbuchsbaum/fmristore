@@ -28,8 +28,10 @@ NULL
 
   # 1. Check consistency with cluster map length (number of active voxels)
   if (sum(user_mask@.Data) != expected_cmap_len) {
-    stop(sprintf("Provided mask's TRUE voxel count (%d) does not match length of HDF5 /cluster_map (%d). User mask override rejected.",
-      sum(user_mask@.Data), expected_cmap_len))
+    stop(sprintf(
+      "Provided mask's TRUE voxel count (%d) does not match length of HDF5 /cluster_map (%d). User mask override rejected.",
+      sum(user_mask@.Data), expected_cmap_len
+    ))
   }
 
   # 2. Check voxel pattern consistency against /voxel_coords or /mask in the HDF5 file
@@ -43,7 +45,8 @@ NULL
       if (!is.null(vox_coords_dset) && inherits(vox_coords_dset, "H5D") && vox_coords_dset$is_valid) close_h5_safely(vox_coords_dset)
       if (!is.null(mask_dset_val) && inherits(mask_dset_val, "H5D") && mask_dset_val$is_valid) close_h5_safely(mask_dset_val)
     },
-    add = TRUE) # Add to existing on.exit handlers if any in calling scope (though this is top-level helper)
+    add = TRUE
+  ) # Add to existing on.exit handlers if any in calling scope (though this is top-level helper)
 
   tryCatch(
     {
@@ -68,7 +71,8 @@ NULL
     },
     error = function(e) {
       stop(sprintf("Error reading HDF5 '/voxel_coords' or '/mask' for user mask validation: %s", e$message))
-    })
+    }
+  )
 
   provided_voxel_indices <- which(user_mask@.Data)
   # Convert to same type for comparison (file_voxel_indices might be numeric due to calculations)
@@ -84,10 +88,10 @@ NULL
 #' @describeIn series_concat Concatenate voxel time series for H5ParcellatedMultiScan
 #' @export
 #' @family H5Parcellated
-setMethod("series_concat",
+setMethod(
+  "series_concat",
   signature(experiment = "H5ParcellatedMultiScan", mask_idx = "numeric"),
   function(experiment, mask_idx, run_indices = NULL) {
-
     if (length(experiment@runs) == 0) {
       warning("[series_concat] Experiment contains no runs. Returning empty matrix.")
       return(matrix(numeric(0), nrow = 0, ncol = length(mask_idx %||% 0)))
@@ -117,8 +121,10 @@ setMethod("series_concat",
       current_run <- experiment@runs[[idx]]
 
       if (!is(current_run, "H5ParcellatedScan")) {
-        stop(sprintf("[series_concat] Run %d (scan: '%s') is not an H5ParcellatedScan object. Voxel-level series cannot be extracted.",
-          idx, current_run@scan_name))
+        stop(sprintf(
+          "[series_concat] Run %d (scan: '%s') is not an H5ParcellatedScan object. Voxel-level series cannot be extracted.",
+          idx, current_run@scan_name
+        ))
       }
 
       tryCatch(
@@ -138,12 +144,14 @@ setMethod("series_concat",
 
           all_series[[length(all_series) + 1]] <- run_series
           total_time <- total_time + nrow(run_series)
-
         },
         error = function(e) {
-          stop(sprintf("[series_concat] Failed to extract series for run %d (scan: '%s'). Error: %s",
-            idx, current_run@scan_name, e$message))
-        })
+          stop(sprintf(
+            "[series_concat] Failed to extract series for run %d (scan: '%s'). Error: %s",
+            idx, current_run@scan_name, e$message
+          ))
+        }
+      )
     }
 
     if (length(all_series) == 0) {
@@ -159,16 +167,17 @@ setMethod("series_concat",
     }
 
     return(result_matrix)
-  })
+  }
+)
 
 
 #' @describeIn matrix_concat Concatenate summary matrices for H5ParcellatedMultiScan
 #' @export
 #' @family H5Parcellated
-setMethod("matrix_concat",
+setMethod(
+  "matrix_concat",
   signature(experiment = "H5ParcellatedMultiScan"),
   function(experiment, run_indices = NULL) {
-
     if (length(experiment@runs) == 0) {
       warning("[matrix_concat] Experiment contains no runs. Returning empty matrix.")
       return(matrix(numeric(0), nrow = 0, ncol = 0))
@@ -196,8 +205,10 @@ setMethod("matrix_concat",
       current_run <- experiment@runs[[idx]]
 
       if (!is(current_run, "H5ParcellatedScanSummary")) {
-        stop(sprintf("[matrix_concat] Run %d (scan: '%s') is not an H5ParcellatedScanSummary object. Summary matrix cannot be extracted.",
-          idx, current_run@scan_name))
+        stop(sprintf(
+          "[matrix_concat] Run %d (scan: '%s') is not an H5ParcellatedScanSummary object. Summary matrix cannot be extracted.",
+          idx, current_run@scan_name
+        ))
       }
 
       tryCatch(
@@ -208,18 +219,22 @@ setMethod("matrix_concat",
           if (is.null(n_clusters)) {
             n_clusters <- ncol(run_matrix)
           } else if (ncol(run_matrix) != n_clusters) {
-            stop(sprintf("[matrix_concat] Inconsistent number of clusters found. Run %d has %d columns, expected %d. Concatenation aborted.",
-              idx, ncol(run_matrix), n_clusters))
+            stop(sprintf(
+              "[matrix_concat] Inconsistent number of clusters found. Run %d has %d columns, expected %d. Concatenation aborted.",
+              idx, ncol(run_matrix), n_clusters
+            ))
           }
 
           all_matrices[[length(all_matrices) + 1]] <- run_matrix
           total_time <- total_time + nrow(run_matrix)
-
         },
         error = function(e) {
-          stop(sprintf("[matrix_concat] Failed to extract matrix for run %d (scan: '%s'). Error: %s",
-            idx, current_run@scan_name, e$message))
-        })
+          stop(sprintf(
+            "[matrix_concat] Failed to extract matrix for run %d (scan: '%s'). Error: %s",
+            idx, current_run@scan_name, e$message
+          ))
+        }
+      )
     }
 
     if (length(all_matrices) == 0) {
@@ -234,7 +249,8 @@ setMethod("matrix_concat",
     }
 
     return(result_matrix)
-  })
+  }
+)
 
 
 #' Constructor for H5ParcellatedMultiScan Objects
@@ -310,14 +326,13 @@ setMethod("matrix_concat",
 #' @export
 #' @family H5Parcellated
 H5ParcellatedMultiScan <- function(file,
-                                scan_names = NULL,
-                                mask = NULL,
-                                clusters = NULL,
-                                scan_metadata = NULL,
-                                cluster_metadata = NULL,
-                                summary_preference = NULL,
-                                keep_handle_open = TRUE
-) {
+                                   scan_names = NULL,
+                                   mask = NULL,
+                                   clusters = NULL,
+                                   scan_metadata = NULL,
+                                   cluster_metadata = NULL,
+                                   summary_preference = NULL,
+                                   keep_handle_open = TRUE) {
   # Rename file_source to file internally for clarity
   file_source <- file
   rm(file) # Remove the old name from the scope
@@ -339,7 +354,8 @@ H5ParcellatedMultiScan <- function(file,
       }
       # Finalizer registration is handled later in the function
     },
-    add = TRUE)
+    add = TRUE
+  )
 
   # --- 1. Handle File Source and Read Header/Create Space ---
   fh <- open_h5(file_source, mode = "r")
@@ -354,7 +370,8 @@ H5ParcellatedMultiScan <- function(file,
         try(h5obj$close_all(), silent = TRUE)
       }
     },
-    envir = parent.frame()) # Defer in the context of the calling function H5ParcellatedMultiScan
+    envir = parent.frame()
+  ) # Defer in the context of the calling function H5ParcellatedMultiScan
 
   # --- Read Header Info and Create Master NeuroSpace ---
   master_space <- NULL
@@ -380,15 +397,15 @@ H5ParcellatedMultiScan <- function(file,
         return(val)
       }
 
-      dims   <- .rd_hdr("dim")
+      dims <- .rd_hdr("dim")
       pixdim <- .rd_hdr("pixdim")
-      qb     <- .rd_hdr("quatern_b")
+      qb <- .rd_hdr("quatern_b")
       qc <- .rd_hdr("quatern_c")
       qd <- .rd_hdr("quatern_d")
-      qx     <- .rd_hdr("qoffset_x")
+      qx <- .rd_hdr("qoffset_x")
       qy <- .rd_hdr("qoffset_y")
       qz <- .rd_hdr("qoffset_z")
-      qfac   <- .rd_hdr("qfac")
+      qfac <- .rd_hdr("qfac")
 
       if (is.null(dims) || length(dims) < 4 || dims[1] != 4) {
         stop("Invalid or missing 'dim' in /header. Must start with 4 and have at least X,Y,Z dims.")
@@ -430,11 +447,11 @@ H5ParcellatedMultiScan <- function(file,
         )
       }
       master_space <- NeuroSpace(dim = XYZ_dims, spacing = spacing_dims, trans = transform_mat)
-
     },
     error = function(e) {
       stop(sprintf("[H5ParcellatedMultiScan] Failed to read header and create NeuroSpace: %s", e$message))
-    })
+    }
+  )
   # Header group is automatically closed by on.exit if added to opened_groups
 
   # --- Auto-load/Validate mask and clusters, using the master_space ---
@@ -453,7 +470,8 @@ H5ParcellatedMultiScan <- function(file,
     },
     error = function(e) {
       stop(sprintf("Failed to get length of /cluster_map: %s", e$message))
-    })
+    }
+  )
   # cmap_dset is closed via on.exit
   if (is.null(cmap_len) || length(cmap_len) != 1) {
     stop("/cluster_map must be a 1D dataset.")
@@ -470,10 +488,12 @@ H5ParcellatedMultiScan <- function(file,
   # then perform stricter HDF5-based validation on the 'mask' object
   # (which is now the user-provided mask, assuming it passed ensure_mask's checks).
   if (!is.null(initial_mask_arg)) {
-    .validate_user_provided_mask_h5(user_mask = mask,
+    .validate_user_provided_mask_h5(
+      user_mask = mask,
       h5_handle = h5obj,
       expected_cmap_len = cmap_len,
-      master_space = master_space)
+      master_space = master_space
+    )
   }
   # 'mask' now holds the final, validated mask for subsequent use.
 
@@ -492,8 +512,10 @@ H5ParcellatedMultiScan <- function(file,
     }
     # 2. Length check
     if (length(clusters@clusters) != sum(mask)) {
-      stop(sprintf("Provided clusters vector length (%d) does not match the number of TRUE voxels in the mask (%d).",
-        length(clusters@clusters), sum(mask)))
+      stop(sprintf(
+        "Provided clusters vector length (%d) does not match the number of TRUE voxels in the mask (%d).",
+        length(clusters@clusters), sum(mask)
+      ))
     }
     message("Provided clusters validation successful.")
     # Use the validated provided clusters
@@ -512,7 +534,8 @@ H5ParcellatedMultiScan <- function(file,
   summary_only_attr <- NULL
   if ("summary_only" %in% h5attr_names(scans_group)) {
     summary_only_attr <- tryCatch(h5attr(scans_group, "summary_only"),
-      error = function(e) NULL)
+      error = function(e) NULL
+    )
   }
 
   if (is.null(summary_preference)) {
@@ -541,8 +564,10 @@ H5ParcellatedMultiScan <- function(file,
     }
     missing_scans <- setdiff(scan_names, available_scans)
     if (length(missing_scans) > 0) {
-      stop(sprintf("[H5ParcellatedMultiScan] Specified scan names not found under '/scans': %s",
-        paste(missing_scans, collapse = ", ")))
+      stop(sprintf(
+        "[H5ParcellatedMultiScan] Specified scan names not found under '/scans': %s",
+        paste(missing_scans, collapse = ", ")
+      ))
     }
     # Keep only requested scans in the specified order
   }
@@ -606,14 +631,18 @@ H5ParcellatedMultiScan <- function(file,
       if (scan_class == "H5ParcellatedScanSummary") {
         create_summary <- TRUE
         if (!summary_dset_exists) {
-          stop(sprintf("Scan '%s' has class='H5ParcellatedScanSummary' but summary data not found at %s",
-            sname, file.path(summary_group_path, summary_dset_name)))
+          stop(sprintf(
+            "Scan '%s' has class='H5ParcellatedScanSummary' but summary data not found at %s",
+            sname, file.path(summary_group_path, summary_dset_name)
+          ))
         }
       } else if (scan_class == "H5ParcellatedScan") {
         create_summary <- FALSE
         if (!has_full_data) {
-          stop(sprintf("Scan '%s' has class='H5ParcellatedScan' but full data not found under %s",
-            sname, file.path(scan_path, "clusters")))
+          stop(sprintf(
+            "Scan '%s' has class='H5ParcellatedScan' but full data not found under %s",
+            sname, file.path(scan_path, "clusters")
+          ))
         }
       } else {
         # Unknown class, fall back to preference logic
@@ -664,7 +693,8 @@ H5ParcellatedMultiScan <- function(file,
         },
         error = function(e_grp) {
           warning(sprintf("Failed to access metadata group for scan '%s': %s", sname, e_grp$message))
-        })
+        }
+      )
       # Meta group closed via on.exit
     }
     final_scan_metadata[[sname]] <- current_scan_meta
@@ -682,17 +712,16 @@ H5ParcellatedMultiScan <- function(file,
           runs_list[[sname]] <- H5ParcellatedScanSummary(
             file = h5obj, # MODIFIED: Pass H5File handle
             scan_name = sname,
-            mask = mask,       # Pass validated mask
+            mask = mask, # Pass validated mask
             clusters = clusters, # Pass validated clusters (can be NULL)
             # cluster_names = character(), # Let constructor handle defaults/loading
             # cluster_ids = integer(),     # Let constructor handle defaults/loading
             summary_dset = summary_dset_name
           )
         },
-        error = function(e) stop(sprintf("Failed to create H5ParcellatedScanSummary for scan '%s': %s", sname, e$message)))
-
+        error = function(e) stop(sprintf("Failed to create H5ParcellatedScanSummary for scan '%s': %s", sname, e$message))
+      )
     } else {
-
       if (!has_full_data) stop(sprintf("Full voxel data required but not found for scan '%s' under group %s", sname, file.path(scan_path, "clusters")))
 
       # Get n_time from metadata if available, else pass NULL (constructor will try to find it)
@@ -704,13 +733,14 @@ H5ParcellatedMultiScan <- function(file,
           runs_list[[sname]] <- H5ParcellatedScan(
             file = h5obj, # MODIFIED: Pass H5File handle
             scan_name = sname,
-            mask = mask,       # Pass validated mask
+            mask = mask, # Pass validated mask
             clusters = clusters, # Pass validated clusters
             n_time = scan_specific_n_time # Pass potential n_time from metadata
             # compress = ? # Let constructor handle reading compress attr if needed
           )
         },
-        error = function(e) stop(sprintf("Failed to create H5ParcellatedScan for scan '%s': %s", sname, e$message)))
+        error = function(e) stop(sprintf("Failed to create H5ParcellatedScan for scan '%s': %s", sname, e$message))
+      )
     }
   }
 
@@ -763,7 +793,8 @@ H5ParcellatedMultiScan <- function(file,
               },
               error = function(e_read) {
                 warning(sprintf("Failed to read global cluster metadata dataset '%s': %s", cluster_meta_group_path, e_read$message))
-              })
+              }
+            )
             if (!is.null(meta_data)) {
               if (is.data.frame(meta_data)) global_meta_df <- meta_data else global_meta_df <- as.data.frame(meta_data)
             }
@@ -779,7 +810,8 @@ H5ParcellatedMultiScan <- function(file,
         },
         error = function(e_grp) {
           warning(sprintf("Error reading global cluster metadata from '%s': %s", cluster_meta_group_path, e_grp$message))
-        })
+        }
+      )
     }
     cluster_metadata <- global_meta_df
   } else {
@@ -805,7 +837,8 @@ H5ParcellatedMultiScan <- function(file,
   exp_obj <- new("H5ParcellatedMultiScan",
     runs = runs_list,
     scan_metadata = final_scan_metadata,
-    cluster_metadata = cluster_metadata)
+    cluster_metadata = cluster_metadata
+  )
 
   # --- Add Finalizer if needed (Checklist Item 4.3) ---
   if (opened_here && keep_handle_open) {
@@ -816,15 +849,15 @@ H5ParcellatedMultiScan <- function(file,
       # Access the handle from the object's structure
       h5_handle_to_close <- NULL
       if (length(e@runs) > 0 && inherits(e@runs[[1]], "H5ParcellatedArray")) {
-         h5_handle_to_close <- e@runs[[1]]@obj
+        h5_handle_to_close <- e@runs[[1]]@obj
       }
       if (!is.null(h5_handle_to_close) && inherits(h5_handle_to_close, "H5File") && h5_handle_to_close$is_valid) {
-         try(h5_handle_to_close$close_all(), silent = TRUE)
+        try(h5_handle_to_close$close_all(), silent = TRUE)
       }
     }, onexit = TRUE)
   } else if (opened_here && !keep_handle_open) {
-      # Close handle immediately if opened here and not keeping open
-      try(h5obj$close_all(), silent = TRUE)
+    # Close handle immediately if opened here and not keeping open
+    try(h5obj$close_all(), silent = TRUE)
   } # else: handle was passed in open, user manages its lifecycle
   # --- End Finalizer ---
 

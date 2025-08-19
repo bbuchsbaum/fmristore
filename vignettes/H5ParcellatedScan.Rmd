@@ -53,7 +53,7 @@ brain_space <- NeuroSpace(brain_dims, spacing = c(2, 2, 2))
 
 # Define brain mask (central region)
 mask_data <- array(FALSE, brain_dims)
-mask_data[4:7, 4:7, 2:4] <- TRUE  # Small brain region
+mask_data[4:7, 4:7, 2:4] <- TRUE # Small brain region
 mask <- LogicalNeuroVol(mask_data, brain_space)
 
 # Divide brain into 3 clusters (regions)
@@ -67,8 +67,10 @@ print(table(clusters@clusters))
 
 ```{r visualize-concept, echo=FALSE, fig.height=3}
 # Simple visualization of clustered brain concept
-plot(1:10, 1:10, type = "n", axes = FALSE,
-  xlab = "", ylab = "", main = "Brain Clusters Concept")
+plot(1:10, 1:10,
+  type = "n", axes = FALSE,
+  xlab = "", ylab = "", main = "Brain Clusters Concept"
+)
 rect(1, 1, 4, 4, col = "lightblue", border = "black", lwd = 2)
 rect(5, 1, 8, 4, col = "lightgreen", border = "black", lwd = 2)
 rect(2, 5, 6, 8, col = "lightcoral", border = "black", lwd = 2)
@@ -93,14 +95,16 @@ fmri_data1 <- array(rnorm(prod(fmri_dims1)), dim = fmri_dims1)
 cluster_2_voxels <- which(clusters@clusters == 2)
 mask_indices <- which(mask, arr.ind = TRUE)
 for (v in cluster_2_voxels) {
-  x <- mask_indices[v, 1]; y <- mask_indices[v, 2]; z <- mask_indices[v, 3]
+  x <- mask_indices[v, 1]
+  y <- mask_indices[v, 2]
+  z <- mask_indices[v, 3]
   # Add sinusoidal activation
-  fmri_data1[x, y, z, ] <- fmri_data1[x, y, z, ] + 0.8 * sin(seq(0, 4*pi, length.out = n_time1))
+  fmri_data1[x, y, z, ] <- fmri_data1[x, y, z, ] + 0.8 * sin(seq(0, 4 * pi, length.out = n_time1))
 }
 
 runs_data[[1]] <- NeuroVec(fmri_data1, NeuroSpace(fmri_dims1))
 
-# Run 2: Rest run (full data) - 50 timepoints  
+# Run 2: Rest run (full data) - 50 timepoints
 n_time2 <- 50
 fmri_dims2 <- c(brain_dims, n_time2)
 fmri_data2 <- array(rnorm(prod(fmri_dims2)), dim = fmri_dims2)
@@ -110,7 +114,9 @@ for (i in 1:3) {
   cluster_voxels <- which(clusters@clusters == i)
   shared_signal <- rnorm(n_time2, sd = 0.3)
   for (v in cluster_voxels) {
-    x <- mask_indices[v, 1]; y <- mask_indices[v, 2]; z <- mask_indices[v, 3]
+    x <- mask_indices[v, 1]
+    y <- mask_indices[v, 2]
+    z <- mask_indices[v, 3]
     fmri_data2[x, y, z, ] <- fmri_data2[x, y, z, ] + shared_signal
   }
 }
@@ -120,8 +126,10 @@ runs_data[[2]] <- NeuroVec(fmri_data2, NeuroSpace(fmri_dims2))
 # Run 3: Will be saved as summary data (we'll use run 1's data)
 runs_data[[3]] <- runs_data[[1]]
 
-cat("Created", length(runs_data), "runs with timepoints:", 
-    paste(sapply(runs_data, function(x) dim(x)[4]), collapse = ", "), "\n")
+cat(
+  "Created", length(runs_data), "runs with timepoints:",
+  paste(sapply(runs_data, function(x) dim(x)[4]), collapse = ", "), "\n"
+)
 ```
 
 ### Save Mixed Full and Summary Data
@@ -131,26 +139,28 @@ cat("Created", length(runs_data), "runs with timepoints:",
 h5_file <- tempfile(fileext = ".h5")
 
 # First, save the two full runs
-write_dataset(list(runs_data[[1]], runs_data[[2]]), 
-              file = h5_file, 
-              clusters = clusters,
-              scan_names = c("task_full", "rest_full"),
-              summary = FALSE)  # Full voxel data
+write_dataset(list(runs_data[[1]], runs_data[[2]]),
+  file = h5_file,
+  clusters = clusters,
+  scan_names = c("task_full", "rest_full"),
+  summary = FALSE
+) # Full voxel data
 
 # Then add a summary run to the same file
-# Note: In practice, you'd append this or use write_clustered_experiment_h5() 
+# Note: In practice, you'd append this or use write_clustered_experiment_h5()
 # For this example, we'll create separate files to show both types clearly
 
 summary_file <- tempfile(fileext = ".h5")
-write_dataset(runs_data[[3]], 
-              file = summary_file, 
-              clusters = clusters,
-              scan_names = "task_summary",
-              summary = TRUE)  # Cluster averages only
+write_dataset(runs_data[[3]],
+  file = summary_file,
+  clusters = clusters,
+  scan_names = "task_summary",
+  summary = TRUE
+) # Cluster averages only
 
 cat("Created files:\n")
-cat("  Full data file:", round(file.size(h5_file)/1024, 1), "KB\n")
-cat("  Summary data file:", round(file.size(summary_file)/1024, 1), "KB\n")
+cat("  Full data file:", round(file.size(h5_file) / 1024, 1), "KB\n")
+cat("  Summary data file:", round(file.size(summary_file) / 1024, 1), "KB\n")
 ```
 
 ## Step 2: Load the Data with read_dataset()
@@ -162,7 +172,7 @@ summary_experiment <- read_dataset(summary_file)
 
 cat("Full data experiment:\n")
 print(full_experiment)
-cat("\nSummary data experiment:\n")  
+cat("\nSummary data experiment:\n")
 print(summary_experiment)
 ```
 
@@ -172,10 +182,10 @@ This is the key concept: **H5ParcellatedScan** and **H5ParcellatedScanSummary** 
 
 ```{r access-individual-scans}
 # Method 1: Access by position in @runs slot
-task_scan <- full_experiment@runs[[1]]     # First scan
-rest_scan <- full_experiment@runs[[2]]     # Second scan
+task_scan <- full_experiment@runs[[1]] # First scan
+rest_scan <- full_experiment@runs[[2]] # Second scan
 
-# Method 2: Access by name if names are available  
+# Method 2: Access by name if names are available
 scan_names_full <- scan_names(full_experiment)
 cat("Available scan names in full experiment:", paste(scan_names_full, collapse = ", "), "\n")
 
@@ -206,7 +216,7 @@ cat("Number of timepoints:", dim(task_scan)[2], "\n\n")
 cat("=== Summary Scan (H5ParcellatedScanSummary) ===\n")
 summary_matrix <- as.matrix(summary_scan)
 cat("Summary dimensions:", paste(dim(summary_matrix), collapse = " × "), "\n")
-cat("Class:", class(summary_scan), "\n") 
+cat("Class:", class(summary_scan), "\n")
 cat("Number of clusters:", ncol(summary_matrix), "\n")
 cat("Number of timepoints:", nrow(summary_matrix), "\n\n")
 
@@ -214,7 +224,7 @@ cat("=== Storage Efficiency ===\n")
 n_voxels_full <- dim(task_scan)[1] * dim(task_scan)[2]
 n_elements_summary <- prod(dim(summary_matrix))
 cat("Full scan elements:", n_voxels_full, "\n")
-cat("Summary scan elements:", n_elements_summary, "\n") 
+cat("Summary scan elements:", n_elements_summary, "\n")
 cat("Compression ratio:", round(n_voxels_full / n_elements_summary, 1), ":1\n")
 ```
 
@@ -234,12 +244,16 @@ cat("Extracted time series dimensions:", paste(dim(task_voxel_ts), collapse = " 
 cat("(rows = timepoints, columns = voxels)\n\n")
 
 # Plot individual voxel time series
-matplot(task_voxel_ts[, 1:3], type = "l", lty = 1, lwd = 2,
-        main = "Task Scan: Individual Voxel Time Series", 
-        xlab = "Time Point", ylab = "Signal",
-        col = c("red", "blue", "darkgreen"))
-legend("topright", legend = paste("Voxel", voxel_indices[1:3]), 
-       col = c("red", "blue", "darkgreen"), lty = 1, lwd = 2)
+matplot(task_voxel_ts[, 1:3],
+  type = "l", lty = 1, lwd = 2,
+  main = "Task Scan: Individual Voxel Time Series",
+  xlab = "Time Point", ylab = "Signal",
+  col = c("red", "blue", "darkgreen")
+)
+legend("topright",
+  legend = paste("Voxel", voxel_indices[1:3]),
+  col = c("red", "blue", "darkgreen"), lty = 1, lwd = 2
+)
 ```
 
 ### Extract Time Series for All Voxels in a Cluster
@@ -254,19 +268,23 @@ cluster_2_ts <- series(task_scan, i = cluster_2_voxels)
 cat("Cluster 2 time series dimensions:", paste(dim(cluster_2_ts), collapse = " × "), "\n")
 
 # Plot the first few voxels from cluster 2 to see the task activation
-matplot(cluster_2_ts[, 1:min(4, ncol(cluster_2_ts))], type = "l", lty = 1,
-        main = "Task Activation in Cluster 2 (Motor) Voxels",
-        xlab = "Time Point", ylab = "Signal",
-        col = rainbow(min(4, ncol(cluster_2_ts))))
-legend("topright", legend = paste("Voxel", cluster_2_voxels[1:min(4, ncol(cluster_2_ts))]),
-       col = rainbow(min(4, ncol(cluster_2_ts))), lty = 1)
+matplot(cluster_2_ts[, 1:min(4, ncol(cluster_2_ts))],
+  type = "l", lty = 1,
+  main = "Task Activation in Cluster 2 (Motor) Voxels",
+  xlab = "Time Point", ylab = "Signal",
+  col = rainbow(min(4, ncol(cluster_2_ts)))
+)
+legend("topright",
+  legend = paste("Voxel", cluster_2_voxels[1:min(4, ncol(cluster_2_ts))]),
+  col = rainbow(min(4, ncol(cluster_2_ts))), lty = 1
+)
 ```
 
 ### Compare Task vs Rest Scans (Individual Scan Analysis)
 
 ```{r compare-scans}
 # Extract the same voxel indices from both scans
-task_sample <- series(task_scan, i = 1:6)  
+task_sample <- series(task_scan, i = 1:6)
 rest_sample <- series(rest_scan, i = 1:6)
 
 # Calculate variance for each voxel in each scan
@@ -286,14 +304,17 @@ print(round(comparison_df, 3))
 
 # Plot comparison
 par(mfrow = c(1, 2))
-plot(task_vars, rest_vars, 
-     xlab = "Task Variance", ylab = "Rest Variance",
-     main = "Variance Comparison", pch = 19, col = "blue")
+plot(task_vars, rest_vars,
+  xlab = "Task Variance", ylab = "Rest Variance",
+  main = "Variance Comparison", pch = 19, col = "blue"
+)
 abline(0, 1, col = "red", lty = 2)
 
-plot(1:6, comparison_df$Ratio, type = "b", pch = 19, col = "darkgreen",
-     xlab = "Voxel Index", ylab = "Task/Rest Variance Ratio",
-     main = "Variance Ratio (Task/Rest)")
+plot(1:6, comparison_df$Ratio,
+  type = "b", pch = 19, col = "darkgreen",
+  xlab = "Voxel Index", ylab = "Task/Rest Variance Ratio",
+  main = "Variance Ratio (Task/Rest)"
+)
 abline(h = 1, col = "red", lty = 2)
 par(mfrow = c(1, 1))
 ```
@@ -310,7 +331,7 @@ summary_matrix <- as.matrix(summary_scan)
 cat("Summary matrix dimensions:", paste(dim(summary_matrix), collapse = " × "), "\n")
 cat("Timepoints:", nrow(summary_matrix), ", Clusters:", ncol(summary_matrix), "\n\n")
 
-# Show column names if available  
+# Show column names if available
 if (!is.null(colnames(summary_matrix))) {
   cat("Cluster names:", paste(colnames(summary_matrix), collapse = ", "), "\n")
 } else {
@@ -318,12 +339,16 @@ if (!is.null(colnames(summary_matrix))) {
 }
 
 # Plot cluster averages over time
-matplot(summary_matrix, type = "l", lty = 1, lwd = 2,
-        main = "Summary Scan: Cluster Average Time Series",
-        xlab = "Time Point", ylab = "Average Signal",
-        col = c("red", "blue", "darkgreen"))
-legend("topright", legend = paste("Cluster", 1:ncol(summary_matrix)),
-       col = c("red", "blue", "darkgreen"), lty = 1, lwd = 2)
+matplot(summary_matrix,
+  type = "l", lty = 1, lwd = 2,
+  main = "Summary Scan: Cluster Average Time Series",
+  xlab = "Time Point", ylab = "Average Signal",
+  col = c("red", "blue", "darkgreen")
+)
+legend("topright",
+  legend = paste("Cluster", 1:ncol(summary_matrix)),
+  col = c("red", "blue", "darkgreen"), lty = 1, lwd = 2
+)
 ```
 
 ### Compute Cluster-to-Cluster Correlations
@@ -336,16 +361,19 @@ print(round(cluster_correlations, 3))
 
 # Visualize correlation matrix
 if (requireNamespace("corrplot", quietly = TRUE)) {
-  corrplot::corrplot(cluster_correlations, method = "color", 
-                     title = "Inter-Cluster Correlations",
-                     mar = c(0,0,2,0))
+  corrplot::corrplot(cluster_correlations,
+    method = "color",
+    title = "Inter-Cluster Correlations",
+    mar = c(0, 0, 2, 0)
+  )
 } else {
   # Simple heatmap alternative
-  image(1:ncol(cluster_correlations), 1:nrow(cluster_correlations), 
-        as.matrix(cluster_correlations),
-        main = "Inter-Cluster Correlations",
-        xlab = "Cluster", ylab = "Cluster",
-        col = heat.colors(20))
+  image(1:ncol(cluster_correlations), 1:nrow(cluster_correlations),
+    as.matrix(cluster_correlations),
+    main = "Inter-Cluster Correlations",
+    xlab = "Cluster", ylab = "Cluster",
+    col = heat.colors(20)
+  )
 }
 ```
 
@@ -367,7 +395,7 @@ most_variable_voxels <- sapply(1:3, function(cluster_id) {
 **Voxel-wise statistical analyses:**
 ```{r practical-stats, eval=FALSE}
 # Example: Correlate each voxel with a task regressor
-task_regressor <- sin(seq(0, 4*pi, length.out = dim(task_scan)[2]))
+task_regressor <- sin(seq(0, 4 * pi, length.out = dim(task_scan)[2]))
 all_voxel_ts <- series(task_scan, i = 1:dim(task_scan)[1])
 voxel_correlations <- cor(all_voxel_ts, task_regressor)
 ```
@@ -377,7 +405,7 @@ voxel_correlations <- cor(all_voxel_ts, task_regressor)
 # Example: Identify activation hotspots within a cluster
 cluster_1_voxels <- which(clusters@clusters == 1)
 cluster_1_ts <- series(task_scan, i = cluster_1_voxels)
-cluster_1_activation <- rowMeans(abs(cluster_1_ts))  # Activation magnitude
+cluster_1_activation <- rowMeans(abs(cluster_1_ts)) # Activation magnitude
 ```
 
 ### Choose H5ParcellatedScanSummary when you need:
@@ -386,7 +414,7 @@ cluster_1_activation <- rowMeans(abs(cluster_1_ts))  # Activation magnitude
 ```{r practical-connectivity}
 # Already computed above - cluster correlation matrix
 print("Inter-cluster connectivity strengths:")
-diag(cluster_correlations) <- NA  # Remove self-correlations
+diag(cluster_correlations) <- NA # Remove self-correlations
 print(round(cluster_correlations, 3))
 ```
 
@@ -415,13 +443,13 @@ When you have an H5ParcellatedMultiScan container with mixed scan types:
 
 ```{r practical-mixed, eval=FALSE}
 # Access different scan types from the same experiment
-full_scan1 <- full_experiment@runs[["task_full"]]    # H5ParcellatedScan
-full_scan2 <- full_experiment@runs[["rest_full"]]    # H5ParcellatedScan
-summary_scan <- summary_experiment@runs[["task_summary"]]  # H5ParcellatedScanSummary
+full_scan1 <- full_experiment@runs[["task_full"]] # H5ParcellatedScan
+full_scan2 <- full_experiment@runs[["rest_full"]] # H5ParcellatedScan
+summary_scan <- summary_experiment@runs[["task_summary"]] # H5ParcellatedScanSummary
 
 # Use appropriate methods for each type
-voxel_data <- series(full_scan1, i = 1:10)           # Voxel time series
-cluster_data <- as.matrix(summary_scan)              # Cluster averages
+voxel_data <- series(full_scan1, i = 1:10) # Voxel time series
+cluster_data <- as.matrix(summary_scan) # Cluster averages
 
 # Cannot use series() on summary scans - this would error:
 # bad_call <- series(summary_scan, i = 1:5)  # ERROR!
@@ -447,9 +475,9 @@ cat("  Summary scan object size:", format(object.size(summary_scan), units = "KB
 cat("  Summary matrix size:", format(object.size(summary_matrix), units = "KB"), "\n\n")
 
 # File size comparison
-cat("File size comparison:\n") 
-cat("  Full data file:", round(file.size(h5_file)/1024, 1), "KB\n")
-cat("  Summary data file:", round(file.size(summary_file)/1024, 1), "KB\n")
+cat("File size comparison:\n")
+cat("  Full data file:", round(file.size(h5_file) / 1024, 1), "KB\n")
+cat("  Summary data file:", round(file.size(summary_file) / 1024, 1), "KB\n")
 ```
 
 ## Clean Up

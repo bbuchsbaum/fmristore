@@ -8,12 +8,15 @@ library(fmristore)
 # -------------------------------------------------------------------------
 # helper: build a tiny 4-D NeuroVec + mask for round-trip tests
 make_toy_vec <- function(nx = 4, ny = 3, nz = 2, nvol = 3) {
-  arr  <- array(rnorm(nx * ny * nz * nvol), dim = c(nx, ny, nz, nvol))
-  spc  <- neuroim2::NeuroSpace(c(nx, ny, nz, nvol), spacing = c(1, 1, 1))
-  mask <- neuroim2::LogicalNeuroVol(array(runif(nx * ny * nz) > .4,
-    dim = c(nx, ny, nz)),
-  space = neuroim2::drop_dim(spc))
-  vec  <- neuroim2::DenseNeuroVec(arr, spc)
+  arr <- array(rnorm(nx * ny * nz * nvol), dim = c(nx, ny, nz, nvol))
+  spc <- neuroim2::NeuroSpace(c(nx, ny, nz, nvol), spacing = c(1, 1, 1))
+  mask <- neuroim2::LogicalNeuroVol(
+    array(runif(nx * ny * nz) > .4,
+      dim = c(nx, ny, nz)
+    ),
+    space = neuroim2::drop_dim(spc)
+  )
+  vec <- neuroim2::DenseNeuroVec(arr, spc)
 
   list(vec = vec, mask = mask)
 }
@@ -25,7 +28,7 @@ test_that("Write and read a small LabeledVolumeSet", {
   X <- 4
   Y <- 5
   Z <- 3
-  nVol <- 2  # small shape
+  nVol <- 2 # small shape
   arr_data <- array(rnorm(X * Y * Z * nVol), dim = c(X, Y, Z, nVol))
 
   # 2) Create a NeuroSpace
@@ -38,15 +41,17 @@ test_that("Write and read a small LabeledVolumeSet", {
   # 4) Create a 3D mask (some pattern of 1/0)
   #    We'll mark ~half as valid
   mask_array <- array(sample(c(TRUE, FALSE), X * Y * Z, replace = TRUE, prob = c(0.6, 0.4)), dim = c(X, Y, Z))
-  mask_vol   <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
+  mask_vol <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
 
   # 5) Create label names
   labels <- c("volume1", "volume2")
 
   # 6) Write to a temporary HDF5 file
   tmpfile <- tempfile(fileext = ".h5")
-  write_labeled_vec(vec = vec_obj, mask = mask_vol, labels = labels,
-    file = tmpfile, compression = 4)
+  write_labeled_vec(
+    vec = vec_obj, mask = mask_vol, labels = labels,
+    file = tmpfile, compression = 4
+  )
 
   # 7) Read it back as LabeledVolumeSet
   lvs <- read_labeled_vec(tmpfile)
@@ -61,12 +66,12 @@ test_that("Write and read a small LabeledVolumeSet", {
   #    We'll load each volume and compare it to arr_data[,,, i] masked
   for (i in seq_along(labels)) {
     # Single volume via [[
-    vol_i <- lvs[[i]]  # or lvs[[labels[i]]]
+    vol_i <- lvs[[i]] # or lvs[[labels[i]]]
     expect_s4_class(vol_i, "DenseNeuroVol")
     # Compare data in non-zero mask
     mask_idx <- which(mask_array)
-    orig_1d  <- arr_data[, , , i][mask_idx]
-    read_1d  <- as.array(vol_i)[mask_idx]
+    orig_1d <- arr_data[, , , i][mask_idx]
+    read_1d <- as.array(vol_i)[mask_idx]
     # They should match up to a small tolerance
     expect_equal(orig_1d, read_1d, tolerance = 1e-8)
   }
@@ -155,7 +160,7 @@ test_that("LabeledVolumeSet array subsetting with [] works correctly", {
   # 4) Create a 3D mask (simple checkerboard-like pattern)
   mask_array <- array(FALSE, dim = c(X, Y, Z))
   mask_array[seq(1, X * Y * Z, by = 2)] <- TRUE # Mask roughly half
-  mask_vol   <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
+  mask_vol <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
 
   # 5) Create label names
   labels <- paste0("vol", 1:nVol)
@@ -163,8 +168,10 @@ test_that("LabeledVolumeSet array subsetting with [] works correctly", {
   # 6) Write to a temporary HDF5 file
   tmpfile <- tempfile(fileext = ".h5")
   on.exit(unlink(tmpfile), add = TRUE) # Ensure cleanup
-  write_labeled_vec(vec = vec_obj, mask = mask_vol, labels = labels,
-    file = tmpfile, compression = 0) # No compression for simplicity
+  write_labeled_vec(
+    vec = vec_obj, mask = mask_vol, labels = labels,
+    file = tmpfile, compression = 0
+  ) # No compression for simplicity
 
   # 7) Read it back
   lvs <- read_labeled_vec(tmpfile)
@@ -181,7 +188,7 @@ test_that("LabeledVolumeSet array subsetting with [] works correctly", {
 
   # Case 1: Single element access
   expect_equal(lvs[1, 1, 1, 1, drop = FALSE], expected_masked_data[1, 1, 1, 1, drop = FALSE])
-  expect_equal(lvs[1, 1, 1, 1, drop = TRUE],  expected_masked_data[1, 1, 1, 1]) # Drop to scalar
+  expect_equal(lvs[1, 1, 1, 1, drop = TRUE], expected_masked_data[1, 1, 1, 1]) # Drop to scalar
   expect_equal(lvs[2, 2, 2, 2, drop = FALSE], expected_masked_data[2, 2, 2, 2, drop = FALSE])
 
   # Case 2: Slice access (drop=FALSE)
@@ -204,8 +211,10 @@ test_that("LabeledVolumeSet array subsetting with [] works correctly", {
   idx_j <- c(1, Y)
   idx_k <- c(1, Z)
   idx_l <- c(1, nVol)
-  expect_equal(lvs[idx_i, idx_j, idx_k, idx_l, drop = FALSE],
-    expected_masked_data[idx_i, idx_j, idx_k, idx_l, drop = FALSE])
+  expect_equal(
+    lvs[idx_i, idx_j, idx_k, idx_l, drop = FALSE],
+    expected_masked_data[idx_i, idx_j, idx_k, idx_l, drop = FALSE]
+  )
 
   # Case 6: Full dimension access (missing arguments)
   expect_equal(lvs[, , , 1, drop = FALSE], expected_masked_data[, , , 1, drop = FALSE]) # Full 3D volume
@@ -213,7 +222,6 @@ test_that("LabeledVolumeSet array subsetting with [] works correctly", {
 
   # Case 7: Test names() method added previously
   expect_equal(names(lvs), labels)
-
 })
 
 test_that("Write and read with special characters in labels", {
@@ -222,7 +230,7 @@ test_that("Write and read with special characters in labels", {
   X <- 4
   Y <- 5
   Z <- 3
-  nVol <- 3  # small shape
+  nVol <- 3 # small shape
   arr_data <- array(rnorm(X * Y * Z * nVol), dim = c(X, Y, Z, nVol))
 
   # 2) Create a NeuroSpace
@@ -233,7 +241,7 @@ test_that("Write and read with special characters in labels", {
 
   # 4) Create a mask
   mask_array <- array(sample(c(TRUE, FALSE), X * Y * Z, replace = TRUE, prob = c(0.6, 0.4)), dim = c(X, Y, Z))
-  mask_vol   <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
+  mask_vol <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
 
   # 5) Create label names with special characters
   labels <- c("volume/1", "volume 2", "volume-3")
@@ -242,8 +250,10 @@ test_that("Write and read with special characters in labels", {
   tmpfile <- tempfile(fileext = ".h5")
   on.exit(unlink(tmpfile), add = TRUE)
 
-  write_labeled_vec(vec = vec_obj, mask = mask_vol, labels = labels,
-    file = tmpfile, compression = 4)
+  write_labeled_vec(
+    vec = vec_obj, mask = mask_vol, labels = labels,
+    file = tmpfile, compression = 4
+  )
 
   # 7) Read it back
   lvs <- read_labeled_vec(tmpfile)
@@ -258,8 +268,8 @@ test_that("Write and read with special characters in labels", {
     expect_s4_class(vol_i, "DenseNeuroVol")
     # Compare data in non-zero mask
     mask_idx <- which(mask_array)
-    orig_1d  <- arr_data[, , , i][mask_idx]
-    read_1d  <- as.array(vol_i)[mask_idx]
+    orig_1d <- arr_data[, , , i][mask_idx]
+    read_1d <- as.array(vol_i)[mask_idx]
     # They should match up to a small tolerance
     expect_equal(orig_1d, read_1d, tolerance = 1e-8)
   }
@@ -283,7 +293,7 @@ test_that("Duplicate labels are detected and reported", {
 
   # 4) Create a mask
   mask_array <- array(sample(c(TRUE, FALSE), X * Y * Z, replace = TRUE, prob = c(0.6, 0.4)), dim = c(X, Y, Z))
-  mask_vol   <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
+  mask_vol <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
 
   # 5) Create duplicate labels
   labels <- c("volume1", "volume1")
@@ -294,8 +304,10 @@ test_that("Duplicate labels are detected and reported", {
 
   # Expect this to error with duplicate labels
   expect_error(
-    write_labeled_vec(vec = vec_obj, mask = mask_vol, labels = labels,
-      file = tmpfile, compression = 4),
+    write_labeled_vec(
+      vec = vec_obj, mask = mask_vol, labels = labels,
+      file = tmpfile, compression = 4
+    ),
     "Duplicate labels detected"
   )
 })
@@ -318,7 +330,7 @@ test_that("Empty mask causes write_labeled_vec to error", {
 
   # 4) Create an empty mask
   mask_array <- array(FALSE, dim = c(X, Y, Z))
-  mask_vol   <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
+  mask_vol <- LogicalNeuroVol(mask_array, space = drop_dim(spc))
 
   # 5) Create labels
   labels <- c("volume1", "volume2")
@@ -329,8 +341,10 @@ test_that("Empty mask causes write_labeled_vec to error", {
 
   # Expect an error because the mask is empty
   expect_error(
-    write_labeled_vec(vec = vec_obj, mask = mask_vol, labels = labels,
-      file = tmpfile, compression = 4),
+    write_labeled_vec(
+      vec = vec_obj, mask = mask_vol, labels = labels,
+      file = tmpfile, compression = 4
+    ),
     regexp = "Mask is empty"
   )
 
@@ -344,15 +358,16 @@ test_that("write_labeled_vec → read_labeled_vec round-trip is loss-less", {
   tmp <- withr::local_tempfile(fileext = ".h5")
 
   toy <- make_toy_vec()
-  vec   <- toy$vec
-  mask  <- toy$mask
-  lbls  <- paste0("vol_", seq_len(dim(vec)[4]))
+  vec <- toy$vec
+  mask <- toy$mask
+  lbls <- paste0("vol_", seq_len(dim(vec)[4]))
 
   # ---------- write ----------
 
   write_labeled_vec(vec, mask, lbls, tmp,
-    compression = 6,       # make sure deflate path is used
-    chunk_size  = 5)       # exercise chunk logic
+    compression = 6, # make sure deflate path is used
+    chunk_size  = 5
+  ) # exercise chunk logic
 
 
   # ---------- read ----------
@@ -361,21 +376,29 @@ test_that("write_labeled_vec → read_labeled_vec round-trip is loss-less", {
   expect_identical(lset@labels, lbls)
 
   # header / space
-  expect_equal(dim(space(lset@mask)),
-    dim(neuroim2::space(vec))[1:3])
-  expect_equal(neuroim2::spacing(space(lset@mask)),
-    neuroim2::spacing(neuroim2::space(vec))[1:3])
+  expect_equal(
+    dim(space(lset@mask)),
+    dim(neuroim2::space(vec))[1:3]
+  )
+  expect_equal(
+    neuroim2::spacing(space(lset@mask)),
+    neuroim2::spacing(neuroim2::space(vec))[1:3]
+  )
 
   # mask round-trip
-  expect_identical(as.logical(as.array(lset@mask)),
-    as.logical(as.array(mask)))
+  expect_identical(
+    as.logical(as.array(lset@mask)),
+    as.logical(as.array(mask))
+  )
 
   # each volume's voxels (only inside mask for speed)
   idx <- which(as.logical(as.array(mask)))
   for (v in seq_along(lbls)) {
     orig <- vec[idx + (v - 1) * prod(dim(mask))]
-    read <- linear_access(lset,
-      idx + (v - 1) * prod(dim(mask)))
+    read <- linear_access(
+      lset,
+      idx + (v - 1) * prod(dim(mask))
+    )
     expect_equal(read, orig, tolerance = 1e-10)
   }
 })
@@ -383,13 +406,13 @@ test_that("write_labeled_vec → read_labeled_vec round-trip is loss-less", {
 test_that("label sanitisation & empty-mask corner cases behave correctly", {
   skip_if_not_installed("hdf5r")
 
-  toy   <- make_toy_vec(nx = 2, ny = 2, nz = 1, nvol = 2)
-  vec   <- toy$vec
-  mask  <- toy$mask
+  toy <- make_toy_vec(nx = 2, ny = 2, nz = 1, nvol = 2)
+  vec <- toy$vec
+  mask <- toy$mask
 
   # ------------------------------------------------------------------
   # (a) duplicate after sanitisation  →  hard error
-  dup_labels <- c("bad/label", "bad label")   # both sanitise to "bad_label"
+  dup_labels <- c("bad/label", "bad label") # both sanitise to "bad_label"
   path <- paste0(withr::local_tempfile(), ".h5")
   expect_error(
     write_labeled_vec(vec, mask, dup_labels, path),
@@ -399,16 +422,21 @@ test_that("label sanitisation & empty-mask corner cases behave correctly", {
 
   # ------------------------------------------------------------------
   # (b) empty mask still produces valid zero volumes round-trip
-  empty_mask <- neuroim2::LogicalNeuroVol(array(FALSE,
-    dim = dim(mask)),
-  space = space(mask))
+  empty_mask <- neuroim2::LogicalNeuroVol(
+    array(FALSE,
+      dim = dim(mask)
+    ),
+    space = space(mask)
+  )
   tmp <- withr::local_tempfile()
   tmp <- paste0(tmp, ".h5")
 
-  expect_error(write_labeled_vec(vec, empty_mask,
-    labels = c("volA", "volB"), file = tmp),
-  regexp = "Mask is empty")
-
+  expect_error(
+    write_labeled_vec(vec, empty_mask,
+      labels = c("volA", "volB"), file = tmp
+    ),
+    regexp = "Mask is empty"
+  )
 })
 
 # New test case for local_tempfile path is respected
@@ -425,10 +453,12 @@ test_that("local_tempfile path is respected", {
   tmp <- paste0(tmp, ".h5")
   # Expect error when writing with empty mask
   expect_error(
-    write_labeled_vec(vec = vec,
+    write_labeled_vec(
+      vec = vec,
       mask = mask,
       labels = c("volA", "volB"),
-      file = tmp),
+      file = tmp
+    ),
     regexp = "Mask is empty"
   )
 
@@ -444,7 +474,7 @@ test_that("labels persist without /original_labels", {
   skip_if_not_installed("hdf5r")
 
   toy <- make_toy_vec(nx = 2, ny = 2, nz = 1, nvol = 2)
-  vec  <- toy$vec
+  vec <- toy$vec
   mask <- toy$mask
   lbls <- c("cond/A", "cond B")
 

@@ -112,15 +112,15 @@ H5NeuroVec <- function(file_name, dataset_name = "data") {
 #' @name DenseNeuroVec,H5NeuroVec
 setAs(
   from = "DenseNeuroVec",
-  to   = "H5NeuroVec",
-  def  = function(from) {
+  to = "H5NeuroVec",
+  def = function(from) {
     to_nih5_vec(from, file_name = NULL, data_type = "FLOAT")
   }
 )
 
 #' @export
 setMethod(
-  f   = "series",
+  f = "series",
   signature = signature(x = "H5NeuroVec", i = "integer"),
   definition = function(x, i) {
     assertthat::assert_that(max(i) <= dim(x)[4])
@@ -417,12 +417,11 @@ setMethod(
 
       # Now we rely on x[idx] => must be valid 1D subscript
       # (which is handled by your `[.H5NeuroVec` or `linear_access()` method)
-      vals <- x[idx]  # => numeric vector of length length(i)*nTime
+      vals <- x[idx] # => numeric vector of length length(i)*nTime
 
       # Reshape => [nTime, length(i)]
       ret <- matrix(vals, nrow = dim(x)[4], ncol = length(i))
       if (drop) drop(ret) else ret
-
     } else {
       # If user provided i,j,k => single voxel across time
       # Confirm each is length=1
@@ -441,7 +440,8 @@ setMethod(
   signature = signature(x = "H5NeuroVec", i = "numeric"),
   definition = function(x, i, j, k, drop = TRUE) {
     callGeneric(x, as.integer(i), as.integer(j), as.integer(k), drop = drop)
-  })
+  }
+)
 
 #' Convert NeuroVec to HDF5 Format, returning an H5NeuroVec
 #'
@@ -488,10 +488,10 @@ setMethod(
 #' @importFrom lifecycle deprecate_warn
 #' @export
 to_nih5_vec <- function(vec,
-                        file_name   = NULL,
-                        data_type   = "FLOAT",
-                        chunk_dim   = c(4, 4, 4, dim(vec)[4]),
-                        nbit        = FALSE,
+                        file_name = NULL,
+                        data_type = "FLOAT",
+                        chunk_dim = c(4, 4, 4, dim(vec)[4]),
+                        nbit = FALSE,
                         compression = 6) {
   if (!requireNamespace("hdf5r", quietly = TRUE)) {
     stop("Package 'hdf5r' must be installed for HDF5 I/O.", call. = FALSE)
@@ -515,7 +515,7 @@ to_nih5_vec <- function(vec,
 
   # 5) Setup dimension
   space_ds <- hdf5r::H5S$new(dims = dim(vec), maxdims = dim(vec))
-  dtype_pl  <- hdf5r::H5P_DATASET_CREATE$new()
+  dtype_pl <- hdf5r::H5P_DATASET_CREATE$new()
 
   # 6) Data type
   h5dtype <- switch(data_type,
@@ -547,19 +547,19 @@ to_nih5_vec <- function(vec,
 
   # 10) dataset "elements"
   dset <- dgroup$create_dataset(
-    name             = "elements",
-    space            = space_ds,
-    dtype            = h5dtype,
+    name = "elements",
+    space = space_ds,
+    dtype = h5dtype,
     dataset_create_pl = dtype_pl,
-    chunk_dims       = chunk_dim,
-    gzip_level       = compression
+    chunk_dims = chunk_dim,
+    gzip_level = compression
   )
 
   # 11) space metadata
-  sgroup[["dim"]]     <- dim(vec)
+  sgroup[["dim"]] <- dim(vec)
   sgroup[["spacing"]] <- spacing(vec)
-  sgroup[["origin"]]  <- origin(space(vec))
-  sgroup[["trans"]]   <- trans(space(vec))
+  sgroup[["origin"]] <- origin(space(vec))
+  sgroup[["trans"]] <- trans(space(vec))
 
   # 12) Write data
   dset[, , , ] <- as.array(vec)
@@ -587,14 +587,16 @@ setMethod(
     cat("\n", crayon::bold(crayon::blue("H5NeuroVec")), "\n", sep = "")
 
     # Gather dimension info
-    d <- dim(object)  # c(X, Y, Z, nVol)
+    d <- dim(object) # c(X, Y, Z, nVol)
     cat(crayon::bold("\n+= Dimensions "), crayon::silver("---------------------------"), "\n", sep = "")
     cat("| ", crayon::yellow("Spatial (XxYxZ)"), " : ",
-      paste(d[1:3], collapse = " x "), "\n", sep = "")
+      paste(d[1:3], collapse = " x "), "\n",
+      sep = ""
+    )
     cat("| ", crayon::yellow("Number of Volumes"), " : ", d[4], "\n", sep = "")
 
     # Spacing, origin
-    sp  <- space(object)
+    sp <- space(object)
     cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep = "")
     cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
     cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse = " x "), "\n", sep = "")
@@ -602,7 +604,9 @@ setMethod(
     # If axes are known, show them; else fallback
     if (length(sp@axes@ndim) >= 3) {
       cat("| ", crayon::yellow("Orientation"), "   : ",
-        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep = "")
+        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n",
+        sep = ""
+      )
     } else {
       cat("| ", crayon::yellow("Orientation"), "   : Unknown\n")
     }

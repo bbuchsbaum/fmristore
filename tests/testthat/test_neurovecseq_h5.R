@@ -8,9 +8,9 @@ test_that("neurovecseq_to_h5 works for NeuroVecSeq", {
   skip_if_not_installed("hdf5r")
 
   # Create test data - 3 NeuroVec objects with different time dimensions
-  dims1 <- c(10, 10, 5, 20)  # 20 time points
-  dims2 <- c(10, 10, 5, 30)  # 30 time points
-  dims3 <- c(10, 10, 5, 25)  # 25 time points
+  dims1 <- c(10, 10, 5, 20) # 20 time points
+  dims2 <- c(10, 10, 5, 30) # 30 time points
+  dims3 <- c(10, 10, 5, 25) # 25 time points
 
   # Create NeuroVec objects using a helper function if available
   if (exists("create_minimal_DenseNeuroVec", where = asNamespace("fmristore"))) {
@@ -47,9 +47,11 @@ test_that("neurovecseq_to_h5 works for NeuroVecSeq", {
   # message("Class of nvs: ", class(nvs))
   # message("Methods for as_h5: ", paste(showMethods("as_h5", printTo = FALSE), collapse = "\n"))
 
-  result <- neurovecseq_to_h5(nvs, file = temp_file,
+  result <- neurovecseq_to_h5(nvs,
+    file = temp_file,
     scan_names = c("run1", "run2", "run3"),
-    compression = 4)
+    compression = 4
+  )
 
   expect_equal(result, temp_file)
   expect_true(file.exists(temp_file))
@@ -91,9 +93,9 @@ test_that("neurovecseq_to_h5 handles metadata", {
   dims <- c(5, 5, 3, 10)
   if (exists("create_minimal_DenseNeuroVec", where = asNamespace("fmristore"))) {
     vec1 <- fmristore:::create_minimal_DenseNeuroVec(dims)
-    vec1@.Data[] <- 1  # Fill with 1s
+    vec1@.Data[] <- 1 # Fill with 1s
     vec2 <- fmristore:::create_minimal_DenseNeuroVec(dims)
-    vec2@.Data[] <- 2  # Fill with 2s
+    vec2@.Data[] <- 2 # Fill with 2s
   } else {
     vec1 <- NeuroVec(array(1, dim = dims), NeuroSpace(dims))
     vec2 <- NeuroVec(array(2, dim = dims), NeuroSpace(dims))
@@ -129,7 +131,7 @@ test_that("neurovecseq_to_h5 validates inputs", {
   # Test with mismatched spatial dimensions
   if (exists("create_minimal_DenseNeuroVec", where = asNamespace("fmristore"))) {
     vec1 <- fmristore:::create_minimal_DenseNeuroVec(c(10, 10, 5, 20))
-    vec2 <- fmristore:::create_minimal_DenseNeuroVec(c(8, 8, 5, 20))  # Different spatial dims
+    vec2 <- fmristore:::create_minimal_DenseNeuroVec(c(8, 8, 5, 20)) # Different spatial dims
 
     # NeuroVecSeq constructor already validates spatial dimensions match
     expect_error(NeuroVecSeq(vec1, vec2), "All NeuroVec objects must have the same spatial dimensions")
@@ -149,6 +151,8 @@ test_that("neurovecseq_to_h5 validates inputs", {
     nvs2 <- NeuroVecSeq(vec1, vec3)
   }
 
-  expect_error(neurovecseq_to_h5(nvs2, scan_names = c("run1")),
-    "Length of scan_names must match number of NeuroVec objects")
+  expect_error(
+    neurovecseq_to_h5(nvs2, scan_names = c("run1")),
+    "Length of scan_names must match number of NeuroVec objects"
+  )
 })

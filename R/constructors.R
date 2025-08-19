@@ -49,8 +49,8 @@
 #' @importFrom withr defer
 #' @export
 H5ParcellatedScan <- function(file, scan_name,
-                         mask, clusters,
-                         n_time = NULL, compress = FALSE) {
+                              mask, clusters,
+                              n_time = NULL, compress = FALSE) {
   # --- 1. Argument Validation (Basic) ---
   if (!((is.character(file) && length(file) == 1 && nzchar(file)) || inherits(file, "H5File"))) {
     stop("[H5ParcellatedScan] 'file' must be a non-empty character string path or an H5File object.")
@@ -65,8 +65,10 @@ H5ParcellatedScan <- function(file, scan_name,
     stop("[H5ParcellatedScan] 'clusters' must be a ClusteredNeuroVol object.")
   }
   # Dimension consistency check (using helper)
-  check_same_dims(mask, clusters, dims_to_compare = 1:3,
-    msg = "[H5ParcellatedScan] Dimensions of 'mask' and 'clusters' must match.")
+  check_same_dims(mask, clusters,
+    dims_to_compare = 1:3,
+    msg = "[H5ParcellatedScan] Dimensions of 'mask' and 'clusters' must match."
+  )
 
   n_vox <- sum(mask)
   if (!identical(length(clusters@clusters), as.integer(n_vox))) {
@@ -139,7 +141,8 @@ H5ParcellatedScan <- function(file, scan_name,
           # Close scan_group if opened before error
           if (!is.null(scan_group) && scan_group$is_valid) try(scan_group$close())
           warning(sprintf("[H5ParcellatedScan] Error reading n_time metadata for scan '%s': %s. Proceeding without inferred n_time.", scan_name, e$message))
-        })
+        }
+      )
     }
 
     if (is.null(determined_n_time)) {
@@ -177,7 +180,8 @@ H5ParcellatedScan <- function(file, scan_name,
       # If new() fails, close the handle we opened.
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
       stop(sprintf("[H5ParcellatedScan] Failed to create object: %s", e$message))
-    })
+    }
+  )
 
   # Return the created object, which now manages the H5 handle.
   return(new_obj)
@@ -229,9 +233,9 @@ H5ParcellatedScan <- function(file, scan_name,
 #' @importFrom hdf5r H5D
 #' @export
 H5ParcellatedScanSummary <- function(file, scan_name,
-                                mask, clusters = NULL,
-                                cluster_names = character(), cluster_ids = integer(),
-                                summary_dset = "summary_data") {
+                                     mask, clusters = NULL,
+                                     cluster_names = character(), cluster_ids = integer(),
+                                     summary_dset = "summary_data") {
   # --- 1. Argument Validation (Basic) ---
   if (!((is.character(file) && length(file) == 1 && nzchar(file)) || inherits(file, "H5File"))) {
     stop("[H5ParcellatedScanSummary] 'file' must be a non-empty character string path or an H5File object.")
@@ -247,8 +251,10 @@ H5ParcellatedScanSummary <- function(file, scan_name,
     if (!is(clusters, "ClusteredNeuroVol")) {
       stop("[H5ParcellatedScanSummary] 'clusters' must be a ClusteredNeuroVol object.")
     }
-    check_same_dims(mask, clusters, dims_to_compare = 1:3,
-      msg = "[H5ParcellatedScanSummary] Dimensions of 'mask' and provided 'clusters' must match.")
+    check_same_dims(mask, clusters,
+      dims_to_compare = 1:3,
+      msg = "[H5ParcellatedScanSummary] Dimensions of 'mask' and provided 'clusters' must match."
+    )
     if (!identical(length(clusters@clusters), as.integer(n_vox))) {
       stop(sprintf(
         "[H5ParcellatedScanSummary] Mismatch: provided clusters@clusters length (%d) != sum(mask) (%d).",
@@ -279,7 +285,8 @@ H5ParcellatedScanSummary <- function(file, scan_name,
     error = function(e) {
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
       stop(paste0("[H5ParcellatedScanSummary] ", e$message))
-    })
+    }
+  )
 
   # --- 4. Read dataset dimensions and reconcile cluster info ---
   final_n_time <- NA_integer_
@@ -295,14 +302,15 @@ H5ParcellatedScanSummary <- function(file, scan_name,
         list(
           dims = ds$dims,
           names = if (ds$attr_exists("cluster_names")) ds$attr_read("cluster_names") else character(),
-          ids   = if (ds$attr_exists("cluster_ids")) ds$attr_read("cluster_ids") else integer()
+          ids = if (ds$attr_exists("cluster_ids")) ds$attr_read("cluster_ids") else integer()
         )
       })
     },
     error = function(e) {
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
       stop(sprintf("[H5ParcellatedScanSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
-    })
+    }
+  )
 
   dataset_dims <- info_res$dims
   if (length(dataset_dims) != 2) {
@@ -314,7 +322,7 @@ H5ParcellatedScanSummary <- function(file, scan_name,
 
   if (length(final_cluster_names) == 0 && length(final_cluster_ids) == 0) {
     final_cluster_names <- info_res$names
-    final_cluster_ids   <- info_res$ids
+    final_cluster_ids <- info_res$ids
 
     if (length(final_cluster_names) > 0 && length(final_cluster_names) != final_n_clusters) {
       stop(sprintf("Read cluster_names length (%d) mismatch with dataset columns (%d).", length(final_cluster_names), final_n_clusters))
@@ -364,7 +372,8 @@ H5ParcellatedScanSummary <- function(file, scan_name,
     error = function(e) {
       if (fh$owns) try(h5obj$close_all(), silent = TRUE)
       stop(sprintf("[H5ParcellatedScanSummary] Failed to create H5ParcellatedScanSummary object: %s", e$message))
-    })
+    }
+  )
 
   return(new_obj)
 }

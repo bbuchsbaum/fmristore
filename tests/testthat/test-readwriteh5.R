@@ -20,11 +20,11 @@ test_that("round trip write/read preserves data integrity", {
   labels <- paste0("vol_", 1:nvols)
 
   # Create mask where values > 0.5 in first volume
-  mask_array <- array(as.logical(vols[, , , 1] > 0.5), dim = dims)  # Ensure 3D logical array
+  mask_array <- array(as.logical(vols[, , , 1] > 0.5), dim = dims) # Ensure 3D logical array
   mask_space <- NeuroSpace(dims, spacing = spacing(space)[1:3], origin = origin(space))
   mask <- LogicalNeuroVol(mask_array, mask_space)
   expect_true(inherits(mask, "LogicalNeuroVol"))
-  expect_equal(dim(mask), dims)  # Verify mask dimensions
+  expect_equal(dim(mask), dims) # Verify mask dimensions
 
   # Write to temporary file
   tmp <- tempfile(fileext = ".h5")
@@ -45,7 +45,7 @@ test_that("round trip write/read preserves data integrity", {
 
   # Test mask preservation
   expect_true(!is.null(attr(result, "mask")))
-  expect_equal(dim(attr(result, "mask")), dims)  # Verify read mask dimensions
+  expect_equal(dim(attr(result, "mask")), dims) # Verify read mask dimensions
   expect_equal(as.array(mask@.Data), as.array(attr(result, "mask")@.Data))
 
   # Test volume data

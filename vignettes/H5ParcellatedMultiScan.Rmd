@@ -47,7 +47,7 @@ brain_space <- NeuroSpace(brain_dims, spacing = c(2, 2, 2))
 
 # Define which voxels contain "brain tissue" (a simple box in the center)
 mask_data <- array(FALSE, brain_dims)
-mask_data[4:7, 4:7, 2:4] <- TRUE  # Small 4×4×3 "brain"
+mask_data[4:7, 4:7, 2:4] <- TRUE # Small 4×4×3 "brain"
 mask <- LogicalNeuroVol(mask_data, brain_space)
 
 cat("Our tiny brain has", sum(mask), "voxels\n")
@@ -81,10 +81,10 @@ fmri_data <- array(rnorm(prod(fmri_dims)), dim = fmri_dims)
 for (i in 1:3) {
   cluster_voxels <- which(clusters@clusters == i)
   mask_indices <- which(mask, arr.ind = TRUE)
-  
+
   for (v in cluster_voxels) {
     x <- mask_indices[v, 1]
-    y <- mask_indices[v, 2] 
+    y <- mask_indices[v, 2]
     z <- mask_indices[v, 3]
     # Add a small bias to each cluster
     fmri_data[x, y, z, ] <- fmri_data[x, y, z, ] + i * 0.5
@@ -137,12 +137,16 @@ cat("Time series dimensions:", paste(dim(voxel_data), collapse = " × "), "\n")
 cat("(rows = time points, columns = voxels)\n\n")
 
 # Plot time series from different clusters to see they're different
-matplot(voxel_data[, 1:3], type = "l", 
-        main = "Time Series from Different Clusters",
-        xlab = "Time Point", ylab = "Signal",
-        col = c("red", "green", "blue"), lty = 1)
-legend("topright", legend = paste("Cluster", 1:3), 
-       col = c("red", "green", "blue"), lty = 1)
+matplot(voxel_data[, 1:3],
+  type = "l",
+  main = "Time Series from Different Clusters",
+  xlab = "Time Point", ylab = "Signal",
+  col = c("red", "green", "blue"), lty = 1
+)
+legend("topright",
+  legend = paste("Cluster", 1:3),
+  col = c("red", "green", "blue"), lty = 1
+)
 ```
 
 ## Advanced Example: Multiple Runs with Summary Data
@@ -158,36 +162,42 @@ runs_data <- list()
 
 for (i in 1:3) {
   # Each run has different length and characteristics
-  n_time <- 40 + i * 10  # 50, 60, 70 timepoints
+  n_time <- 40 + i * 10 # 50, 60, 70 timepoints
   run_dims <- c(brain_dims, n_time)
-  
+
   # Generate data with run-specific patterns
   run_data <- array(rnorm(prod(run_dims)), dim = run_dims)
-  
+
   # Add different activation patterns for each run
   if (i == 2) {
     # Task1: stronger activation in cluster 2
     cluster_2_voxels <- which(clusters@clusters == 2)
     mask_indices <- which(mask, arr.ind = TRUE)
     for (v in cluster_2_voxels) {
-      x <- mask_indices[v, 1]; y <- mask_indices[v, 2]; z <- mask_indices[v, 3]
-      run_data[x, y, z, ] <- run_data[x, y, z, ] + sin(seq(0, 2*pi, length.out = n_time))
+      x <- mask_indices[v, 1]
+      y <- mask_indices[v, 2]
+      z <- mask_indices[v, 3]
+      run_data[x, y, z, ] <- run_data[x, y, z, ] + sin(seq(0, 2 * pi, length.out = n_time))
     }
   } else if (i == 3) {
     # Task2: stronger activation in cluster 3
     cluster_3_voxels <- which(clusters@clusters == 3)
     mask_indices <- which(mask, arr.ind = TRUE)
     for (v in cluster_3_voxels) {
-      x <- mask_indices[v, 1]; y <- mask_indices[v, 2]; z <- mask_indices[v, 3]
-      run_data[x, y, z, ] <- run_data[x, y, z, ] + cos(seq(0, 2*pi, length.out = n_time))
+      x <- mask_indices[v, 1]
+      y <- mask_indices[v, 2]
+      z <- mask_indices[v, 3]
+      run_data[x, y, z, ] <- run_data[x, y, z, ] + cos(seq(0, 2 * pi, length.out = n_time))
     }
   }
-  
+
   runs_data[[i]] <- NeuroVec(run_data, NeuroSpace(run_dims))
 }
 
-cat("Created", length(runs_data), "runs with", 
-    paste(sapply(runs_data, function(x) dim(x)[4]), collapse = ", "), "timepoints\n")
+cat(
+  "Created", length(runs_data), "runs with",
+  paste(sapply(runs_data, function(x) dim(x)[4]), collapse = ", "), "timepoints\n"
+)
 ```
 
 ### Save Multiple Runs
@@ -198,10 +208,11 @@ multi_file <- tempfile(fileext = ".h5")
 
 # The new interface can handle a list of NeuroVec objects
 # The mask is extracted from the clusters automatically
-write_dataset(runs_data, 
-              file = multi_file, 
-              clusters = clusters,
-              scan_names = run_names)
+write_dataset(runs_data,
+  file = multi_file,
+  clusters = clusters,
+  scan_names = run_names
+)
 
 cat("Multi-run file size:", round(file.size(multi_file) / 1024, 1), "KB\n")
 ```
@@ -225,18 +236,22 @@ multi_experiment
 cat("Available runs:\n")
 for (i in seq_along(multi_experiment@runs)) {
   run <- multi_experiment@runs[[i]]
-  cat("  ", names(multi_experiment@runs)[i], ": ", 
-      paste(dim(run), collapse = " × "), " (", class(run), ")\n", sep = "")
+  cat("  ", names(multi_experiment@runs)[i], ": ",
+    paste(dim(run), collapse = " × "), " (", class(run), ")\n",
+    sep = ""
+  )
 }
 
 # Extract data from a specific run
 task1_run <- multi_experiment@runs[["task1"]]
-task1_data <- series(task1_run, i = 1:3)  # First 3 voxels
+task1_data <- series(task1_run, i = 1:3) # First 3 voxels
 
 # Show the activation pattern we added to task1
-matplot(task1_data, type = "l", 
-        main = "Task1 Activation Pattern",
-        xlab = "Time Point", ylab = "Signal")
+matplot(task1_data,
+  type = "l",
+  main = "Task1 Activation Pattern",
+  xlab = "Time Point", ylab = "Signal"
+)
 ```
 
 ### Creating Summary Data
@@ -247,11 +262,12 @@ matplot(task1_data, type = "l",
 summary_file <- tempfile(fileext = ".h5")
 
 # Save just the cluster averages (much more compact)
-write_dataset(runs_data[[1]],  # Use the first run
-              file = summary_file, 
-              clusters = clusters,
-              summary = TRUE,  # This is the key parameter
-              scan_name = "rest_summary")
+write_dataset(runs_data[[1]], # Use the first run
+  file = summary_file,
+  clusters = clusters,
+  summary = TRUE, # This is the key parameter
+  scan_name = "rest_summary"
+)
 
 # Load and examine the summary data
 summary_experiment <- read_dataset(summary_file)
@@ -263,12 +279,16 @@ cat("Summary data dimensions:", paste(dim(summary_matrix), collapse = " × "), "
 cat("(rows = time points, columns = clusters)\n")
 
 # Plot the average signal from each cluster
-matplot(summary_matrix, type = "l", lty = 1,
-        col = c("red", "green", "blue"),
-        main = "Average Signal per Brain Region",
-        xlab = "Time Point", ylab = "Average Signal")
-legend("topright", legend = paste("Region", 1:3), 
-       col = c("red", "green", "blue"), lty = 1)
+matplot(summary_matrix,
+  type = "l", lty = 1,
+  col = c("red", "green", "blue"),
+  main = "Average Signal per Brain Region",
+  xlab = "Time Point", ylab = "Average Signal"
+)
+legend("topright",
+  legend = paste("Region", 1:3),
+  col = c("red", "green", "blue"), lty = 1
+)
 ```
 
 ## Key Functions Summary
@@ -282,16 +302,22 @@ The new simplified interface provides three main functions:
 write_dataset(my_neurovec, file = "data.h5", clusters = my_clusters)
 
 # Save multiple runs at once
-write_dataset(list_of_neurovecs, file = "multi.h5", clusters = my_clusters,
-              scan_names = c("run1", "run2", "run3"))
+write_dataset(list_of_neurovecs,
+  file = "multi.h5", clusters = my_clusters,
+  scan_names = c("run1", "run2", "run3")
+)
 
 # Save only cluster averages (more compact)
-write_dataset(my_neurovec, file = "summary.h5", clusters = my_clusters, 
-              summary = TRUE)
+write_dataset(my_neurovec,
+  file = "summary.h5", clusters = my_clusters,
+  summary = TRUE
+)
 
 # Use median instead of mean for summaries
-write_dataset(my_neurovec, file = "median.h5", clusters = my_clusters,
-              summary = TRUE, summary_fun = median)
+write_dataset(my_neurovec,
+  file = "median.h5", clusters = my_clusters,
+  summary = TRUE, summary_fun = median
+)
 ```
 
 ### `read_dataset()` - Load Your Data
@@ -321,23 +347,33 @@ The H5ParcellatedMultiScan format is designed for efficiency:
 
 ```{r efficiency-demo}
 # Compare file sizes
-cat("Original in-memory data size per run: ~", 
-    round(object.size(runs_data[[1]]) / 1024, 1), "KB\n")
+cat(
+  "Original in-memory data size per run: ~",
+  round(object.size(runs_data[[1]]) / 1024, 1), "KB\n"
+)
 
-cat("HDF5 compressed file size: ", 
-    round(file.size(multi_file) / 1024, 1), "KB\n")
+cat(
+  "HDF5 compressed file size: ",
+  round(file.size(multi_file) / 1024, 1), "KB\n"
+)
 
-cat("Summary-only file size: ",
-    round(file.size(summary_file) / 1024, 1), "KB\n")
+cat(
+  "Summary-only file size: ",
+  round(file.size(summary_file) / 1024, 1), "KB\n"
+)
 
 # Memory usage when loading
-cat("\nMemory usage of loaded experiment object: ",
-    format(object.size(multi_experiment), units = "KB"), "\n")
+cat(
+  "\nMemory usage of loaded experiment object: ",
+  format(object.size(multi_experiment), units = "KB"), "\n"
+)
 
 # The actual data is loaded on-demand
 small_extraction <- series(multi_experiment@runs[[1]], i = 1:2)
-cat("Memory usage of small data extraction: ",
-    format(object.size(small_extraction), units = "KB"), "\n")
+cat(
+  "Memory usage of small data extraction: ",
+  format(object.size(small_extraction), units = "KB"), "\n"
+)
 ```
 
 ## When to Use H5ParcellatedMultiScan

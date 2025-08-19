@@ -27,8 +27,10 @@ read_h5_mask_to_LogicalNeuroVol <- function(h5, dset = "/mask", ref_space) {
     # Get dimensions FIRST from the dataset object
     dims <- mask_dset$dims
     if (is.null(dims) || length(dims) != 3) { # Expecting 3D mask
-      stop(sprintf("Dataset '%s' does not have expected 3 dimensions. Found dimensions: %s",
-        dset, paste(dims, collapse = "x")))
+      stop(sprintf(
+        "Dataset '%s' does not have expected 3 dimensions. Found dimensions: %s",
+        dset, paste(dims, collapse = "x")
+      ))
     }
 
     # Validate dataset dimensions against the reference space
@@ -62,8 +64,6 @@ read_h5_mask_to_LogicalNeuroVol <- function(h5, dset = "/mask", ref_space) {
 #' @importFrom neuroim2 ClusteredNeuroVol space
 read_h5_clusters_to_ClusteredNeuroVol <- function(h5, mask,
                                                   map_dset = "/cluster_map") {
-
-
   stopifnot(h5$exists(map_dset))
   cmap_dset <- h5[[map_dset]]
   vec <- NULL

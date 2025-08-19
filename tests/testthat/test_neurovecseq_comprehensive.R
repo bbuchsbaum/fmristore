@@ -205,7 +205,7 @@ test_that("neurovecseq_to_h5 chunking and compression work correctly", {
   neurovecseq_to_h5(
     nvs,
     file = temp_file2,
-    chunk_dim = NULL,  # Use default
+    chunk_dim = NULL, # Use default
     compression = 4
   )
 
@@ -214,7 +214,7 @@ test_that("neurovecseq_to_h5 chunking and compression work correctly", {
 
   dset2 <- h5f2[["scans/scan_1/data"]]
   chunk_info2 <- dset2$chunk_dims
-  expect_equal(chunk_info2, c(10, 10, 10, 50))  # Default time-optimized
+  expect_equal(chunk_info2, c(10, 10, 10, 50)) # Default time-optimized
 
   # Test 3: File size comparison (compressed vs uncompressed)
   temp_file3 <- tempfile(fileext = ".h5")
@@ -223,7 +223,7 @@ test_that("neurovecseq_to_h5 chunking and compression work correctly", {
   neurovecseq_to_h5(
     nvs,
     file = temp_file3,
-    compression = 0  # No compression
+    compression = 0 # No compression
   )
 
   size_compressed <- file.info(temp_file1)$size
@@ -245,13 +245,13 @@ test_that("neurovecseq_to_h5 data integrity is maintained", {
 
   # Different patterns for each scan
   data1 <- array(0, dim = dims)
-  data1[4, 4, 2, ] <- 1:15  # Time series at specific voxel
+  data1[4, 4, 2, ] <- 1:15 # Time series at specific voxel
 
   data2 <- array(0, dim = dims)
-  data2[, , , 8] <- 1  # All voxels at time point 8
+  data2[, , , 8] <- 1 # All voxels at time point 8
 
   data3 <- array(0, dim = dims)
-  data3[1:4, 1:4, 1, 1] <- matrix(1:16, 4, 4)  # Spatial pattern at t=1
+  data3[1:4, 1:4, 1, 1] <- matrix(1:16, 4, 4) # Spatial pattern at t=1
 
   vec1 <- NeuroVec(data1, NeuroSpace(dims))
   vec2 <- NeuroVec(data2, NeuroSpace(dims))
@@ -349,7 +349,7 @@ test_that("neurovecseq_to_h5 handles edge cases", {
   dset <- h5f3[["scans/scan_1/data"]]
   dtype_obj <- dset$get_type()
   dtype_size <- dtype_obj$get_size()
-  expect_equal(dtype_size, 8)  # DOUBLE is 8 bytes
+  expect_equal(dtype_size, 8) # DOUBLE is 8 bytes
 
   h5f3$close_all()
 })
@@ -394,7 +394,7 @@ test_that("neurovecseq_to_h5 error handling works correctly", {
 
   # Test 6: Invalid chunk dimensions
   expect_error(
-    neurovecseq_to_h5(nvs, chunk_dim = c(100, 100, 100, 100)),  # Larger than data
+    neurovecseq_to_h5(nvs, chunk_dim = c(100, 100, 100, 100)), # Larger than data
     "chunk_dims.*must be.*<= dims"
   )
 })
@@ -402,10 +402,10 @@ test_that("neurovecseq_to_h5 error handling works correctly", {
 test_that("neurovecseq_to_h5 performance is acceptable", {
   skip_if_not_installed("neuroim2")
   skip_if_not_installed("hdf5r")
-  skip_on_cran()  # Skip performance tests on CRAN
+  skip_on_cran() # Skip performance tests on CRAN
 
   # Create reasonably sized data
-  dims <- c(64, 64, 30, 100)  # ~12MB per scan
+  dims <- c(64, 64, 30, 100) # ~12MB per scan
   vec1 <- NeuroVec(array(rnorm(prod(dims)), dim = dims), NeuroSpace(dims))
   vec2 <- NeuroVec(array(rnorm(prod(dims)), dim = dims), NeuroSpace(dims))
   vec3 <- NeuroVec(array(rnorm(prod(dims)), dim = dims), NeuroSpace(dims))
@@ -422,7 +422,8 @@ test_that("neurovecseq_to_h5 performance is acceptable", {
 
   # Should complete in reasonable time (adjust based on system)
   expect_true(write_time < 30,
-    info = sprintf("Write took %.1f seconds", write_time))
+    info = sprintf("Write took %.1f seconds", write_time)
+  )
 
   # Test read performance
   h5f <- H5File$new(temp_file, mode = "r")
@@ -436,7 +437,8 @@ test_that("neurovecseq_to_h5 performance is acceptable", {
   })["elapsed"]
 
   expect_true(ts_time < 1.0,
-    info = sprintf("10 time series extractions took %.3f seconds", ts_time))
+    info = sprintf("10 time series extractions took %.3f seconds", ts_time)
+  )
 
   # Volume access should also be reasonable
   vol_time <- system.time({
@@ -444,5 +446,6 @@ test_that("neurovecseq_to_h5 performance is acceptable", {
   })["elapsed"]
 
   expect_true(vol_time < 2.0,
-    info = sprintf("Volume extraction took %.3f seconds", vol_time))
+    info = sprintf("Volume extraction took %.3f seconds", vol_time)
+  )
 })

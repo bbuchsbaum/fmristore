@@ -156,11 +156,11 @@ setMethod(
         dtype = h5dtype_obj,
         chunk_dims = final_chunk_dim,
         compression = compression,
-        overwrite = TRUE)
+        overwrite = TRUE
+      )
 
       write_success <- TRUE # Mark success if we reached here
       message("Successfully wrote NeuroVol to: ", out_file)
-
     }, error = function(e) {
       # Error occurred during writing
       stop("Failed during HDF5 write phase for ", out_file, ": ", e$message)
@@ -187,22 +187,22 @@ setMethod(
         trans_data <- h5_read_obj[["/space/trans"]]$read()
 
         sp_read <- NeuroSpace(
-          dim    = h5_read_obj[["/space/dim"]]$read(),
+          dim = h5_read_obj[["/space/dim"]]$read(),
           spacing = h5_read_obj[["/space/spacing"]]$read(),
           origin = h5_read_obj[["/space/origin"]]$read(),
-          trans  = trans_data
+          trans = trans_data
         )
 
 
         # Return the H5NeuroVol with the NEW, OPEN, read-mode handle
         new("H5NeuroVol", space = sp_read, h5obj = h5_read_obj)
-
       },
       error = function(e) {
         # If reopening or reading space fails, ensure the read handle is closed if it opened
         if (!is.null(h5_read_obj) && h5_read_obj$is_valid) safe_h5_close(h5_read_obj)
         stop("Failed to reopen/read HDF5 file ", out_file, " to create H5NeuroVol: ", e$message)
-      })
+      }
+    )
   }
 )
 
@@ -214,7 +214,7 @@ setMethod(
   signature = signature(x = "H5NeuroVol", i = "numeric"),
   definition = function(x, i) {
     # 1) Check range
-    n_vox <- prod(dim(x))  # total number of voxels in 3D
+    n_vox <- prod(dim(x)) # total number of voxels in 3D
     if (any(i < 1 | i > n_vox)) {
       stop("Some linear indices are out of range 1..", n_vox)
     }
@@ -226,7 +226,7 @@ setMethod(
     }
 
     # 3) Convert linear -> (x,y,z)
-    coords <- arrayInd(i, dim(x))  # Nx3
+    coords <- arrayInd(i, dim(x)) # Nx3
 
     # 4) bounding box
     minx <- min(coords[, 1])
@@ -244,17 +244,21 @@ setMethod(
     # shape => (maxx - minx + 1) x (maxy - miny + 1) x (maxz - minz + 1)
 
     # 6) Offset coords to index subvol
-    off_coords <- cbind(coords[, 1] - minx + 1,
+    off_coords <- cbind(
+      coords[, 1] - minx + 1,
       coords[, 2] - miny + 1,
-      coords[, 3] - minz + 1)
+      coords[, 3] - minz + 1
+    )
 
     # 7) Gather values
     n <- nrow(coords)
     out_vals <- numeric(n)
     for (k in seq_len(n)) {
-      out_vals[k] <- subvol[off_coords[k, 1],
+      out_vals[k] <- subvol[
+        off_coords[k, 1],
         off_coords[k, 2],
-        off_coords[k, 3]]
+        off_coords[k, 3]
+      ]
     }
     out_vals
   }
@@ -266,7 +270,7 @@ setMethod(
   f = "linear_access",
   signature = signature(x = "H5NeuroVol", i = "integer"),
   definition = function(x, i) {
-    callGeneric(x, as.numeric(i))  # passes off to the numeric method above
+    callGeneric(x, as.numeric(i)) # passes off to the numeric method above
   }
 )
 
@@ -294,7 +298,7 @@ setMethod(
   signature = signature(x = "H5NeuroVol"),
   definition = function(x, i, j, k, ..., drop = TRUE) {
     # 1) Determine dimension of the underlying volume
-    dimx <- dim(x)  # c(X, Y, Z)
+    dimx <- dim(x) # c(X, Y, Z)
     if (length(dimx) != 3) {
       stop("H5NeuroVol is not 3D? Found dim=", paste(dimx, collapse = "x"))
     }
@@ -365,7 +369,7 @@ setMethod(
     subvol_vec <- as.vector(subvol)
 
     # Build a systematic index
-    N  <- length(i) * length(j) * length(k)
+    N <- length(i) * length(j) * length(k)
     ix_i <- rep(seq_along(i), times = length(j) * length(k))
     ix_j <- rep(rep(seq_along(j), each = length(i)), times = length(k))
     ix_k <- rep(seq_along(k), each = length(i) * length(j))
@@ -380,7 +384,7 @@ setMethod(
       (loc_k - 1) * subdimI * subdimJ
 
     out_vals <- subvol_vec[sub_lin_idx]
-    arr_out  <- array(out_vals, dim = out_dim)
+    arr_out <- array(out_vals, dim = out_dim)
 
     # 8) drop dims if requested
     if (drop) {

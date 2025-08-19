@@ -35,10 +35,14 @@
 #' @examples
 #' \dontrun{
 #' # Create example NeuroVec objects with different time dimensions
-#' vec1 <- NeuroVec(array(rnorm(10 * 10 * 5 * 20), dim = c(10, 10, 5, 20)),
-#'   NeuroSpace(c(10, 10, 5, 20)))
-#' vec2 <- NeuroVec(array(rnorm(10 * 10 * 5 * 30), dim = c(10, 10, 5, 30)),
-#'   NeuroSpace(c(10, 10, 5, 30)))
+#' vec1 <- NeuroVec(
+#'   array(rnorm(10 * 10 * 5 * 20), dim = c(10, 10, 5, 20)),
+#'   NeuroSpace(c(10, 10, 5, 20))
+#' )
+#' vec2 <- NeuroVec(
+#'   array(rnorm(10 * 10 * 5 * 30), dim = c(10, 10, 5, 30)),
+#'   NeuroSpace(c(10, 10, 5, 30))
+#' )
 #'
 #' # Create NeuroVecSeq
 #' nvs <- NeuroVecSeq(vec1, vec2)
@@ -49,7 +53,8 @@
 #'   scan_metadata = list(
 #'     rest_run1 = list(TR = 2.0, task = "rest"),
 #'     task_run1 = list(TR = 2.0, task = "motor")
-#' ))
+#'   )
+#' )
 #'
 #' # File can later be read back (functionality to be implemented)
 #' unlink(h5_file)
@@ -109,11 +114,14 @@ neurovecseq_to_h5 <- function(neurovecseq,
   # Write shared spatial information from first NeuroVec
   space_grp <- h5obj$create_group("space")
   h5_write(h5obj, "/space/dim", dim(first_space)[1:3],
-    dtype = hdf5r::h5types$H5T_NATIVE_INT32)
+    dtype = hdf5r::h5types$H5T_NATIVE_INT32
+  )
   h5_write(h5obj, "/space/origin", origin(first_space),
-    dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+    dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+  )
   h5_write(h5obj, "/space/trans", trans(first_space),
-    dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
+    dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE
+  )
 
   # Create scans group
   scans_grp <- h5obj$create_group("scans")
@@ -151,14 +159,16 @@ neurovecseq_to_h5 <- function(neurovecseq,
       "FLOAT" = hdf5r::h5types$H5T_IEEE_F32LE,
       "DOUBLE" = hdf5r::h5types$H5T_IEEE_F64LE,
       "INT" = hdf5r::h5types$H5T_NATIVE_INT32,
-      stop("Unsupported data_type: ", data_type))
+      stop("Unsupported data_type: ", data_type)
+    )
 
     h5_write(h5obj,
       path = file.path("/scans", scan_name, "data"),
       data = as.array(vec),
       dtype = dtype,
       chunk_dims = scan_chunk_dim,
-      compression = compression)
+      compression = compression
+    )
 
     # Write scan-specific metadata if provided
     if (!is.null(scan_metadata) && scan_name %in% names(scan_metadata)) {
@@ -169,7 +179,8 @@ neurovecseq_to_h5 <- function(neurovecseq,
           h5_write(h5obj,
             path = file.path("/scans", scan_name, "metadata", key),
             data = meta[[key]],
-            dtype = guess_h5_type(meta[[key]]))
+            dtype = guess_h5_type(meta[[key]])
+          )
         }
       }
     }

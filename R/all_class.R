@@ -57,7 +57,6 @@ setOldClass("H5File")
 #'     # Access a subset of the data
 #'     subset_data <- h5_vol[1:2, 1:2, 1]
 #'     print(subset_data)
-#'
 #'   }, error = function(e) {
 #'     message("H5NeuroVol example failed: ", e$message)
 #'   }, finally = {
@@ -82,12 +81,13 @@ setOldClass("H5File")
 #' @importMethodsFrom neuroim2 linear_access
 setClass("H5NeuroVol",
   slots = c(
-    h5obj = "H5File"  # underlying HDF5 file handle
+    h5obj = "H5File" # underlying HDF5 file handle
   ),
   prototype = list(
     h5obj = NULL # Default to NULL, needs explicit file handle
   ),
-  contains = c("NeuroVol", "ArrayLike3D"))
+  contains = c("NeuroVol", "ArrayLike3D")
+)
 
 #' H5NeuroVec Class
 #'
@@ -138,7 +138,6 @@ setClass("H5NeuroVol",
 #'     # Access a subset of the data
 #'     subset_data <- h5_vec[1:2, 1:2, 1, 1:2]
 #'     print(subset_data)
-#'
 #'   }, error = function(e) {
 #'     message("H5NeuroVec example failed: ", e$message)
 #'   }, finally = {
@@ -160,14 +159,15 @@ setClass("H5NeuroVol",
 #' @rdname H5NeuroVec-class
 setClass("H5NeuroVec",
   slots = c(
-    obj = "H5File",        # underlying HDF5 file handle
+    obj = "H5File", # underlying HDF5 file handle
     dataset_name = "character" # path to 4D dataset within the file
   ),
   prototype = list(
     obj = NULL,
     dataset_name = "data" # default dataset path
   ),
-  contains = c("NeuroVec", "ArrayLike4D"))
+  contains = c("NeuroVec", "ArrayLike4D")
+)
 
 #' H5Format Class
 #'
@@ -180,7 +180,8 @@ setClass("H5NeuroVec",
 #' @keywords internal
 #' @noRd
 setClass("H5Format",
-  contains = c("FileFormat"))
+  contains = c("FileFormat")
+)
 
 #' H5NeuroVecSource Class
 #'
@@ -197,7 +198,8 @@ setClass("H5NeuroVecSource",
   representation(file_name = "character"),
   prototype = list(
     file_name = character() # Default to empty character vector
-))
+  )
+)
 
 #' LatentNeuroVec Class
 #'
@@ -273,12 +275,11 @@ setClass("H5NeuroVecSource",
 #'       # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
 #'       # For a simple demonstration, we can show its dimensions:
 #'       print(dim(latent_vec)) # from NeuroVec inheritance
-#'
 #'     },
 #'     error = function(e) {
 #'       message("LatentNeuroVec example failed: ", e$message)
-#'     })
-#'
+#'     }
+#'   )
 #' } else {
 #'   message("Skipping LatentNeuroVec example: neuroim2, Matrix, or helper not available.")
 #' }
@@ -294,8 +295,8 @@ setClass("LatentNeuroVec",
     map = "IndexLookupVol",
     label = "character"
   ),
-
-  contains = c("NeuroVec", "AbstractSparseNeuroVec"))
+  contains = c("NeuroVec", "AbstractSparseNeuroVec")
+)
 
 #' LatentNeuroVecSource Class
 #'
@@ -312,7 +313,8 @@ setClass("LatentNeuroVecSource",
   representation(file_name = "character"),
   prototype = list(
     file_name = character() # Default to empty character vector
-))
+  )
+)
 
 
 #' LabeledVolumeSet Class
@@ -361,7 +363,6 @@ setClass("LatentNeuroVecSource",
 #'     # Access data for a specific label (returns a NeuroVol or similar)
 #'     # data_cond_a <- lvs[["CondA"]]
 #'     # print(dim(data_cond_a)) # Should be 3D x num_vols_per_label
-#'
 #'   }, error = function(e) {
 #'     message("LabeledVolumeSet example failed: ", e$message)
 #'   }, finally = {
@@ -382,12 +383,13 @@ setClass("LatentNeuroVecSource",
 #' @export
 setClass("LabeledVolumeSet",
   slots = c(
-    obj      = "H5File",          # pointer to open file
+    obj      = "H5File", # pointer to open file
     mask     = "LogicalNeuroVol", # 3D mask
-    labels   = "character",       # volume (sub-volume) names
-    load_env = "environment"     # environment for lazy loading
+    labels   = "character", # volume (sub-volume) names
+    load_env = "environment" # environment for lazy loading
   ),
-  contains = c("NeuroVec"))  # extends NeuroVec
+  contains = c("NeuroVec")
+) # extends NeuroVec
 
 #' H5ParcellatedArray (Virtual Base Class)
 #'
@@ -439,16 +441,24 @@ setClass("H5ParcellatedArray",
     if (mask_space_valid) {
       expected_nvox <- sum(object@mask)
       if (!is.na(object@n_voxels) && object@n_voxels != expected_nvox) {
-        errors <- c(errors,
-          sprintf("Slot 'n_voxels' (%d) does not match sum(mask) (%d).",
-            object@n_voxels, expected_nvox))
+        errors <- c(
+          errors,
+          sprintf(
+            "Slot 'n_voxels' (%d) does not match sum(mask) (%d).",
+            object@n_voxels, expected_nvox
+          )
+        )
       }
       # Check 2: length of cluster vector should match n_voxels (which should match sum(mask))
       if (!is.null(object@clusters) && is(object@clusters, "ClusteredNeuroVol") && length(object@clusters@clusters) > 0) {
         if (length(object@clusters@clusters) != expected_nvox) {
-          errors <- c(errors,
-            sprintf("Length of clusters@clusters (%d) does not match sum(mask) (%d).",
-              length(object@clusters@clusters), expected_nvox))
+          errors <- c(
+            errors,
+            sprintf(
+              "Length of clusters@clusters (%d) does not match sum(mask) (%d).",
+              length(object@clusters@clusters), expected_nvox
+            )
+          )
         }
       }
     }
@@ -459,7 +469,8 @@ setClass("H5ParcellatedArray",
 
     if (length(errors) == 0) TRUE else errors
   },
-  contains = "VIRTUAL")
+  contains = "VIRTUAL"
+)
 
 #' H5ParcellatedScan Class
 #'
@@ -488,7 +499,8 @@ setClass("H5ParcellatedScan",
     compress = FALSE
     # Inherits prototype for obj, mask, clusters, n_voxels
   ),
-  contains = "H5ParcellatedArray")
+  contains = "H5ParcellatedArray"
+)
 
 #' H5ParcellatedScanSummary Class
 #'
@@ -524,7 +536,8 @@ setClass("H5ParcellatedScanSummary",
     cluster_ids   = integer(),
     summary_dset  = "summary_data"
   ),
-  contains = "H5ParcellatedArray")
+  contains = "H5ParcellatedArray"
+)
 
 #' H5ParcellatedMultiScan Class
 #'
@@ -561,13 +574,18 @@ setClass("H5ParcellatedMultiScan",
     # Check 1: All elements in 'runs' list must inherit from H5ParcellatedArray
     if (n_runs > 0) {
       is_valid_run <- vapply(object@runs, inherits, logical(1),
-        what = "H5ParcellatedArray")
+        what = "H5ParcellatedArray"
+      )
       if (!all(is_valid_run)) {
         invalid_indices <- which(!is_valid_run)
-        errors <- c(errors,
-          paste0("Elements at indices ",
+        errors <- c(
+          errors,
+          paste0(
+            "Elements at indices ",
             paste(invalid_indices, collapse = ", "),
-            " in the 'runs' list do not inherit from H5ParcellatedArray."))
+            " in the 'runs' list do not inherit from H5ParcellatedArray."
+          )
+        )
         # Stop further checks if basic type is wrong
         return(errors)
       }
@@ -575,9 +593,13 @@ setClass("H5ParcellatedMultiScan",
 
     # Check 2: Ensure scan_metadata has same length as runs if not empty
     if (length(object@scan_metadata) > 0 && length(object@scan_metadata) != n_runs) {
-      errors <- c(errors,
-        sprintf("Length of 'scan_metadata' (%d) does not match length of 'runs' list (%d).",
-          length(object@scan_metadata), n_runs))
+      errors <- c(
+        errors,
+        sprintf(
+          "Length of 'scan_metadata' (%d) does not match length of 'runs' list (%d).",
+          length(object@scan_metadata), n_runs
+        )
+      )
     }
 
     # Check 3: If multiple runs, verify they share the same H5File, mask, and clusters
@@ -594,9 +616,13 @@ setClass("H5ParcellatedMultiScan",
         # Check H5 File consistency
         current_filename <- tryCatch(current_run@obj$get_filename(), error = function(e) NA_character_)
         if (is.na(current_filename) || !identical(first_filename, current_filename)) {
-          errors <- c(errors,
-            sprintf("Run %d uses a different HDF5 file ('%s') than Run 1 ('%s').",
-              i, current_filename, first_filename))
+          errors <- c(
+            errors,
+            sprintf(
+              "Run %d uses a different HDF5 file ('%s') than Run 1 ('%s').",
+              i, current_filename, first_filename
+            )
+          )
         }
         # Check mask consistency (using identical to check for same object in memory)
         if (!identical(first_run@mask, current_run@mask)) {
@@ -635,5 +661,5 @@ setClass("H5NeuroVecSeq",
   prototype = list(
     obj  = NULL,
     vecs = list()
-  ))
-
+  )
+)

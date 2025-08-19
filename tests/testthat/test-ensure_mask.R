@@ -8,7 +8,7 @@ library(fmristore)
 test_that("ensure_mask loads mask from HDF5 when mask is NULL", {
   skip_if_not_installed("hdf5r")
   sp <- NeuroSpace(c(2, 2, 2))
-  mask_arr <- array(c(TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE), dim = c(2,2,2))
+  mask_arr <- array(c(TRUE, FALSE, FALSE, TRUE, TRUE, FALSE, TRUE, FALSE), dim = c(2, 2, 2))
 
   tmp <- tempfile(fileext = ".h5")
   on.exit(unlink(tmp), add = TRUE)
@@ -27,7 +27,7 @@ test_that("ensure_mask detects dimension mismatch", {
   skip_if_not_installed("neuroim2")
   sp <- NeuroSpace(c(2, 2, 2))
   wrong_sp <- NeuroSpace(c(2, 2, 3))
-  mask_wrong <- LogicalNeuroVol(array(TRUE, dim = c(2,2,3)), wrong_sp)
+  mask_wrong <- LogicalNeuroVol(array(TRUE, dim = c(2, 2, 3)), wrong_sp)
 
   expect_error(
     fmristore:::ensure_mask(mask_wrong, NULL, sp),
@@ -37,8 +37,8 @@ test_that("ensure_mask detects dimension mismatch", {
 
 
 test_that("ensure_mask rejects non LogicalNeuroVol inputs", {
-  sp <- NeuroSpace(c(2,2,2))
-  arr <- array(1, dim = c(2,2,2))
+  sp <- NeuroSpace(c(2, 2, 2))
+  arr <- array(1, dim = c(2, 2, 2))
 
   expect_error(
     fmristore:::ensure_mask(arr, NULL, sp),

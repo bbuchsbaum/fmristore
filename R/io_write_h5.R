@@ -22,7 +22,7 @@ validate_runs_data <- function(rd) {
     )
     if (el$type == "full" && !is.list(el$data)) stop(sprintf("Run %d ('%s'): type is 'full' but data is not a list.", i, el$scan_name))
     if (el$type == "summary" && !is.matrix(el$data)) stop(sprintf("Run %d ('%s'): type is 'summary' but data is not a matrix.", i, el$scan_name))
-    
+
     # Validate that full data list names match cluster_XXX pattern
     if (el$type == "full" && is.list(el$data)) {
       data_names <- names(el$data)
@@ -30,8 +30,10 @@ validate_runs_data <- function(rd) {
         cluster_pattern <- "^cluster_[0-9]+$"
         if (!all(grepl(cluster_pattern, data_names))) {
           invalid_names <- data_names[!grepl(cluster_pattern, data_names)]
-          stop(sprintf("Run %d ('%s'): full data list contains invalid cluster names: %s. Expected pattern: cluster_<ID>", 
-                      i, el$scan_name, paste(invalid_names, collapse = ", ")))
+          stop(sprintf(
+            "Run %d ('%s'): full data list contains invalid cluster names: %s. Expected pattern: cluster_<ID>",
+            i, el$scan_name, paste(invalid_names, collapse = ", ")
+          ))
         }
       }
     }
@@ -86,7 +88,6 @@ validate_runs_data <- function(rd) {
 #'   exists("write_parcellated_experiment_h5", where = "package:fmristore") &&
 #'   !is.null(fmristore:::create_minimal_LogicalNeuroVol) &&
 #'   !is.null(fmristore:::create_minimal_ClusteredNeuroVol)) {
-#'
 #'   temp_h5_file <- NULL
 #'
 #'   tryCatch({
@@ -99,7 +100,7 @@ validate_runs_data <- function(rd) {
 #'     # Create clusters that align with the mask's space
 #'     clust_vol <- fmristore:::create_minimal_ClusteredNeuroVol(
 #'       space = neuroim2::space(mask_vol), # Use mask's space
-#'       mask = mask_vol@.Data,            # Use mask's data
+#'       mask = mask_vol@.Data, # Use mask's data
 #'       num_clusters = 2L
 #'     )
 #'
@@ -179,7 +180,6 @@ validate_runs_data <- function(rd) {
 #'       # print(h5f$ls(recursive=TRUE))
 #'       # h5f$close_all()
 #'     }
-#'
 #'   }, error = function(e) {
 #'     message("write_parcellated_experiment_h5 example failed: ", e$message)
 #'     if (!is.null(temp_h5_file)) message("Temporary file was: ", temp_h5_file)
@@ -195,19 +195,21 @@ validate_runs_data <- function(rd) {
 #' }
 #' @export
 write_parcellated_experiment_h5 <- function(filepath,
-                                          mask,
-                                          clusters,
-                                          runs_data,
-                                          cluster_metadata = NULL,
-                                          overwrite = FALSE,
-                                          compress = TRUE, # Added compress argument
-                                          verbose = TRUE) {
+                                            mask,
+                                            clusters,
+                                            runs_data,
+                                            cluster_metadata = NULL,
+                                            overwrite = FALSE,
+                                            compress = TRUE, # Added compress argument
+                                            verbose = TRUE) {
   # --- Input Validation ---
   if (!is(mask, "LogicalNeuroVol")) stop("`mask` must be a LogicalNeuroVol object.")
   if (!is(clusters, "ClusteredNeuroVol")) stop("`clusters` must be a ClusteredNeuroVol object.")
   # Use helper for dimension check
-  check_same_dims(mask, clusters, dims_to_compare = 1:3,
-    msg = "Dimensions of mask and clusters must match.")
+  check_same_dims(mask, clusters,
+    dims_to_compare = 1:3,
+    msg = "Dimensions of mask and clusters must match."
+  )
   if (!is.list(runs_data)) stop("`runs_data` must be a list.")
   if (file.exists(filepath) && !overwrite) stop("File exists and overwrite is FALSE: ", filepath)
   if (file.exists(filepath) && overwrite) file.remove(filepath)
@@ -224,15 +226,15 @@ write_parcellated_experiment_h5 <- function(filepath,
   if (!is.null(cluster_metadata)) {
     if (!is.data.frame(cluster_metadata)) stop("`cluster_metadata` must be a data.frame.")
     if (!("cluster_id" %in% names(cluster_metadata))) stop("`cluster_metadata` must contain a 'cluster_id' column.")
-    
+
     # Check if cluster_ids in metadata match unique(clusters@clusters)
     unique_cluster_ids_actual <- sort(unique(clusters@clusters))
     metadata_cluster_ids <- sort(unique(cluster_metadata$cluster_id))
-    
+
     if (!identical(metadata_cluster_ids, unique_cluster_ids_actual)) {
       missing_in_metadata <- setdiff(unique_cluster_ids_actual, metadata_cluster_ids)
       extra_in_metadata <- setdiff(metadata_cluster_ids, unique_cluster_ids_actual)
-      
+
       error_msg <- "Cluster IDs in metadata do not match those in clusters object."
       if (length(missing_in_metadata) > 0) {
         error_msg <- paste0(error_msg, " Missing from metadata: ", paste(missing_in_metadata, collapse = ", "), ".")
@@ -251,7 +253,7 @@ write_parcellated_experiment_h5 <- function(filepath,
   tryCatch({
     if (verbose) message("Creating HDF5 file: ", filepath)
     h5f <- hdf5r::H5File$new(filepath, mode = "w")
-    
+
     # Add class attribute for type detection
     hdf5r::h5attr(h5f, "fmristore_class") <- "H5ParcellatedMultiScan"
     hdf5r::h5attr(h5f, "fmristore_version") <- as.character(packageVersion("fmristore"))
@@ -266,7 +268,8 @@ write_parcellated_experiment_h5 <- function(filepath,
 
     # Voxel Coordinates - use h5_write
     h5_write(h5f, "/voxel_coords", which(as.array(mask), arr.ind = TRUE),
-      dtype = h5types$H5T_NATIVE_INT32, overwrite = TRUE)
+      dtype = h5types$H5T_NATIVE_INT32, overwrite = TRUE
+    )
 
     # Header - use h5_write for each field
     # hdr_grp <- h5f$create_group("header") # h5_write creates parent
@@ -291,7 +294,8 @@ write_parcellated_experiment_h5 <- function(filepath,
     unique_cluster_ids <- sort(unique(clusters@clusters))
     # Write cluster_ids using h5_write
     h5_write(h5f, "/clusters/cluster_ids", unique_cluster_ids,
-      dtype = h5types$H5T_NATIVE_INT32, overwrite = TRUE)
+      dtype = h5types$H5T_NATIVE_INT32, overwrite = TRUE
+    )
 
     # Write cluster_metadata using h5_write
     if (!is.null(cluster_metadata)) {
@@ -308,12 +312,14 @@ write_parcellated_experiment_h5 <- function(filepath,
             col_path <- file.path("/clusters/cluster_meta", cn)
             h5_write(h5f, col_path, vec,
               dtype = guess_h5_type(vec), # guess_h5_type handles string type creation
-              overwrite = TRUE)
+              overwrite = TRUE
+            )
           }
         },
         error = function(e) {
           warning("Failed during writing of cluster metadata: ", e$message)
-        }) # No finally needed for meta_grp
+        }
+      ) # No finally needed for meta_grp
     }
     # global_clus_grp$close() # Close group handle
 
@@ -359,12 +365,14 @@ write_parcellated_experiment_h5 <- function(filepath,
               meta_path <- file.path("/scans", sname, "metadata", mname)
               h5_write(h5f, meta_path, mval,
                 dtype = guess_h5_type(mval),
-                overwrite = TRUE)
+                overwrite = TRUE
+              )
             }
           },
           error = function(e) {
             warning(sprintf("Failed during writing of metadata for scan '%s': %s", sname, e$message))
-          }) # No finally needed
+          }
+        ) # No finally needed
       }
 
       # Write data based on type
@@ -401,8 +409,9 @@ write_parcellated_experiment_h5 <- function(filepath,
 
             for (nm in names(sdata)) { # e.g. "cluster_17"
               mat <- sdata[[nm]]
-              if (!is.matrix(mat) || !is.numeric(mat))
+              if (!is.matrix(mat) || !is.numeric(mat)) {
                 stop("run ", sname, ": ", nm, " is not numeric matrix")
+              }
               dims <- dim(mat)
               if (any(dims < 0) || length(dims) != 2) stop("Invalid dimensions for matrix in ", nm)
 
@@ -412,20 +421,22 @@ write_parcellated_experiment_h5 <- function(filepath,
                 dtype = h5types$H5T_IEEE_F32LE,
                 chunk_dims = chunk_dims_full,
                 compression = if (prod(dims) > 0) gzip_level else 0L,
-                overwrite = TRUE)
+                overwrite = TRUE
+              )
             }
           },
           error = function(e) {
             stop(sprintf("Failed writing full data for scan '%s': %s", sname, e$message))
-          }) # No finally needed
-
+          }
+        ) # No finally needed
       } else if (stype == "summary") {
         # scan_summary_grp <- scan_grp$create_group("clusters_summary") # h5_write creates parent
         tryCatch(
           {
             mat <- sdata # validated above
-            if (!is.matrix(mat) || !is.numeric(mat))
+            if (!is.matrix(mat) || !is.numeric(mat)) {
               stop("run ", sname, ": summary data is not numeric matrix")
+            }
             dims <- dim(mat)
             if (any(dims < 0) || length(dims) != 2) stop("Invalid dimensions for summary matrix")
 
@@ -440,12 +451,13 @@ write_parcellated_experiment_h5 <- function(filepath,
               dtype = h5types$H5T_IEEE_F32LE,
               chunk_dims = chunk_dims_summary,
               compression = if (prod(dims) > 0) gzip_level else 0L,
-              overwrite = TRUE)
+              overwrite = TRUE
+            )
           },
           error = function(e) {
             stop(sprintf("Failed writing summary data for scan '%s': %s", sname, e$message))
-          }) # No finally needed
-
+          }
+        ) # No finally needed
       } else {
         warning(sprintf("Unknown run type '%s' for scan '%s'. Skipping data write.", stype, sname))
       }
@@ -453,7 +465,6 @@ write_parcellated_experiment_h5 <- function(filepath,
       # No need to close scan_grp explicitly
     }
     # No need to close scans_grp explicitly
-
   }, error = function(e) {
     if (!is.null(h5f) && h5f$is_valid) try(h5f$close_all(), silent = TRUE)
     if (file.exists(filepath)) file.remove(filepath) # Clean up partial file on error
@@ -475,16 +486,19 @@ write_clustered_experiment_h5 <- function(filepath,
                                           overwrite = FALSE,
                                           compress = TRUE,
                                           verbose = TRUE) {
-  .Deprecated("write_parcellated_experiment_h5", 
-              package = "fmristore",
-              msg = "write_clustered_experiment_h5 is deprecated. Please use write_parcellated_experiment_h5 instead.")
-  
-  write_parcellated_experiment_h5(filepath = filepath,
-                                   mask = mask,
-                                   clusters = clusters,
-                                   runs_data = runs_data,
-                                   cluster_metadata = cluster_metadata,
-                                   overwrite = overwrite,
-                                   compress = compress,
-                                   verbose = verbose)
+  .Deprecated("write_parcellated_experiment_h5",
+    package = "fmristore",
+    msg = "write_clustered_experiment_h5 is deprecated. Please use write_parcellated_experiment_h5 instead."
+  )
+
+  write_parcellated_experiment_h5(
+    filepath = filepath,
+    mask = mask,
+    clusters = clusters,
+    runs_data = runs_data,
+    cluster_metadata = cluster_metadata,
+    overwrite = overwrite,
+    compress = compress,
+    verbose = verbose
+  )
 }

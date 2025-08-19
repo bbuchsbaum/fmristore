@@ -15,7 +15,8 @@ test_that(".dataset_path validates inputs and constructs path", {
       h5f$close_all()
       unlink(fn)
     },
-    add = TRUE)
+    add = TRUE
+  )
 
   obj <- h5f
   run <- new("H5ParcellatedScan",
@@ -25,7 +26,8 @@ test_that(".dataset_path validates inputs and constructs path", {
     n_voxels = sum(mask),
     scan_name = "runA",
     n_time = 5L,
-    compress = FALSE)
+    compress = FALSE
+  )
 
   expect_equal(fmristore:::.dataset_path(run, 1L), "/scans/runA/clusters/cluster_1")
   expect_error(fmristore:::.dataset_path(run, 0L), "single positive integer")
@@ -37,7 +39,8 @@ test_that(".dataset_path validates inputs and constructs path", {
     n_voxels = sum(mask),
     scan_name = "",
     n_time = 5L,
-    compress = FALSE)
+    compress = FALSE
+  )
   expect_error(fmristore:::.dataset_path(run_bad, 1L), "Invalid 'scan_name'")
 })
 
@@ -45,9 +48,13 @@ test_that(".dataset_path validates inputs and constructs path", {
 
 test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds", {
   # Create mask with specific TRUE voxels to match cluster count
-  mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2, 2, 1),
-    true_voxels = list(c(1L, 1L, 1L), c(2L, 1L, 1L),
-      c(1L, 2L, 1L), c(2L, 2L, 1L)))
+  mask <- fmristore:::create_minimal_LogicalNeuroVol(
+    dims = c(2, 2, 1),
+    true_voxels = list(
+      c(1L, 1L, 1L), c(2L, 1L, 1L),
+      c(1L, 2L, 1L), c(2L, 2L, 1L)
+    )
+  )
   clus_vals <- c(1L, 2L, 1L, 2L)
   clus <- ClusteredNeuroVol(mask, clusters = clus_vals)
   n_time <- 3L
@@ -59,7 +66,8 @@ test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds
       h5f$close_all()
       unlink(tmp)
     },
-    add = TRUE)
+    add = TRUE
+  )
   # Create nested group structure
   scans_grp <- h5f$create_group("scans")
   runA_grp <- scans_grp$create_group("runA")
@@ -74,7 +82,8 @@ test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds
     n_voxels = sum(mask),
     scan_name = "runA",
     n_time = n_time,
-    compress = FALSE)
+    compress = FALSE
+  )
 
   res <- fmristore:::.get_cluster_timeseries_by_mask_index(run, c(1, 3), c(1, 3), n_time)
   # mask index 1 -> cluster 1, position 1: times 1,3 -> [1,5]
@@ -86,8 +95,12 @@ test_that(".get_cluster_timeseries_by_mask_index extracts data and checks bounds
   # mask index 4 -> cluster 2, position 2: all times -> [12,14,16]
   expect_equal(res2, matrix(c(11, 12, 13, 14, 15, 16), nrow = 2, ncol = 3))
 
-  expect_error(fmristore:::.get_cluster_timeseries_by_mask_index(run, 5L, NULL, n_time),
-    "out of the valid mask range")
-  expect_error(fmristore:::.get_cluster_timeseries_by_mask_index(run, 1L, 4L, n_time),
-    "valid time range")
+  expect_error(
+    fmristore:::.get_cluster_timeseries_by_mask_index(run, 5L, NULL, n_time),
+    "out of the valid mask range"
+  )
+  expect_error(
+    fmristore:::.get_cluster_timeseries_by_mask_index(run, 1L, 4L, n_time),
+    "valid time range"
+  )
 })

@@ -1,4 +1,3 @@
-
 library(neuroim2)
 library(fmristore)
 
@@ -30,8 +29,8 @@ test_that("H5NeuroVol construction and subsetting works", {
 
 test_that("coercion via as() uses as_h5 for DenseNeuroVol", {
   dims <- c(4, 4, 4)
-  sp   <- NeuroSpace(dims)
-  arr  <- array(rnorm(prod(dims)), dim = dims)
+  sp <- NeuroSpace(dims)
+  arr <- array(rnorm(prod(dims)), dim = dims)
   dvol <- DenseNeuroVol(arr, sp)
 
   h5vol <- as(dvol, "H5NeuroVol")
@@ -79,30 +78,32 @@ test_that("H5NeuroVec construction and series extraction works", {
 })
 
 test_that("LatentNeuroVec single timepoint reconstruction", {
-  n_basis       <- 5
-  n_voxels      <- 1000
-  n_timepoints  <- 100
+  n_basis <- 5
+  n_voxels <- 1000
+  n_timepoints <- 100
 
   # basis => (n_timepoints x n_basis) => (100 x 5)
   basis <- Matrix(rnorm(n_timepoints * n_basis),
     nrow = n_timepoints,
-    ncol = n_basis)
+    ncol = n_basis
+  )
 
   # loadings => (p x k) => (1000 x 5)
   loadings <- Matrix(rnorm(n_voxels * n_basis),
     nrow = n_voxels,
     ncol = n_basis,
-    sparse = TRUE)
+    sparse = TRUE
+  )
 
-  offset <- rnorm(n_voxels)  # length=1000
+  offset <- rnorm(n_voxels) # length=1000
 
   # Create a NeuroSpace with dims (10,10,10,100)
   space <- NeuroSpace(c(10, 10, 10, n_timepoints), spacing = c(2, 2, 2), origin = c(1, 1, 1))
   mask_vol <- LogicalNeuroVol(array(TRUE, dim = c(10, 10, 10)), drop_dim(space))
 
   latent_vec <- LatentNeuroVec(
-    basis    = basis,      # (100 x 5)
-    loadings = loadings,   # (1000 x 5)
+    basis    = basis, # (100 x 5)
+    loadings = loadings, # (1000 x 5)
     space    = space,
     mask     = mask_vol,
     offset   = offset
@@ -134,12 +135,12 @@ test_that("H5NeuroVol indexing matches in-memory NeuroVol", {
   # 1) Create a random 3D volume in memory
   set.seed(42)
   arr <- array(rnorm(1000), dim = c(10, 10, 10))
-  sp  <- NeuroSpace(dim = c(10, 10, 10))
-  mem_vol <- NeuroVol(arr, sp)  # DenseNeuroVol
+  sp <- NeuroSpace(dim = c(10, 10, 10))
+  mem_vol <- NeuroVol(arr, sp) # DenseNeuroVol
 
   # 2) Convert it to H5NeuroVol on the fly
   tmpfile <- tempfile(fileext = ".h5")
-  h5vol   <- as_h5(mem_vol, file = tmpfile, data_type = "FLOAT")
+  h5vol <- as_h5(mem_vol, file = tmpfile, data_type = "FLOAT")
 
   # 3) Check basic dimension
   expect_equal(dim(h5vol), c(10, 10, 10))
@@ -188,14 +189,16 @@ test_that("H5NeuroVec indexing matches in-memory DenseNeuroVec", {
   set.seed(42)
   # e.g. 10x10x5 volume with 8 timepoints => total dims c(10,10,5,8)
   arr <- array(rnorm(10 * 10 * 5 * 8), dim = c(10, 10, 5, 8))
-  sp  <- NeuroSpace(dim = c(10, 10, 5, 8))
+  sp <- NeuroSpace(dim = c(10, 10, 5, 8))
   mem_vec <- DenseNeuroVec(data = arr, space = sp)
 
   ## 2) Convert it to an H5NeuroVec file
   tmpfile <- tempfile(fileext = ".h5")
-  h5_vec <- as_h5(mem_vec, file = tmpfile, data_type = "FLOAT",
+  h5_vec <- as_h5(mem_vec,
+    file = tmpfile, data_type = "FLOAT",
     chunk_dim = c(4, 4, 4, 8),
-    compression = 6)
+    compression = 6
+  )
 
   ## Basic checks
   expect_s4_class(h5_vec, "H5NeuroVec")
@@ -204,36 +207,36 @@ test_that("H5NeuroVec indexing matches in-memory DenseNeuroVec", {
   ## 3) Test straightforward subsetting
   # e.g. a small sub-block
   sub_arr <- mem_vec[1:5, 1:4, 2:3, 1:2]
-  h5sub   <- h5_vec[1:5, 1:4, 2:3, 1:2]
+  h5sub <- h5_vec[1:5, 1:4, 2:3, 1:2]
   expect_equal(h5sub, sub_arr, tolerance = 1e-7)
 
   # Another sub-block
   sub_arr2 <- mem_vec[2:3, 5:10, 1:5, 8]
-  h5sub2   <- h5_vec[2:3, 5:10, 1:5, 8]
+  h5sub2 <- h5_vec[2:3, 5:10, 1:5, 8]
   expect_equal(h5sub2, sub_arr2, tolerance = 1e-7)
 
   ## 4) Test partial indexing (missing one dimension => full range):
   # example: x[i, j, k] => implies full range in 4th dimension
-  sub3d_mem <- mem_vec[2:3, 1:2, 4:5, ]  # i.e. ignoring time => all volumes
-  sub3d_h5  <- h5_vec[2:3, 1:2, 4:5, ]
+  sub3d_mem <- mem_vec[2:3, 1:2, 4:5, ] # i.e. ignoring time => all volumes
+  sub3d_h5 <- h5_vec[2:3, 1:2, 4:5, ]
   expect_equal(sub3d_mem, sub3d_h5, tolerance = 1e-7)
 
   ## 5) Test linear indexing
   # pick some scattered linear indices, compare
   lin_idx <- c(1, 50, 100, 234, 999, 1000, 2000)
   lin_mem <- mem_vec[lin_idx]
-  lin_h5  <- h5_vec[lin_idx]
+  lin_h5 <- h5_vec[lin_idx]
   expect_equal(lin_h5, lin_mem, tolerance = 1e-7)
 
   ## 6) Test more random scattered subsetting across dimensions
   # We'll define random i, j, k, l
   i_scat <- sample(1:10, 4)
   j_scat <- sample(1:10, 5)
-  k_scat <- sample(1:5,  3)
-  l_scat <- sample(1:8,  2)
+  k_scat <- sample(1:5, 3)
+  l_scat <- sample(1:8, 2)
 
   scat_mem <- mem_vec[i_scat, j_scat, k_scat, l_scat]
-  scat_h5  <- h5_vec[i_scat, j_scat, k_scat, l_scat]
+  scat_h5 <- h5_vec[i_scat, j_scat, k_scat, l_scat]
   expect_equal(scat_h5, scat_mem, tolerance = 1e-7)
 
   ## 7) Test random linear indexing for 4D

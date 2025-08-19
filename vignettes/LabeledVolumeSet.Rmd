@@ -42,7 +42,8 @@ n_contrasts <- 3
 
 # Simulate t-statistic maps for different contrasts
 contrast_data <- array(rnorm(prod(brain_dims) * n_contrasts),
-  dim = c(brain_dims, n_contrasts))
+  dim = c(brain_dims, n_contrasts)
+)
 ```
 
 ### Step 2: Create Brain Mask
@@ -50,7 +51,7 @@ contrast_data <- array(rnorm(prod(brain_dims) * n_contrasts),
 ```{r create_mask}
 # Create a brain mask (only analyze certain voxels)
 brain_mask <- array(TRUE, dim = brain_dims)
-brain_mask[1:3, 1:3, ] <- FALSE  # Exclude corners
+brain_mask[1:3, 1:3, ] <- FALSE # Exclude corners
 
 # Convert to neuroim2 objects
 stat_maps <- NeuroVec(contrast_data, NeuroSpace(c(brain_dims, n_contrasts)))
@@ -133,8 +134,10 @@ print(paste("Found", n_sig, "significant voxels"))
 if (n_sig > 0) {
   effect_map <- results[["effect_size"]]
   sig_effects <- effect_map[which(significant_voxels)]
-  hist(sig_effects, main = "Effect Sizes in Significant Voxels",
-    xlab = "Effect Size")
+  hist(sig_effects,
+    main = "Effect Sizes in Significant Voxels",
+    xlab = "Effect Size"
+  )
 }
 
 close(results)
@@ -154,7 +157,8 @@ brain_dims <- c(15, 15, 8)
 
 # Create subject-specific activation maps
 subject_data <- array(rnorm(prod(brain_dims) * n_subjects),
-  dim = c(brain_dims, n_subjects))
+  dim = c(brain_dims, n_subjects)
+)
 ```
 
 ### Add Activation Patterns
@@ -200,7 +204,7 @@ h5_handle$close_all()
 subjects <- read_labeled_vec(h5_file)
 
 # Extract all subjects' data efficiently
-all_subjects_data <- subjects[, , , ]  # Get all volumes at once
+all_subjects_data <- subjects[, , , ] # Get all volumes at once
 
 # Compute mean across subjects (4th dimension)
 group_mean <- apply(all_subjects_data, c(1, 2, 3), mean)
@@ -208,8 +212,10 @@ print(paste("Group mean map dimensions:", paste(dim(group_mean), collapse = "x")
 
 # Find peak activation
 peak_loc <- which(group_mean == max(group_mean), arr.ind = TRUE)
-print(paste("Peak activation at voxel:",
-  paste(peak_loc, collapse = ", ")))
+print(paste(
+  "Peak activation at voxel:",
+  paste(peak_loc, collapse = ", ")
+))
 
 close(subjects)
 unlink(h5_file)
@@ -225,7 +231,8 @@ n_conditions <- 10
 brain_dims <- c(20, 20, 10)
 
 condition_data <- array(rnorm(prod(brain_dims) * n_conditions),
-  dim = c(brain_dims, n_conditions))
+  dim = c(brain_dims, n_conditions)
+)
 condition_vec <- NeuroVec(condition_data, NeuroSpace(c(brain_dims, n_conditions)))
 mask <- LogicalNeuroVol(array(TRUE, brain_dims), NeuroSpace(brain_dims))
 condition_names <- paste0("Condition_", LETTERS[1:n_conditions])
@@ -244,15 +251,19 @@ cond_B <- conditions[["Condition_B"]]
 
 # Method 2: Access multiple conditions at once
 print("Method 2: Multiple conditions via indices")
-first_three <- conditions[, , , 1:3]  # Get first 3 conditions
-print(paste("Dimensions of first 3 conditions:",
-  paste(dim(first_three), collapse = "x")))
+first_three <- conditions[, , , 1:3] # Get first 3 conditions
+print(paste(
+  "Dimensions of first 3 conditions:",
+  paste(dim(first_three), collapse = "x")
+))
 
 # Method 3: Extract values at specific voxel across all conditions
 print("Method 3: Voxel time series across conditions")
 voxel_10_10_5 <- conditions[10, 10, 5, ]
-barplot(voxel_10_10_5, names.arg = condition_names,
-  las = 2, main = "Values at Voxel [10,10,5]")
+barplot(voxel_10_10_5,
+  names.arg = condition_names,
+  las = 2, main = "Values at Voxel [10,10,5]"
+)
 
 close(conditions)
 unlink(h5_file)
@@ -263,8 +274,10 @@ unlink(h5_file)
 ### 1. Use Meaningful Labels
 ```{r meaningful_labels, eval=FALSE}
 # Good labels
-good_labels <- c("PreTreatment_T1", "PostTreatment_T1",
-  "PreTreatment_T2", "PostTreatment_T2")
+good_labels <- c(
+  "PreTreatment_T1", "PostTreatment_T1",
+  "PreTreatment_T2", "PostTreatment_T2"
+)
 
 # Avoid generic labels
 bad_labels <- c("map1", "map2", "map3", "map4")
@@ -275,22 +288,25 @@ bad_labels <- c("map1", "map2", "map3", "map4")
 # Save different analysis stages
 write_labeled_vec(raw_maps, mask,
   paste0("Raw_", condition_names),
-  file = "raw_maps.h5")
+  file = "raw_maps.h5"
+)
 
 write_labeled_vec(smoothed_maps, mask,
   paste0("Smoothed_", condition_names),
-  file = "smoothed_maps.h5")
+  file = "smoothed_maps.h5"
+)
 
 write_labeled_vec(stats_maps, mask,
   paste0("Stats_", condition_names),
-  file = "statistical_maps.h5")
+  file = "statistical_maps.h5"
+)
 ```
 
 ### 3. Remember to Close
 ```{r close_reminder, eval=FALSE}
 lvs <- read_labeled_vec("my_maps.h5")
 # ... analysis code ...
-close(lvs)  # Always close when done!
+close(lvs) # Always close when done!
 ```
 
 ## Summary

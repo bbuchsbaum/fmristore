@@ -137,8 +137,8 @@ test_that("H5ParcellatedMultiScan handles invalid cluster configurations", {
   # Create valid initial structure
   fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan(
     file_path = temp_file2,
-    master_mask_dims = c(5L, 5L, 5L),  # Fixed: use correct parameter name
-    num_master_clusters = 3L,          # Fixed: use correct parameter name
+    master_mask_dims = c(5L, 5L, 5L), # Fixed: use correct parameter name
+    num_master_clusters = 3L, # Fixed: use correct parameter name
     n_time_run1 = 10L
   )
 
@@ -153,7 +153,7 @@ test_that("H5ParcellatedMultiScan handles invalid cluster configurations", {
   # This should trigger the "inconsistent lengths" warning
   meta_grp <- clusters_grp$create_group("cluster_meta")
   meta_grp$create_dataset("id", robj = 1:3, dtype = hdf5r::h5types$H5T_NATIVE_INT)
-  meta_grp$create_dataset("name", robj = c("A", "B"), dtype = hdf5r::H5T_STRING$new(size = 10))  # Wrong length!
+  meta_grp$create_dataset("name", robj = c("A", "B"), dtype = hdf5r::H5T_STRING$new(size = 10)) # Wrong length!
   h5file$close()
 
   # Should fail with error about invalid cluster_metadata slot (list instead of data.frame)
@@ -182,103 +182,124 @@ test_that("Concurrent HDF5 access and resource cleanup", {
 
   # Test 1: Sequential access (one handle at a time)
   # This avoids HDF5 concurrency issues while still testing resource management
-  
+
   # Open first handle
   h5_vec1 <- H5NeuroVec(temp_file)
   expect_equal(dim(h5_vec1), dims)
-  
-  # Test data access 
-  data1 <- tryCatch({
-    # Use simple indexing instead of linear_access to avoid concurrency issues
-    h5_vec1[1, 1, 1, 1:5]
-  }, error = function(e) {
-    # If even simple indexing fails, skip this specific test
-    
-    error_msg <- if (inherits(e, "condition")) {
-      # Try different ways to get the message
-      tryCatch({
-        # First try conditionMessage which is the proper way
-        conditionMessage(e)
-      }, error = function(e3) {
-        # If that fails, try direct access
-        tryCatch({
-          if (!is.null(e[["message"]])) {
-            e[["message"]]
-          } else if (!is.null(e$message)) {
-            e$message
-          } else {
-            "Condition object but message not accessible"
+
+  # Test data access
+  data1 <- tryCatch(
+    {
+      # Use simple indexing instead of linear_access to avoid concurrency issues
+      h5_vec1[1, 1, 1, 1:5]
+    },
+    error = function(e) {
+      # If even simple indexing fails, skip this specific test
+
+      error_msg <- if (inherits(e, "condition")) {
+        # Try different ways to get the message
+        tryCatch(
+          {
+            # First try conditionMessage which is the proper way
+            conditionMessage(e)
+          },
+          error = function(e3) {
+            # If that fails, try direct access
+            tryCatch(
+              {
+                if (!is.null(e[["message"]])) {
+                  e[["message"]]
+                } else if (!is.null(e$message)) {
+                  e$message
+                } else {
+                  "Condition object but message not accessible"
+                }
+              },
+              error = function(e4) {
+                "Condition object but message extraction failed"
+              }
+            )
           }
-        }, error = function(e4) {
-          "Condition object but message extraction failed"
-        })
-      })
-    } else if (is.environment(e)) {
-      # Try to extract error info from environment
-      tryCatch({
-        # Check if there's a message element in the environment
-        if (exists("message", envir = e)) {
-          get("message", envir = e)
-        } else {
-          "Error object is an environment (no message found)"
-        }
-      }, error = function(e2) {
-        "Error object is an environment (could not access contents)"
-      })
-    } else {
-      paste("Unknown error type:", class(e))
+        )
+      } else if (is.environment(e)) {
+        # Try to extract error info from environment
+        tryCatch(
+          {
+            # Check if there's a message element in the environment
+            if (exists("message", envir = e)) {
+              get("message", envir = e)
+            } else {
+              "Error object is an environment (no message found)"
+            }
+          },
+          error = function(e2) {
+            "Error object is an environment (could not access contents)"
+          }
+        )
+      } else {
+        paste("Unknown error type:", class(e))
+      }
+      skip(paste("HDF5 access failed:", error_msg))
     }
-    skip(paste("HDF5 access failed:", error_msg))
-  })
+  )
   expect_length(data1, 5)
   close(h5_vec1)
-  
+
   # Open second handle (after closing first)
   h5_vec2 <- H5NeuroVec(temp_file)
   expect_equal(dim(h5_vec2), dims)
-  
-  data2 <- tryCatch({
-    h5_vec2[1, 1, 1, 6:10]
-  }, error = function(e) {
-    error_msg <- if (inherits(e, "condition")) {
-      # Try different ways to get the message
-      tryCatch({
-        # First try conditionMessage which is the proper way
-        conditionMessage(e)
-      }, error = function(e3) {
-        # If that fails, try direct access
-        tryCatch({
-          if (!is.null(e[["message"]])) {
-            e[["message"]]
-          } else if (!is.null(e$message)) {
-            e$message
-          } else {
-            "Condition object but message not accessible"
+
+  data2 <- tryCatch(
+    {
+      h5_vec2[1, 1, 1, 6:10]
+    },
+    error = function(e) {
+      error_msg <- if (inherits(e, "condition")) {
+        # Try different ways to get the message
+        tryCatch(
+          {
+            # First try conditionMessage which is the proper way
+            conditionMessage(e)
+          },
+          error = function(e3) {
+            # If that fails, try direct access
+            tryCatch(
+              {
+                if (!is.null(e[["message"]])) {
+                  e[["message"]]
+                } else if (!is.null(e$message)) {
+                  e$message
+                } else {
+                  "Condition object but message not accessible"
+                }
+              },
+              error = function(e4) {
+                "Condition object but message extraction failed"
+              }
+            )
           }
-        }, error = function(e4) {
-          "Condition object but message extraction failed"
-        })
-      })
-    } else if (is.environment(e)) {
-      "Error object is an environment (not a standard condition)"
-    } else {
-      paste("Unknown error type:", class(e))
+        )
+      } else if (is.environment(e)) {
+        "Error object is an environment (not a standard condition)"
+      } else {
+        paste("Unknown error type:", class(e))
+      }
+      skip(paste("HDF5 access failed:", error_msg))
     }
-    skip(paste("HDF5 access failed:", error_msg))
-  })
+  )
   expect_length(data2, 5)
   close(h5_vec2)
-  
+
   # Test 1b: Multiple handles for dimensions only (less resource intensive)
   h5_vec1 <- H5NeuroVec(temp_file)
   h5_vec2 <- H5NeuroVec(temp_file)
   h5_vec3 <- H5NeuroVec(temp_file)
-  
+
   # All should be able to read dimensions (less likely to cause concurrency issues)
   expect_equal(dim(h5_vec1), dims)
-  expect_equal(dim(h5_vec2), dims) 
+  expect_equal(dim(h5_vec2), dims)
   expect_equal(dim(h5_vec3), dims)
-  
+
   # Close in different order
   close(h5_vec2)
   close(h5_vec1)
@@ -296,7 +317,7 @@ test_that("Concurrent HDF5 access and resource cleanup", {
   })
 
   # File handle should still be valid and closeable
-  expect_true(h5_vec@obj$is_valid)  # H5NeuroVec uses @obj slot
+  expect_true(h5_vec@obj$is_valid) # H5NeuroVec uses @obj slot
   close(h5_vec)
 
   # Test 3: Cleanup in error conditions during write
@@ -327,7 +348,7 @@ test_that("Concurrent HDF5 access and resource cleanup", {
 
   # Force garbage collection
   gc()
-  Sys.sleep(0.1)  # Give finalizers time to run
+  Sys.sleep(0.1) # Give finalizers time to run
 
   # Should still be able to open the file
   h5_final <- H5NeuroVec(temp_file)

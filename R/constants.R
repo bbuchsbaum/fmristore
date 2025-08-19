@@ -8,8 +8,8 @@
 #' @export
 #' @examples
 #' # Access constants
-#' H5_PATHS$SCANS_GROUP  # "/scans"
-#' sprintf(H5_PATHS$CLUSTER_DSET_TPL, "run1", 5)  # "/scans/run1/clusters/cluster_5"
+#' H5_PATHS$SCANS_GROUP # "/scans"
+#' sprintf(H5_PATHS$CLUSTER_DSET_TPL, "run1", 5) # "/scans/run1/clusters/cluster_5"
 NULL
 
 #' HDF5 file structure constants
@@ -23,24 +23,24 @@ H5_PATHS <- list(
   HEADER_GROUP = "/header",
   SPACE_GROUP = "/space",
   VOXEL_COORDS = "/voxel_coords",
-  
+
   # Scan-level path templates (use with sprintf)
   SCAN_GROUP_TPL = "/scans/%s",
   CLUSTERS_GROUP_TPL = "/scans/%s/clusters",
   SUMMARY_GROUP_TPL = "/scans/%s/clusters_summary",
   EMBEDDING_TPL = "/scans/%s/embedding",
   METADATA_GROUP_TPL = "/scans/%s/metadata",
-  
+
   # Dataset templates (use with sprintf)
   CLUSTER_DSET_TPL = "/scans/%s/clusters/cluster_%d",
   SUMMARY_DSET_TPL = "/scans/%s/clusters_summary/%s",
   N_TIME_ATTR = "n_time",
-  
+
   # Basis and latent structure
   BASIS_MATRIX = "/basis/basis_matrix",
   BASIS_OFFSET = "/basis/offset",
   BASIS_LABELS = "/basis/labels",
-  
+
   # Metadata paths
   CLUSTER_METADATA = "/cluster_metadata",
   SCAN_METADATA_TPL = "/scans/%s/metadata",

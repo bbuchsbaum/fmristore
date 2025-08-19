@@ -12,7 +12,6 @@ create_dummy_clustered_summary_h5 <- function(filepath,
                                               scan_name = "scan_summary1",
                                               cluster_ids = 1:3,
                                               summary_dset_name = "summary_data") {
-
   n_clusters <- length(cluster_ids)
 
   # Create basic mask (needed for context, but data isn't voxel-wise)
@@ -51,7 +50,8 @@ create_dummy_clustered_summary_h5 <- function(filepath,
 
   file$close_all()
 
-  return(list(filepath = filepath,
+  return(list(
+    filepath = filepath,
     mask = mask_vol,
     clusters = clusters_vol, # May be NULL in actual use case
     dims = dims,
@@ -71,7 +71,8 @@ test_that("H5ParcellatedScanSummary constructor works with file path", {
   on.exit(unlink(setup_info$filepath), add = TRUE)
 
   # Use new constructor
-  run_summary <- H5ParcellatedScanSummary(file = setup_info$filepath,
+  run_summary <- H5ParcellatedScanSummary(
+    file = setup_info$filepath,
     scan_name = setup_info$scan_name,
     mask = setup_info$mask,
     clusters = setup_info$clusters,
@@ -101,7 +102,8 @@ test_that("H5ParcellatedScanSummary constructor works with open H5File handle (v
 
   # Keep using make_run_summary for this test, expecting a deprecation warning
   expect_warning(
-    run_summary_open <- make_run_summary(file_source = h5f,
+    run_summary_open <- make_run_summary(
+      file_source = h5f,
       scan_name = setup_info$scan_name,
       mask = setup_info$mask,
       clusters = setup_info$clusters,
@@ -126,13 +128,19 @@ test_that("H5ParcellatedScanSummary constructor errors work", {
   on.exit(if (h5f_err$is_valid) h5f_err$close_all(), add = TRUE)
 
   # Use new constructor for error checks
-  expect_error(H5ParcellatedScanSummary(file = "nonexistent.h5", scan_name = "s1", mask = setup_info$mask,
-    clusters = setup_info$clusters), regexp = "does not exist")
+  expect_error(H5ParcellatedScanSummary(
+    file = "nonexistent.h5", scan_name = "s1", mask = setup_info$mask,
+    clusters = setup_info$clusters
+  ), regexp = "does not exist")
   # Test invalid scan_name within an existing file
-  expect_error(H5ParcellatedScanSummary(file = setup_info$filepath,
-    scan_name = "wrong_scan_name", mask = setup_info$mask,
-    clusters = setup_info$clusters),
-  "scan group not found")
+  expect_error(
+    H5ParcellatedScanSummary(
+      file = setup_info$filepath,
+      scan_name = "wrong_scan_name", mask = setup_info$mask,
+      clusters = setup_info$clusters
+    ),
+    "scan group not found"
+  )
   # Test invalid summary_dset name
   expect_error(H5ParcellatedScanSummary(file = setup_info$filepath, scan_name = setup_info$scan_name, mask = setup_info$mask, clusters = setup_info$clusters, summary_dset = "wrong_name"), "summary dataset not found")
 })
@@ -146,13 +154,15 @@ test_that("H5ParcellatedScanSummary cluster name/ID reconciliation works", {
 
   # Case 1: Provided names/IDs match dataset columns
   # Use new constructor (need file path)
-  run_summary <- H5ParcellatedScanSummary(file = setup_info$filepath,
+  run_summary <- H5ParcellatedScanSummary(
+    file = setup_info$filepath,
     scan_name = setup_info$scan_name,
     mask = setup_info$mask,
     clusters = setup_info$clusters,
     cluster_names = paste0("clus_", 1:3), # Explicitly correct
     cluster_ids = 1:3,
-    summary_dset = setup_info$summary_dset_name)
+    summary_dset = setup_info$summary_dset_name
+  )
   expect_equal(run_summary@cluster_names, paste0("clus_", 1:3))
   expect_equal(run_summary@cluster_ids, 1:3)
   run_summary@obj$close_all() # Close object handle
@@ -160,23 +170,27 @@ test_that("H5ParcellatedScanSummary cluster name/ID reconciliation works", {
   # Case 2: Mismatched provided names (warning, reset to Col_X)
   # Use new constructor
   expect_warning(
-    run_summary_badnames <- H5ParcellatedScanSummary(file = setup_info$filepath,
+    run_summary_badnames <- H5ParcellatedScanSummary(
+      file = setup_info$filepath,
       scan_name = setup_info$scan_name,
       mask = setup_info$mask,
       clusters = setup_info$clusters,
       cluster_names = c("A", "B"), # Mismatch cols (3)
       cluster_ids = 1:3, # Match cols
-      summary_dset = setup_info$summary_dset_name),
+      summary_dset = setup_info$summary_dset_name
+    ),
     "Final number of cluster names.*does not match dataset columns"
   )
   expect_warning( # Second warning about resetting
-    H5ParcellatedScanSummary(file = setup_info$filepath,
+    H5ParcellatedScanSummary(
+      file = setup_info$filepath,
       scan_name = setup_info$scan_name,
       mask = setup_info$mask,
       clusters = setup_info$clusters,
       cluster_names = c("A", "B"), # Mismatch cols (3)
       cluster_ids = 1:3, # Match cols
-      summary_dset = setup_info$summary_dset_name),
+      summary_dset = setup_info$summary_dset_name
+    ),
     "Resetting to default names"
   )
   expect_equal(run_summary_badnames@cluster_names, paste0("Col_", 1:3))
@@ -185,13 +199,15 @@ test_that("H5ParcellatedScanSummary cluster name/ID reconciliation works", {
 
   # Case 3: No names/IDs provided, derive from clusters object
   # Use new constructor
-  run_summary_derive <- H5ParcellatedScanSummary(file = setup_info$filepath,
+  run_summary_derive <- H5ParcellatedScanSummary(
+    file = setup_info$filepath,
     scan_name = setup_info$scan_name,
     mask = setup_info$mask,
     clusters = setup_info$clusters,
     cluster_names = character(), # Explicitly empty
-    cluster_ids = integer(),   # Explicitly empty
-    summary_dset = setup_info$summary_dset_name)
+    cluster_ids = integer(), # Explicitly empty
+    summary_dset = setup_info$summary_dset_name
+  )
   expect_equal(run_summary_derive@cluster_names, paste0("Cluster", 1:3)) # Default names when none provided
   expect_equal(run_summary_derive@cluster_ids, 1:3)
   run_summary_derive@obj$close_all()
@@ -199,17 +215,18 @@ test_that("H5ParcellatedScanSummary cluster name/ID reconciliation works", {
   # Case 4: No names/IDs/clusters provided, derive from dataset cols (Col_X)
   # Use new constructor
   # No warning expected here - defaults are generated silently
-  run_summary_defaults <- H5ParcellatedScanSummary(file = setup_info$filepath,
+  run_summary_defaults <- H5ParcellatedScanSummary(
+    file = setup_info$filepath,
     scan_name = setup_info$scan_name,
     mask = setup_info$mask,
     clusters = NULL, # No clusters object
     cluster_names = character(),
     cluster_ids = integer(),
-    summary_dset = setup_info$summary_dset_name)
+    summary_dset = setup_info$summary_dset_name
+  )
   expect_equal(run_summary_defaults@cluster_names, paste0("Cluster", 1:3))
   expect_equal(run_summary_defaults@cluster_ids, 1:3)
   run_summary_defaults@obj$close_all()
-
 })
 
 test_that("as.matrix method for H5ParcellatedScanSummary works", {
@@ -219,7 +236,8 @@ test_that("as.matrix method for H5ParcellatedScanSummary works", {
   h5f <- H5File$new(setup_info$filepath, mode = "r")
   on.exit(h5f$close_all(), add = TRUE)
 
-  run_summary <- make_run_summary(file_source = h5f,
+  run_summary <- make_run_summary(
+    file_source = h5f,
     scan_name = setup_info$scan_name,
     mask = setup_info$mask,
     clusters = setup_info$clusters,
@@ -242,7 +260,8 @@ test_that("as.matrix method for H5ParcellatedScanSummary works", {
   expect_equal(mat, setup_info$summary_data)
 
   # Test case where cluster_names don't match columns (should warn)
-  run_summary_badnames <- make_run_summary(file_source = h5f,
+  run_summary_badnames <- make_run_summary(
+    file_source = h5f,
     scan_name = setup_info$scan_name,
     mask = setup_info$mask,
     clusters = setup_info$clusters,
@@ -252,7 +271,6 @@ test_that("as.matrix method for H5ParcellatedScanSummary works", {
   expect_warning(mat_badnames <- as.matrix(run_summary_badnames), "Length of cluster_names")
   expect_null(colnames(mat_badnames)) # Names should not be set
   expect_equal(mat_badnames, setup_info$summary_data, check.attributes = FALSE) # Content still matches
-
 })
 
 test_that("make_run_summary generates default names/ids and as.data.frame works", {
@@ -266,7 +284,8 @@ test_that("make_run_summary generates default names/ids and as.data.frame works"
   run_summary_defaults <- NULL
 
   expect_warning(
-    run_summary_defaults <- make_run_summary(file_source = h5f,
+    run_summary_defaults <- make_run_summary(
+      file_source = h5f,
       scan_name = setup_info$scan_name,
       mask = setup_info$mask,
       clusters = NULL # Pass NULL to test default generation

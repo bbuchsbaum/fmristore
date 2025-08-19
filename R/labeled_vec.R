@@ -110,17 +110,19 @@ write_labeled_vec <- function(vec,
   # 2. Check if mask is empty - fail fast
   # Now works correctly with logical mask_arr
   idx_nonzero <- which(mask_arr == TRUE)
-  n_nonzero   <- length(idx_nonzero)
+  n_nonzero <- length(idx_nonzero)
   if (n_nonzero == 0) {
     stop("Mask is empty (all FALSE). Cannot write a LabeledVolumeSet with no valid voxels.")
   }
 
   # 3. Validate vec dimensions against mask
-  nd <- dim(vec)  # [X, Y, Z, nVols]
+  nd <- dim(vec) # [X, Y, Z, nVols]
   stopifnot(length(nd) == 4)
   if (!all(dim(mask_arr) == nd[1:3])) {
-    stop("Mask dimensions [", paste(dim(mask_arr), collapse = ","),
-      "] do not match first 3 dimensions of vec [", paste(nd[1:3], collapse = ","), "]")
+    stop(
+      "Mask dimensions [", paste(dim(mask_arr), collapse = ","),
+      "] do not match first 3 dimensions of vec [", paste(nd[1:3], collapse = ","), "]"
+    )
   }
   nVols <- nd[4]
 
@@ -151,7 +153,7 @@ write_labeled_vec <- function(vec,
   Z <- nd[3]
 
   # Extract 4x4 transformation matrix from NeuroSpace
-  tmat <- trans(space(vec))          # e.g. a 4x4
+  tmat <- trans(space(vec)) # e.g. a 4x4
   # Convert to quaternion + qfac - Harden error message
   q <- tryCatch(
     matrixToQuatern(tmat),
@@ -161,10 +163,10 @@ write_labeled_vec <- function(vec,
   )
 
   # Gather spacing & origin
-  sp  <- spacing(space(vec))         # c(dx, dy, dz)
-  org <- origin(space(vec))          # c(ox, oy, oz)
+  sp <- spacing(space(vec)) # c(dx, dy, dz)
+  org <- origin(space(vec)) # c(ox, oy, oz)
   if (length(sp) < 3) {
-    sp  <- c(sp, rep(1, 3 - length(sp)))
+    sp <- c(sp, rep(1, 3 - length(sp)))
   }
   if (length(org) < 3) {
     org <- c(org, rep(0, 3 - length(org)))
@@ -190,51 +192,53 @@ write_labeled_vec <- function(vec,
   # Build minimal NIfTI-like header fields
   # Add common unused fields, initialized
   hdr_default <- list(
-    sizeof_hdr  = 348L,
-    data_type   = "", # Unused
-    db_name     = "", # Unused
-    extents     = 0L, # Unused
+    sizeof_hdr = 348L,
+    data_type = "", # Unused
+    db_name = "", # Unused
+    extents = 0L, # Unused
     session_error = 0L, # Unused
-    regular     = 0L, # Unused
-    dim_info    = 0L, # Unused
-    dim         = c(4L, X, Y, Z, nVols, 1L, 1L, 1L),
-    intent_p1   = 0.0, intent_p2 = 0.0, intent_p3 = 0.0, # Unused
+    regular = 0L, # Unused
+    dim_info = 0L, # Unused
+    dim = c(4L, X, Y, Z, nVols, 1L, 1L, 1L),
+    intent_p1 = 0.0, intent_p2 = 0.0, intent_p3 = 0.0, # Unused
     intent_code = 0L, # Unused
-    datatype    = nifti_datatype_code,
-    bitpix      = nifti_bitpix,
+    datatype = nifti_datatype_code,
+    bitpix = nifti_bitpix,
     slice_start = 0L, # Unused
-    pixdim      = c(0.0, sp[1], sp[2], sp[3], 0, 0, 0, 0), # Keep pixdim[1]=0, qfac stored elsewhere
-    vox_offset  = 0.0, # Unused
-    scl_slope   = 1.0, # Unused
-    scl_inter   = 0.0, # Unused
-    slice_end   = 0L, # Unused
-    slice_code  = 0L, # Unused
-    xyzt_units  = 0L, # Unused
-    cal_max     = 0.0, cal_min = 0.0, # Unused
+    pixdim = c(0.0, sp[1], sp[2], sp[3], 0, 0, 0, 0), # Keep pixdim[1]=0, qfac stored elsewhere
+    vox_offset = 0.0, # Unused
+    scl_slope = 1.0, # Unused
+    scl_inter = 0.0, # Unused
+    slice_end = 0L, # Unused
+    slice_code = 0L, # Unused
+    xyzt_units = 0L, # Unused
+    cal_max = 0.0, cal_min = 0.0, # Unused
     slice_duration = 0.0, # Unused
-    toffset     = 0.0, # Unused
-    glmax       = 0L, glmin = 0L, # Unused
-    descrip     = "fmristore labeled volume set", # Basic description
-    aux_file    = "", # Unused
-    qform_code  = 1L, # Default to NIFTI_XFORM_SCANNER_ANAT
-    sform_code  = 0L, # Default to NIFTI_XFORM_UNKNOWN
-    quatern_b   = q$quaternion[1],
-    quatern_c   = q$quaternion[2],
-    quatern_d   = q$quaternion[3],
-    qoffset_x   = org[1],
-    qoffset_y   = org[2],
-    qoffset_z   = org[3],
-    srow_x      = c(tmat[1, 1], tmat[1, 2], tmat[1, 3], tmat[1, 4]), # Store sform rows
-    srow_y      = c(tmat[2, 1], tmat[2, 2], tmat[2, 3], tmat[2, 4]),
-    srow_z      = c(tmat[3, 1], tmat[3, 2], tmat[3, 3], tmat[3, 4]),
+    toffset = 0.0, # Unused
+    glmax = 0L, glmin = 0L, # Unused
+    descrip = "fmristore labeled volume set", # Basic description
+    aux_file = "", # Unused
+    qform_code = 1L, # Default to NIFTI_XFORM_SCANNER_ANAT
+    sform_code = 0L, # Default to NIFTI_XFORM_UNKNOWN
+    quatern_b = q$quaternion[1],
+    quatern_c = q$quaternion[2],
+    quatern_d = q$quaternion[3],
+    qoffset_x = org[1],
+    qoffset_y = org[2],
+    qoffset_z = org[3],
+    srow_x = c(tmat[1, 1], tmat[1, 2], tmat[1, 3], tmat[1, 4]), # Store sform rows
+    srow_y = c(tmat[2, 1], tmat[2, 2], tmat[2, 3], tmat[2, 4]),
+    srow_z = c(tmat[3, 1], tmat[3, 2], tmat[3, 3], tmat[3, 4]),
     intent_name = "", # Unused
-    magic       = "n+1" # Keep writing variable length for now
+    magic = "n+1" # Keep writing variable length for now
   )
 
   # Merge user overrides from header_values, preventing overwrite of critical fields
-  protected_fields <- c("dim", "pixdim", "quatern_b", "quatern_c", "quatern_d",
+  protected_fields <- c(
+    "dim", "pixdim", "quatern_b", "quatern_c", "quatern_d",
     "qoffset_x", "qoffset_y", "qoffset_z", "sizeof_hdr", "magic",
-    "datatype", "bitpix")
+    "datatype", "bitpix"
+  )
   for (nm in names(header_values)) {
     if (nm %in% protected_fields) {
       warning("Ignoring attempt to override protected header field: '", nm, "'")
@@ -367,15 +371,15 @@ read_labeled_vec <- function(file_path) {
   }
 
   # Read required header fields
-  dims       <- .rd_hdr("dim")         # c(4, X, Y, Z, nVols, 1,1,1)
-  pixdim     <- .rd_hdr("pixdim")      # c(0.0, dx, dy, dz, ...)
-  qb         <- .rd_hdr("quatern_b")
-  qc         <- .rd_hdr("quatern_c")
-  qd         <- .rd_hdr("quatern_d")
-  qx         <- .rd_hdr("qoffset_x")
-  qy         <- .rd_hdr("qoffset_y")
-  qz         <- .rd_hdr("qoffset_z")
-  qfac       <- .rd_hdr("qfac")        # Read qfac from header
+  dims <- .rd_hdr("dim") # c(4, X, Y, Z, nVols, 1,1,1)
+  pixdim <- .rd_hdr("pixdim") # c(0.0, dx, dy, dz, ...)
+  qb <- .rd_hdr("quatern_b")
+  qc <- .rd_hdr("quatern_c")
+  qd <- .rd_hdr("quatern_d")
+  qx <- .rd_hdr("qoffset_x")
+  qy <- .rd_hdr("qoffset_y")
+  qz <- .rd_hdr("qoffset_z")
+  qfac <- .rd_hdr("qfac") # Read qfac from header
 
   # Read labels from root level
   labels_arr <- .rd_root("labels")
@@ -412,8 +416,10 @@ read_labeled_vec <- function(file_path) {
     stop("Read /mask dataset has unexpected dimensions: ", paste(mask_dims, collapse = "x"))
   }
   if (!all(dim(mask_arr) == c(X, Y, Z))) {
-    stop("Dimensions of /mask [", paste(dim(mask_arr), collapse = ","),
-      "] do not match dimensions specified in header/dim [", X, ",", Y, ",", Z, "]")
+    stop(
+      "Dimensions of /mask [", paste(dim(mask_arr), collapse = ","),
+      "] do not match dimensions specified in header/dim [", X, ",", Y, ",", Z, "]"
+    )
   }
 
   # Rebuild 4x4 transform from quaternion
@@ -422,9 +428,9 @@ read_labeled_vec <- function(file_path) {
 
   if (!is.null(pixdim) && length(pixdim) >= 4) {
     # pixdim[0] is ignored (should be 0)
-    dx   <- pixdim[2]
-    dy   <- pixdim[3]
-    dz   <- pixdim[4]
+    dx <- pixdim[2]
+    dy <- pixdim[3]
+    dz <- pixdim[4]
   } else {
     warning("Missing or incomplete 'pixdim' in header. Using default spacing (1,1,1).")
     dx <- 1
@@ -467,8 +473,8 @@ read_labeled_vec <- function(file_path) {
   load_env <- new.env(parent = emptyenv())
   # The H5File handle is stored in the main object's obj slot
   load_env$mask_idx <- which(as.logical(mask_arr) == TRUE) # Ensure logical mask used
-  load_env$dims     <- c(X, Y, Z)
-  load_env$space    <- spc
+  load_env$dims <- c(X, Y, Z)
+  load_env$space <- spc
   # Remove sanitize function from environment
   # load_env$sanitize_label <- function(lbl) { gsub("[^A-Za-z0-9_.-]", "_", lbl) }
 
@@ -514,11 +520,15 @@ read_labeled_vec <- function(file_path) {
         if (length(current_mask_idx) != length(val1)) {
           # Check if data length exceeds mask length (potential corruption)
           if (length(val1) > length(current_mask_idx)) {
-            stop(paste0("Data length mismatch for label ", sQuote(lab), ". Stored data (",
-              length(val1), ") exceeds mask size (", length(current_mask_idx), "). File may be corrupt."))
+            stop(paste0(
+              "Data length mismatch for label ", sQuote(lab), ". Stored data (",
+              length(val1), ") exceeds mask size (", length(current_mask_idx), "). File may be corrupt."
+            ))
           } else {
-            warning(paste0("Data length mismatch for label ", sQuote(lab), ". Expected ",
-              length(current_mask_idx), " values based on mask, but found ", length(val1), ". Padding with zeros."))
+            warning(paste0(
+              "Data length mismatch for label ", sQuote(lab), ". Expected ",
+              length(current_mask_idx), " values based on mask, but found ", length(val1), ". Padding with zeros."
+            ))
             # Fill available data, rest remains zero
             vol[current_mask_idx[1:length(val1)]] <- val1
           }
@@ -527,14 +537,16 @@ read_labeled_vec <- function(file_path) {
         }
         # Use space from load_env
         DenseNeuroVol(vol, space = parent_obj@load_env$space)
-
       },
       error = function(e) {
         # Simplify error message to reveal original error
-        stop(sprintf("Error loading data for label '%s': %s",
+        stop(sprintf(
+          "Error loading data for label '%s': %s",
           lab %||% "(unknown)",
-          conditionMessage(e)))
-      })
+          conditionMessage(e)
+        ))
+      }
+    )
   }
 
   # --- 7. Create LabeledVolumeSet Object ---
@@ -577,7 +589,7 @@ setMethod(
 
     # 1) Figure out any missing dims => use full range
     dims_3d <- dim(space(x@mask))
-    nVols   <- length(x@labels)
+    nVols <- length(x@labels)
     # Handle missing i/j/k/l by using full ranges
     if (missing(i)) i <- seq_len(dims_3d[1])
     if (missing(j)) j <- seq_len(dims_3d[2])
@@ -640,9 +652,9 @@ setMethod(
     # Validity check is implicitly handled by the loader
 
     dims_3d <- dim(space(x@mask))
-    nVols   <- length(x@labels)
-    bigDim  <- c(dims_3d, nVols)
-    total   <- prod(bigDim)
+    nVols <- length(x@labels)
+    bigDim <- c(dims_3d, nVols)
+    total <- prod(bigDim)
 
     i <- as.integer(i)
     if (any(i < 1 | i > total)) {
@@ -755,8 +767,8 @@ setMethod(
 
     cat("\n", crayon::bold(crayon::blue("LabeledVolumeSet")), "\n", sep = "")
 
-    sp   <- space(object@mask)
-    nd3  <- dim(sp)
+    sp <- space(object@mask)
+    nd3 <- dim(sp)
     nvol <- length(object@labels)
 
     cat(crayon::bold("\n+= Volume Info "), crayon::silver("---------------------------"), "\n", sep = "")
@@ -766,7 +778,9 @@ setMethod(
     lbl_preview <- object@labels[1:min(3, nvol)]
     cat("| ", crayon::yellow("Labels"), "        : ",
       paste(lbl_preview, collapse = ", "),
-      if (nvol > 3) crayon::silver(paste0(" ... (", nvol - 3, " more)")), "\n", sep = "")
+      if (nvol > 3) crayon::silver(paste0(" ... (", nvol - 3, " more)")), "\n",
+      sep = ""
+    )
 
     cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep = "")
     cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
@@ -774,7 +788,9 @@ setMethod(
 
     if (length(sp@axes@ndim) == 1 && sp@axes@ndim >= 3) {
       cat("| ", crayon::yellow("Orientation"), "   : ",
-        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep = "")
+        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n",
+        sep = ""
+      )
     } else {
       cat("| ", crayon::yellow("Orientation"), "   : Unknown / Not specified\n")
     }
