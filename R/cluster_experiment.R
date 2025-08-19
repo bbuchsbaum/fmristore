@@ -1019,10 +1019,17 @@ setMethod("cluster_metadata", "H5ParcellatedMultiScan", function(x) {
 setMethod("show", "H5ParcellatedMultiScan", function(object) {
   cat("\nH5ParcellatedMultiScan\n")
   cat("  # runs        :", length(object@runs), "\n")
-  # Use %||% which should be defined in io_h5_helpers.R now
-  num_clusters <- length(object@cluster_metadata$cluster_id) %||%
-    (if (length(object@runs) > 0) length(object@runs[[1]]@cluster_ids) else NA)
+  
+  # Get cluster count from the actual clusters object (single source of truth)
+  num_clusters <- if (length(object@runs) > 0 && !is.null(object@runs[[1]]@clusters)) {
+    clust_obj <- object@runs[[1]]@clusters
+    if (is(clust_obj, "ClusteredNeuroVol") && length(clust_obj@clusters) > 0) {
+      length(unique(clust_obj@clusters[clust_obj@clusters > 0]))
+    } else NA
+  } else NA
+  
   cat("  # clusters    :", num_clusters %||% "Unknown", "\n")
+  
   if (length(object@runs) > 0) {
     cat("  mask dims     :", paste(dim(object@runs[[1]]@mask), collapse = "x"), "\n")
     h5_handle <- object@runs[[1]]@obj

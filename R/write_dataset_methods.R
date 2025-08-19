@@ -138,6 +138,19 @@ setMethod(
         stop("Could not extract a valid LogicalNeuroVol mask from the clusters object")
       }
     }
+    
+    # Get additional arguments
+    dots <- list(...)
+    
+    # Generate basic cluster metadata if not provided
+    unique_clusters <- sort(unique(clusters@clusters[clusters@clusters > 0]))
+    if (length(unique_clusters) > 0 && !("cluster_metadata" %in% names(dots))) {
+      cluster_metadata <- data.frame(
+        cluster_id = unique_clusters,
+        n_voxels = sapply(unique_clusters, function(id) sum(clusters@clusters == id))
+      )
+      dots$cluster_metadata <- cluster_metadata
+    }
 
     # Convert to runs_data format
     if (summary) {
@@ -164,7 +177,6 @@ setMethod(
     # compression levels: 0 = none, 1-9 = increasing compression
     # convert to boolean for backward compatibility
     # Don't pass scan_name/scan_names through as they're already in runs_data
-    dots <- list(...)
     dots$scan_name <- NULL
     dots$scan_names <- NULL
 
@@ -245,6 +257,19 @@ setMethod(
         stop("Could not extract a valid LogicalNeuroVol mask from the clusters object")
       }
     }
+    
+    # Get additional arguments
+    dots <- list(...)
+    
+    # Generate basic cluster metadata if not provided
+    unique_clusters <- sort(unique(clusters@clusters[clusters@clusters > 0]))
+    if (length(unique_clusters) > 0 && !("cluster_metadata" %in% names(dots))) {
+      cluster_metadata <- data.frame(
+        cluster_id = unique_clusters,
+        n_voxels = sapply(unique_clusters, function(id) sum(clusters@clusters == id))
+      )
+      dots$cluster_metadata <- cluster_metadata
+    }
 
     # Generate scan names if not provided
     if (is.null(scan_names)) {
@@ -275,7 +300,7 @@ setMethod(
     # compression levels: 0 = none, 1-9 = increasing compression
     # convert to boolean for backward compatibility
     # Don't pass scan_names through as they're already in runs_data
-    dots <- list(...)
+    # dots already contains cluster_metadata if we generated it
     dots$scan_names <- NULL
 
     do.call(write_parcellated_experiment_h5, c(
