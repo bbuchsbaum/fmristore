@@ -5,6 +5,7 @@
 \alias{as_h5,NeuroVec-method}
 \alias{as_h5,LatentNeuroVec-method}
 \alias{as_h5,LabeledVolumeSet-method}
+\alias{as_h5,ClusteredNeuroVec-method}
 \alias{as_h5,NeuroVecSeq-method}
 \title{Generic function to convert R objects to HDF5 format}
 \usage{
@@ -30,6 +31,8 @@ as_h5(object, file, ...)
   chunk_size = 1024,
   header_values = list()
 )
+
+\S4method{as_h5}{ClusteredNeuroVec}(object, file = NULL, scan_name = "scan_001", compression = 4, ...)
 
 \S4method{as_h5}{NeuroVecSeq}(object, file = NULL, ...)
 }

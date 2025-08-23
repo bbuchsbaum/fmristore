@@ -30,7 +30,7 @@ In the fmristore parcellated data system, **H5ParcellatedMultiScan** serves as a
 1. **H5ParcellatedScan**: Full voxel-level time series data
 2. **H5ParcellatedScanSummary**: Cluster-averaged time series data
 
-This vignette focuses on working with these **individual scan objects** - how to access them from the parent H5ParcellatedMultiScan container and what operations you can perform on each scan type.
+This vignette focuses on working with these **individual scan objects** - how to create them (including from neuroim2's ClusteredNeuroVec objects), access them from the parent H5ParcellatedMultiScan container, and what operations you can perform on each scan type.
 
 ### The Data Hierarchy
 
@@ -161,6 +161,113 @@ write_dataset(runs_data[[3]],
 cat("Created files:\n")
 cat("  Full data file:", round(file.size(h5_file) / 1024, 1), "KB\n")
 cat("  Summary data file:", round(file.size(summary_file) / 1024, 1), "KB\n")
+```
+
+## Converting neuroim2 ClusteredNeuroVec Objects
+
+The neuroim2 package provides `ClusteredNeuroVec`, a class that stores time series data organized by clusters. This is a perfect match for fmristore's parcellated storage format. Here's how to convert ClusteredNeuroVec objects to HDF5 format:
+
+### Creating a ClusteredNeuroVec
+
+```{r create-clustered-neurovec}
+# ClusteredNeuroVec stores cluster-averaged time series
+# First, create a ClusteredNeuroVol (spatial clustering)
+cvol <- neuroim2::ClusteredNeuroVol(mask = mask, clusters = cluster_assignments)
+
+# Create time series data (time x clusters matrix)
+n_time_cnv <- 40
+n_clusters_cnv <- max(cluster_assignments)
+ts_data <- matrix(rnorm(n_time_cnv * n_clusters_cnv), 
+                  nrow = n_time_cnv, 
+                  ncol = n_clusters_cnv)
+
+# Add some structure to make clusters distinguishable
+for (i in 1:n_clusters_cnv) {
+  ts_data[, i] <- ts_data[, i] + sin(seq(0, 2*pi, length.out = n_time_cnv) * i)
+}
+
+# Create ClusteredNeuroVec
+cnvec <- neuroim2::ClusteredNeuroVec(x = ts_data, cvol = cvol)
+
+cat("Created ClusteredNeuroVec:\n")
+cat("  Time points:", nrow(cnvec@ts), "\n")
+cat("  Clusters:", ncol(cnvec@ts), "\n")
+cat("  Data stored as:", class(cnvec@ts), "\n")
+```
+
+### Converting to HDF5: Single Scan (Default)
+
+By default, `ClusteredNeuroVec` is treated as a single scan since it doesn't contain run information:
+
+```{r convert-cnvec-single}
+# Method 1: Using as_h5() - creates a single scan by default
+h5_single <- as_h5(cnvec, file = tempfile(fileext = ".h5"), scan_name = "my_scan")
+cat("Created:", class(h5_single), "\n")
+
+# Method 2: Using write_dataset() - explicit single scan
+cnvec_file <- tempfile(fileext = ".h5")
+h5_single2 <- write_dataset(cnvec, 
+                            file = cnvec_file, 
+                            scan_name = "task_scan",
+                            as_multiscan = FALSE)  # Default is FALSE
+cat("Created:", class(h5_single2), "\n")
+
+# The result is an H5ParcellatedScanSummary
+summary_mat <- as.matrix(h5_single)
+cat("Summary data dimensions:", dim(summary_mat), "\n")
+
+# Clean up
+close(h5_single)
+close(h5_single2)
+```
+
+### Converting to HDF5: Multi-Scan Container
+
+If you want to prepare for adding more scans later, you can create a multi-scan container:
+
+```{r convert-cnvec-multi}
+# Create as multi-scan container with one scan
+h5_multi <- as_h5(cnvec, 
+                  file = tempfile(fileext = ".h5"),
+                  scan_name = "scan_001",
+                  as_multiscan = TRUE)  # Explicitly request multi-scan
+
+cat("Created:", class(h5_multi), "\n")
+cat("Number of scans:", length(h5_multi@runs), "\n")
+cat("First scan type:", class(h5_multi@runs[[1]]), "\n")
+
+# You can add more scans to this container later
+# (See H5ParcellatedMultiScan vignette for details)
+
+close(h5_multi)
+```
+
+### Combining Multiple ClusteredNeuroVec Objects
+
+If you have multiple ClusteredNeuroVec objects from different runs:
+
+```{r combine-multiple-cnvec}
+# Create a second ClusteredNeuroVec (e.g., from another run)
+ts_data2 <- matrix(rnorm(n_time_cnv * n_clusters_cnv), 
+                   nrow = n_time_cnv, 
+                   ncol = n_clusters_cnv)
+cnvec2 <- neuroim2::ClusteredNeuroVec(x = ts_data2, cvol = cvol)
+
+# Combine into a multi-scan container
+multi_file <- tempfile(fileext = ".h5")
+
+# First scan
+write_dataset(cnvec, 
+             file = multi_file,
+             scan_name = "run1",
+             as_multiscan = TRUE)
+
+# Add second scan to existing file
+# Note: This would require appending functionality
+# For now, create separate files and combine
+
+# Alternative: Create list of NeuroVec objects from ClusteredNeuroVec data
+# This is a workaround until direct multi-scan support is added
 ```
 
 ## Step 2: Load the Data with read_dataset()
@@ -495,21 +602,28 @@ unlink(c(h5_file, summary_file))
 
 1. **Individual scan objects** (`H5ParcellatedScan` and `H5ParcellatedScanSummary`) are accessed from **H5ParcellatedMultiScan** containers via `@runs[[index]]` or `@runs[["name"]]`
 
-2. **H5ParcellatedScan** provides voxel-level access within clusters:
+2. **ClusteredNeuroVec conversion** is now seamlessly supported:
+   - Use `as_h5()` for quick conversion (defaults to single scan)
+   - Use `write_dataset()` with `as_multiscan` parameter for more control
+   - ClusteredNeuroVec naturally maps to H5ParcellatedScanSummary format
+
+3. **H5ParcellatedScan** provides voxel-level access within clusters:
    - Use `series(scan, i = indices)` for individual voxel time series
    - Supports 4D indexing: `scan[i, j, k, t]`
    - Essential for spatial pattern analysis and voxel-wise statistics
 
-3. **H5ParcellatedScanSummary** provides efficient cluster-level analysis:
+4. **H5ParcellatedScanSummary** provides efficient cluster-level analysis:
    - Use `as.matrix(scan)` to get time × cluster matrix
    - Perfect for connectivity analysis and group comparisons
    - Much smaller memory footprint
+   - Natural output format for ClusteredNeuroVec conversion
 
-4. **Modern workflow** uses `read_dataset()` and `write_dataset()` functions for simplified data I/O with automatic type detection
+5. **Modern workflow** uses `read_dataset()` and `write_dataset()` functions for simplified data I/O with automatic type detection
 
-5. **Choose the right scan type** based on your analysis needs:
+6. **Choose the right scan type** based on your analysis needs:
    - Full scans for detailed within-cluster analysis
    - Summary scans for between-cluster connectivity and efficiency
+   - ClusteredNeuroVec for when you already have cluster-averaged data
 
 ## Next Steps
 

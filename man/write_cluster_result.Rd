@@ -31,7 +31,7 @@ write_cluster_result(
 
 \item{scan_name}{Character string naming this scan in the HDF5 file (default: "scan_001")}
 
-\item{type}{Character string, either "full" for voxel-level data or "summary" for 
+\item{type}{Character string, either "full" for voxel-level data or "summary" for
 cluster-averaged data}
 
 \item{cluster_metadata}{Optional data.frame containing metadata for each cluster.
@@ -39,7 +39,7 @@ Should have a column named \code{cluster_id} matching the unique cluster IDs.}
 
 \item{overwrite}{Logical, whether to overwrite an existing file (default: FALSE)}
 
-\item{compress}{Logical or numeric. If logical: TRUE uses compression level 4, 
+\item{compress}{Logical or numeric. If logical: TRUE uses compression level 4,
 FALSE uses no compression. If numeric: specify compression level 0-9.}
 
 \item{verbose}{Logical, whether to print progress messages (default: TRUE)}
@@ -50,7 +50,7 @@ FALSE uses no compression. If numeric: specify compression level 0-9.}
 Invisibly returns NULL. Called for its side effect of creating an HDF5 file.
 }
 \description{
-A convenience function for writing clustering results (e.g., from supervoxels()) 
+A convenience function for writing clustering results (e.g., from supervoxels())
 along with the original neuroimaging data to an HDF5 file. This function serves
 as a user-friendly interface to \code{\link{write_dataset}}.
 }
@@ -83,7 +83,7 @@ write_cluster_result(
   neurovec = my_4d_data,
   filename = "clustered_summary.h5",
   type = "summary",
-  compress = 6  # Higher compression
+  compress = 6 # Higher compression
 )
 
 # With cluster metadata

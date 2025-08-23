@@ -68,6 +68,25 @@ setMethod(
 #' @export
 setMethod(
   f = "as_h5",
+  signature = signature(object = "ClusteredNeuroVec"),
+  definition = function(object, file = NULL, scan_name = "scan_001", 
+                        as_multiscan = FALSE, compression = 4, ...) {
+    # Validate file path
+    if (is.null(file)) {
+      file <- tempfile(fileext = ".h5")
+      message("No file specified, using temporary file: ", file)
+    }
+    
+    # Delegate to write_dataset method with as_multiscan parameter
+    write_dataset(object, file = file, scan_name = scan_name, 
+                  as_multiscan = as_multiscan, compression = compression, ...)
+  }
+)
+
+#' @rdname as_h5-methods
+#' @export
+setMethod(
+  f = "as_h5",
   signature = signature(object = "NeuroVecSeq"),
   definition = function(object, file = NULL, ...) {
     # Extract additional arguments

@@ -149,6 +149,70 @@ legend("topright",
 )
 ```
 
+## Understanding Single Scan vs Multi-Scan Containers
+
+When working with clustered neuroimaging data, it's important to understand the distinction between single scan and multi-scan containers:
+
+### Single Scan: H5ParcellatedScanSummary
+- Contains data from **one** fMRI run/scan
+- Created by default when converting a single `ClusteredNeuroVec` object
+- More efficient for single-run analyses
+- Direct access to the data without container overhead
+
+### Multi-Scan: H5ParcellatedMultiScan
+- Container that can hold **multiple** scans
+- Each scan is stored as an H5ParcellatedScan or H5ParcellatedScanSummary
+- Ideal for multi-run experiments or sessions
+- Provides unified access to all runs in an experiment
+
+### Converting ClusteredNeuroVec Objects
+
+The neuroim2 package's `ClusteredNeuroVec` class naturally represents a single scan with cluster-averaged time series. Here's how to work with it:
+
+```{r clustered-neurovec-example}
+# Create a ClusteredNeuroVec (single scan with cluster averages)
+cvol <- neuroim2::ClusteredNeuroVol(mask = mask, clusters = cluster_assignments)
+
+# Time series data: time x clusters matrix
+ts_data <- matrix(rnorm(n_timepoints * 3), nrow = n_timepoints, ncol = 3)
+cnvec <- neuroim2::ClusteredNeuroVec(x = ts_data, cvol = cvol)
+
+# Convert to HDF5 - defaults to single scan
+single_scan_file <- tempfile(fileext = ".h5")
+h5_single <- as_h5(cnvec, file = single_scan_file, scan_name = "my_scan")
+
+cat("Default conversion creates:", class(h5_single), "\n")
+cat("This is a single scan, not a container\n")
+
+# If you need a multi-scan container (for future expansion)
+multi_scan_file <- tempfile(fileext = ".h5")
+h5_multi <- as_h5(cnvec, file = multi_scan_file, 
+                  scan_name = "scan1", 
+                  as_multiscan = TRUE)
+
+cat("\nWith as_multiscan=TRUE:", class(h5_multi), "\n")
+cat("Number of scans in container:", length(h5_multi@runs), "\n")
+
+# Clean up
+close(h5_single)
+close(h5_multi)
+unlink(c(single_scan_file, multi_scan_file))
+```
+
+### When to Use Each Format
+
+**Use Single Scan (default for ClusteredNeuroVec):**
+- Working with individual fMRI runs
+- Memory-constrained environments
+- Simple analyses on single datasets
+- When you don't need the container overhead
+
+**Use Multi-Scan Container:**
+- Multi-run experiments
+- Session-level analyses
+- When you need to add more scans later
+- Group studies with consistent parcellation
+
 ## Advanced Example: Multiple Runs with Summary Data
 
 Now let's see a more realistic example with multiple runs and both detailed and summarized data.

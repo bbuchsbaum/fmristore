@@ -81,7 +81,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   exists("write_parcellated_experiment_h5", where = "package:fmristore") &&
   !is.null(fmristore:::create_minimal_LogicalNeuroVol) &&
   !is.null(fmristore:::create_minimal_ClusteredNeuroVol)) {
-
   temp_h5_file <- NULL
 
   tryCatch({
@@ -94,7 +93,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Create clusters that align with the mask's space
     clust_vol <- fmristore:::create_minimal_ClusteredNeuroVol(
       space = neuroim2::space(mask_vol), # Use mask's space
-      mask = mask_vol@.Data,            # Use mask's data
+      mask = mask_vol@.Data, # Use mask's data
       num_clusters = 2L
     )
 
@@ -174,7 +173,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       # print(h5f$ls(recursive=TRUE))
       # h5f$close_all()
     }
-
   }, error = function(e) {
     message("write_parcellated_experiment_h5 example failed: ", e$message)
     if (!is.null(temp_h5_file)) message("Temporary file was: ", temp_h5_file)

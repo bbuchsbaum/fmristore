@@ -16,7 +16,7 @@ This provides a single source of truth for the HDF5 file structure.
 }
 \examples{
 # Access constants
-H5_PATHS$SCANS_GROUP  # "/scans"
-sprintf(H5_PATHS$CLUSTER_DSET_TPL, "run1", 5)  # "/scans/run1/clusters/cluster_5"
+H5_PATHS$SCANS_GROUP # "/scans"
+sprintf(H5_PATHS$CLUSTER_DSET_TPL, "run1", 5) # "/scans/run1/clusters/cluster_5"
 }
 \keyword{datasets}

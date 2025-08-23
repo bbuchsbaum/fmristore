@@ -69,7 +69,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   exists("H5ParcellatedMultiScan", where = "package:fmristore") &&
   exists("linear_access", where = "package:neuroim2") &&
   !is.null(fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan)) {
-
   temp_exp_file <- NULL
   exp_obj <- NULL
   run_full <- NULL
@@ -80,7 +79,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       master_mask_dims = c(3L, 3L, 2L), # Small dimensions
       num_master_clusters = 2L,
       n_time_run1 = 4L, # For Run1_Full
-      n_time_run2 = 0   # No need for Run2_Summary here
+      n_time_run2 = 0 # No need for Run2_Summary here
     )
     exp_obj <- fmristore::H5ParcellatedMultiScan(file_path = temp_exp_file)
 
@@ -112,7 +111,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     } else {
       message("Could not retrieve Run1_Full from the experiment for linear_access example.")
     }
-
   }, error = function(e) {
     message("linear_access example for H5ParcellatedScan failed: ", e$message)
     if (!is.null(temp_exp_file)) message("Temporary file was: ", temp_exp_file)

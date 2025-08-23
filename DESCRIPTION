@@ -62,4 +62,5 @@ Collate:
     'read_dataset_methods.R'
     'write_cluster_result.R'
     'write_dataset_methods.R'
+    'write_parcellated_scan_h5.R'
     'zzz_example_helpers.R'

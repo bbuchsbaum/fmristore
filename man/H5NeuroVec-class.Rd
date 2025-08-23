@@ -52,7 +52,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Access a subset of the data
     subset_data <- h5_vec[1:2, 1:2, 1, 1:2]
     print(subset_data)
-
   }, error = function(e) {
     message("H5NeuroVec example failed: ", e$message)
   }, finally = {

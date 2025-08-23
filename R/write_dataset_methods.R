@@ -507,3 +507,137 @@ setMethod(
     invisible(NULL)
   }
 )
+
+#' Write Dataset Method for ClusteredNeuroVec
+#'
+#' Write a neuroim2::ClusteredNeuroVec object to HDF5 using fmristore's clustered format
+#'
+#' @param x A neuroim2::ClusteredNeuroVec object
+#' @param file Output HDF5 file path
+#' @param scan_name Name for the scan (default: "scan_001")
+#' @param as_multiscan Logical, whether to create a multi-scan container (default: FALSE)
+#' @param compression Compression level 0-9 (default: 4)
+#' @param ... Additional arguments passed to underlying write functions
+#' @return An H5ParcellatedScanSummary object (if as_multiscan=FALSE) or 
+#'         H5ParcellatedMultiScan object (if as_multiscan=TRUE)
+#'
+#' @details
+#' This method converts a neuroim2::ClusteredNeuroVec to fmristore's HDF5 format.
+#' The ClusteredNeuroVec stores time series data per cluster (T x K matrix),
+#' which is written as summary data in the HDF5 file.
+#' 
+#' By default (as_multiscan=FALSE), creates a single scan file and returns
+#' an H5ParcellatedScanSummary object. When as_multiscan=TRUE, creates a
+#' multi-scan container with one scan and returns an H5ParcellatedMultiScan object.
+#'
+#' @examples
+#' \dontrun{
+#' # Assuming you have a ClusteredNeuroVec object from neuroim2
+#' # cnvec <- neuroim2::ClusteredNeuroVec(...)
+#' 
+#' # Default: create single scan file
+#' h5_scan <- write_dataset(cnvec, file = "single_scan.h5")
+#' 
+#' # Create multi-scan container
+#' h5_multi <- write_dataset(cnvec, file = "multi_scan.h5", as_multiscan = TRUE)
+#' }
+#'
+#' @export
+#' @rdname write_dataset
+setMethod(
+  "write_dataset",
+  signature(x = "ClusteredNeuroVec"),
+  function(x, file, scan_name = "scan_001", as_multiscan = FALSE, compression = 4, ...) {
+    # Validate inputs
+    if (missing(file)) stop("'file' argument is required")
+    if (!is(x, "ClusteredNeuroVec")) {
+      stop("'x' must be a neuroim2::ClusteredNeuroVec object")
+    }
+    
+    # Extract components from ClusteredNeuroVec
+    # x@cvol is the ClusteredNeuroVol with cluster assignments
+    # x@ts is the T x K matrix of time series (time x clusters)
+    # x@cl_map is an integer vector with cluster assignments for each voxel in 3D space
+    
+    clusters <- x@cvol  # ClusteredNeuroVol object
+    mask <- clusters@mask  # LogicalNeuroVol mask
+    time_series <- x@ts  # T x K matrix
+    
+    # Get unique cluster IDs from the cvol (excluding 0 which means outside mask)
+    cluster_ids <- sort(unique(clusters@clusters))
+    cluster_ids <- cluster_ids[cluster_ids > 0]
+    n_clusters <- length(cluster_ids)
+    n_time <- nrow(time_series)
+    
+    # Validate dimensions
+    if (ncol(time_series) != n_clusters) {
+      stop(sprintf("Mismatch between time series columns (%d) and number of clusters (%d)", 
+                   ncol(time_series), n_clusters))
+    }
+    
+    # Get additional arguments
+    dots <- list(...)
+    
+    # Generate cluster metadata if not provided
+    if (!("cluster_metadata" %in% names(dots))) {
+      cluster_metadata <- data.frame(
+        cluster_id = cluster_ids,
+        n_voxels = sapply(cluster_ids, function(id) sum(clusters@clusters == id))
+      )
+      dots$cluster_metadata <- cluster_metadata
+    } else {
+      cluster_metadata <- dots$cluster_metadata
+      dots$cluster_metadata <- NULL  # Remove from dots to avoid passing twice
+    }
+    
+    # Choose write method based on as_multiscan
+    if (as_multiscan) {
+      # Original behavior: create multi-scan container
+      # Create runs_data structure with summary data
+      runs_data <- list(
+        list(
+          scan_name = scan_name,
+          type = "summary",
+          data = time_series  # Already in T x K format
+        )
+      )
+      
+      # Delegate to write_parcellated_experiment_h5
+      dots$scan_name <- NULL
+      dots$scan_names <- NULL
+      
+      # Remove cluster_metadata from dots since we're passing it explicitly
+      dots_filtered <- dots[names(dots) != "cluster_metadata"]
+      
+      do.call(write_parcellated_experiment_h5, c(
+        list(
+          filepath = file,
+          mask = mask,
+          clusters = clusters,
+          runs_data = runs_data,
+          compress = compression > 0,
+          cluster_metadata = cluster_metadata
+        ),
+        dots_filtered
+      ))
+      
+      # Return an H5ParcellatedMultiScan object for the created file
+      H5ParcellatedMultiScan(file)
+      
+    } else {
+      # New behavior: create single scan file
+      write_parcellated_scan_h5(
+        filepath = file,
+        mask = mask,
+        clusters = clusters,
+        scan_data = time_series,  # T x K matrix
+        scan_name = scan_name,
+        data_type = "summary",
+        scan_metadata = dots$scan_metadata %||% list(),
+        cluster_metadata = cluster_metadata,
+        compress = compression > 0,
+        verbose = dots$verbose %||% FALSE
+      )
+    }
+  }
+)

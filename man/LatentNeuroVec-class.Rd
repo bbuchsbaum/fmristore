@@ -102,12 +102,11 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
       # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
       # For a simple demonstration, we can show its dimensions:
       print(dim(latent_vec)) # from NeuroVec inheritance
-
     },
     error = function(e) {
       message("LatentNeuroVec example failed: ", e$message)
-    })
-
+    }
+  )
 } else {
   message("Skipping LatentNeuroVec example: neuroim2, Matrix, or helper not available.")
 }

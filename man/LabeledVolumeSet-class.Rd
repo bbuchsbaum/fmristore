@@ -53,7 +53,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Access data for a specific label (returns a NeuroVol or similar)
     # data_cond_a <- lvs[["CondA"]]
     # print(dim(data_cond_a)) # Should be 3D x num_vols_per_label
-
   }, error = function(e) {
     message("LabeledVolumeSet example failed: ", e$message)
   }, finally = {

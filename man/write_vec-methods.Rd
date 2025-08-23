@@ -39,7 +39,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
   requireNamespace("Matrix", quietly = TRUE) &&
   exists("write_vec", where = "package:neuroim2") &&
   !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-
   lnv <- NULL
   temp_h5_file <- NULL
 
@@ -61,7 +60,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     if (file.exists(temp_h5_file)) {
       cat("Successfully wrote LatentNeuroVec to:", temp_h5_file, "\n")
     }
-
   }, error = function(e) {
     message("write_vec example failed: ", e$message)
   }, finally = {

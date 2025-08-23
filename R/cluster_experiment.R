@@ -1055,3 +1055,21 @@ setMethod("close", "H5ParcellatedMultiScan", function(con, ...) {
   }
   invisible(NULL)
 })
+
+#' @rdname close-methods
+#' @export
+setMethod("close", "H5ParcellatedScanSummary", function(con, ...) {
+  if (!is.null(con@obj)) {
+    safe_h5_close(con@obj)
+  }
+  invisible(NULL)
+})
+
+#' @rdname close-methods
+#' @export
+setMethod("close", "H5ParcellatedScan", function(con, ...) {
+  if (!is.null(con@obj)) {
+    safe_h5_close(con@obj)
+  }
+  invisible(NULL)
+})

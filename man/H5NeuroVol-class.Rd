@@ -55,7 +55,6 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     # Access a subset of the data
     subset_data <- h5_vol[1:2, 1:2, 1]
     print(subset_data)
-
   }, error = function(e) {
     message("H5NeuroVol example failed: ", e$message)
   }, finally = {

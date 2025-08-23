@@ -1,0 +1,404 @@
+---
+title: "fmristore: Efficient Storage for Neuroimaging Data"
+author: "fmristore Package"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{fmristore: Efficient Storage for Neuroimaging Data}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  echo = TRUE,
+  fig.width = 7,
+  fig.height = 5
+)
+library(fmristore)
+library(neuroim2)
+```
+
+## Overview
+
+The `fmristore` package provides efficient HDF5-based storage solutions for neuroimaging data, with special support for:
+
+- **Memory-efficient access** to large fMRI datasets
+- **Clustered/parcellated data** organization
+- **Multiple scan management** in unified containers
+- **Seamless conversion** from neuroim2 data structures
+- **Latent representations** for data compression
+
+## Quick Start: Choose Your Storage Format
+
+```{r decision-tree, echo=FALSE, fig.height=6}
+plot(1:10, 1:10, type = "n", axes = FALSE, xlab = "", ylab = "", 
+     main = "Choosing the Right Storage Format")
+
+# Decision tree boxes
+rect(4, 9, 6, 10, col = "lightblue")
+text(5, 9.5, "Your Data", font = 2)
+
+# Branches
+arrows(5, 9, 2, 7.5, length = 0.1)
+arrows(5, 9, 5, 7.5, length = 0.1) 
+arrows(5, 9, 8, 7.5, length = 0.1)
+
+# Data types
+rect(0.5, 7, 3.5, 8, col = "lightgreen")
+text(2, 7.5, "Regular\n4D fMRI")
+
+rect(3.5, 7, 6.5, 8, col = "lightyellow")
+text(5, 7.5, "Clustered\nData")
+
+rect(6.5, 7, 9.5, 8, col = "lightcoral")
+text(8, 7.5, "Multiple\nBrain Maps")
+
+# Storage formats
+rect(0.5, 5, 3.5, 6)
+text(2, 5.5, "H5NeuroVec")
+
+rect(3.5, 5, 6.5, 6)
+text(5, 5.5, "H5Parcellated*")
+
+rect(6.5, 5, 9.5, 6)
+text(8, 5.5, "LabeledVolumeSet")
+```
+
+## Data Conversion Workflows
+
+### 1. Converting neuroim2 ClusteredNeuroVec
+
+The `ClusteredNeuroVec` class from neuroim2 stores cluster-averaged time series data. Here's the complete workflow:
+
+```{r clustered-neurovec-workflow}
+# Create sample data
+brain_dims <- c(10, 10, 5)
+mask_data <- array(FALSE, brain_dims)
+mask_data[3:7, 3:7, 2:4] <- TRUE
+mask <- LogicalNeuroVol(mask_data, NeuroSpace(brain_dims))
+
+# Define clusters
+n_voxels <- sum(mask)
+cluster_ids <- sample(1:3, n_voxels, replace = TRUE)
+cvol <- ClusteredNeuroVol(mask, cluster_ids)
+
+# Create time series (T x K matrix)
+n_time <- 100
+n_clusters <- 3
+ts_data <- matrix(rnorm(n_time * n_clusters), nrow = n_time, ncol = n_clusters)
+
+# Create ClusteredNeuroVec
+cnvec <- ClusteredNeuroVec(x = ts_data, cvol = cvol)
+
+# Convert to HDF5 (single scan by default)
+h5_file <- tempfile(fileext = ".h5")
+h5_scan <- as_h5(cnvec, file = h5_file, scan_name = "my_scan")
+
+cat("Conversion result:\n")
+cat("  Input:", class(cnvec), "with", nrow(ts_data), "timepoints\n")
+cat("  Output:", class(h5_scan), "\n")
+cat("  Storage:", round(file.size(h5_file)/1024, 1), "KB\n")
+
+# Access the data
+summary_matrix <- as.matrix(h5_scan)
+cat("  Retrieved:", dim(summary_matrix)[1], "x", dim(summary_matrix)[2], "matrix\n")
+
+close(h5_scan)
+unlink(h5_file)
+```
+
+### 2. Converting Regular NeuroVec to HDF5
+
+For standard 4D fMRI data:
+
+```{r neurovec-workflow}
+# Create 4D fMRI data
+fmri_dims <- c(10, 10, 5, 50)  # x, y, z, time
+fmri_data <- array(rnorm(prod(fmri_dims)), dim = fmri_dims)
+nvec <- NeuroVec(fmri_data, NeuroSpace(fmri_dims))
+
+# Convert to HDF5-backed storage
+h5_file <- tempfile(fileext = ".h5")
+h5_nvec <- as_h5(nvec, file = h5_file)
+
+cat("Regular NeuroVec conversion:\n")
+cat("  Memory usage before:", format(object.size(nvec), units = "KB"), "\n")
+cat("  File size:", round(file.size(h5_file)/1024, 1), "KB\n")
+cat("  Can access slices:", dim(h5_nvec[,,, 1:10]), "\n")
+
+close(h5_nvec)
+unlink(h5_file)
+```
+
+### 3. Creating Multi-Scan Experiments
+
+When you have multiple runs with the same clustering:
+
+```{r multi-scan-workflow}
+# Create multiple ClusteredNeuroVec objects (e.g., multiple runs)
+runs <- list()
+for (i in 1:3) {
+  ts <- matrix(rnorm(n_time * n_clusters), nrow = n_time, ncol = n_clusters)
+  runs[[i]] <- ClusteredNeuroVec(x = ts, cvol = cvol)
+}
+
+# Option 1: Convert first run to multi-scan container
+h5_file <- tempfile(fileext = ".h5")
+h5_multi <- as_h5(runs[[1]], 
+                  file = h5_file, 
+                  scan_name = "run1",
+                  as_multiscan = TRUE)
+
+cat("Multi-scan container created:\n")
+cat("  Type:", class(h5_multi), "\n")
+cat("  Scans:", length(h5_multi@runs), "\n")
+
+# Note: Currently, adding additional scans requires using write_dataset
+# with the appropriate file management strategy
+
+close(h5_multi)
+unlink(h5_file)
+```
+
+## Performance Comparison
+
+Let's compare different storage strategies:
+
+```{r performance-comparison}
+# Create test data
+dims <- c(64, 64, 40, 200)  # Realistic fMRI dimensions
+n_voxels_total <- prod(dims[1:3])
+n_voxels_brain <- round(n_voxels_total * 0.3)  # ~30% brain voxels
+
+# Memory usage estimates
+memory_full <- n_voxels_total * dims[4] * 8 / (1024^2)  # MB
+memory_masked <- n_voxels_brain * dims[4] * 8 / (1024^2)  # MB
+memory_clustered <- 100 * dims[4] * 8 / (1024^2)  # 100 clusters
+
+cat("Storage Comparison for", paste(dims, collapse="x"), "data:\n")
+cat("─────────────────────────────────────────\n")
+cat("Full volume:      ", round(memory_full, 1), "MB\n")
+cat("Masked (30%):     ", round(memory_masked, 1), "MB\n")
+cat("Clustered (100):  ", round(memory_clustered, 1), "MB\n")
+cat("Compression ratio:", round(memory_full/memory_clustered, 0), ":1\n")
+```
+
+## Best Practices
+
+### 1. Memory Management
+
+Always close HDF5 objects when done:
+
+```{r memory-management, eval=FALSE}
+# Good practice
+h5_obj <- as_h5(data, file = "output.h5")
+# ... work with data ...
+close(h5_obj)
+
+# Or use try-finally for safety
+h5_obj <- as_h5(data, file = "output.h5")
+tryCatch({
+  # ... work with data ...
+}, finally = {
+  close(h5_obj)
+})
+```
+
+### 2. Choosing Between Single and Multi-Scan
+
+```{r single-vs-multi, eval=FALSE}
+# Single scan (default) - simpler, more efficient for one run
+h5_single <- as_h5(cnvec, file = "single.h5")
+
+# Multi-scan - when you need a container for multiple runs
+h5_multi <- as_h5(cnvec, file = "multi.h5", as_multiscan = TRUE)
+```
+
+### 3. Data Access Patterns
+
+```{r access-patterns, eval=FALSE}
+# Efficient: Access contiguous slices
+time_slice <- h5_neurovec[,, , 1:10]  # Good
+
+# Less efficient: Random access
+random_times <- h5_neurovec[,, , c(1, 50, 25, 75)]  # Slower
+
+# For clustered data: Get summary matrix
+summary_data <- as.matrix(h5_parcellated_scan)  # Efficient
+```
+
+## Common Use Cases
+
+### Use Case 1: Single Subject, Multiple Runs
+
+```{r use-case-1}
+# Typical fMRI experiment with multiple runs
+n_runs <- 4
+n_time_per_run <- 150
+
+# Create clustering once (same for all runs)
+mask <- LogicalNeuroVol(mask_data, NeuroSpace(brain_dims))
+clusters <- ClusteredNeuroVol(mask, cluster_ids)
+
+# Generate and save each run
+for (run in 1:n_runs) {
+  # Simulate run data
+  ts <- matrix(rnorm(n_time_per_run * n_clusters), 
+               nrow = n_time_per_run, ncol = n_clusters)
+  cnvec <- ClusteredNeuroVec(x = ts, cvol = cvol)
+  
+  # Save each run separately (simple approach)
+  run_file <- tempfile(pattern = paste0("run", run, "_"), fileext = ".h5")
+  h5_run <- as_h5(cnvec, file = run_file, scan_name = paste0("run", run))
+  
+  cat("Saved run", run, "as", class(h5_run), "\n")
+  close(h5_run)
+  unlink(run_file)  # Clean up for example
+}
+```
+
+### Use Case 2: Group Study with ROI Analysis
+
+```{r use-case-2}
+# Multiple subjects, same ROI parcellation
+n_subjects <- 20
+n_rois <- 50  # Brain regions
+
+# Simulate group data
+group_data <- list()
+for (subj in 1:n_subjects) {
+  # Each subject has different activation patterns
+  subj_ts <- matrix(rnorm(n_time * n_rois), nrow = n_time, ncol = n_rois)
+  
+  # Add subject-specific effects
+  subj_ts <- subj_ts + rnorm(1, sd = 0.5)  # Individual differences
+  
+  group_data[[subj]] <- subj_ts
+}
+
+cat("Group study setup:\n")
+cat("  Subjects:", n_subjects, "\n")
+cat("  ROIs:", n_rois, "\n")
+cat("  Time points:", n_time, "\n")
+cat("  Total data points:", n_subjects * n_rois * n_time, "\n")
+```
+
+### Use Case 3: Resting State Connectivity
+
+```{r use-case-3}
+# Resting state data often uses parcellations for connectivity
+# Create sample resting state data with network structure
+
+# Define network membership for ROIs
+n_networks <- 3
+network_assignment <- rep(1:n_networks, length.out = n_clusters)
+
+# Generate data with network structure
+rest_ts <- matrix(rnorm(n_time * n_clusters), nrow = n_time, ncol = n_clusters)
+
+# Add network-specific correlations
+for (net in 1:n_networks) {
+  net_rois <- which(network_assignment == net)
+  if (length(net_rois) > 1) {
+    # Add shared signal within network
+    shared_signal <- rnorm(n_time, sd = 0.5)
+    for (roi in net_rois) {
+      rest_ts[, roi] <- rest_ts[, roi] + shared_signal
+    }
+  }
+}
+
+# Calculate connectivity
+connectivity <- cor(rest_ts)
+
+cat("Resting state connectivity:\n")
+cat("  Within-network correlation:", 
+    round(mean(connectivity[network_assignment == 1, network_assignment == 1]), 2), "\n")
+cat("  Between-network correlation:", 
+    round(mean(connectivity[network_assignment == 1, network_assignment == 2]), 2), "\n")
+```
+
+## Advanced Features
+
+### Latent Representations
+
+For data compression using basis decompositions:
+
+```{r latent-demo, eval=FALSE}
+# Create basis and loadings for compression
+basis <- matrix(rnorm(n_time * 20), nrow = n_time, ncol = 20)  # 20 components
+loadings <- Matrix::Matrix(rnorm(n_voxels * 20), nrow = n_voxels, ncol = 20, sparse = TRUE)
+
+# Create LatentNeuroVec
+lnv <- LatentNeuroVec(basis = basis, 
+                      loadings = loadings, 
+                      mask = mask,
+                      space = NeuroSpace(c(brain_dims, n_time)))
+
+# Compression ratio depends on number of components
+compression_ratio <- (n_voxels * n_time) / (n_time * 20 + n_voxels * 20)
+cat("Compression ratio:", round(compression_ratio, 1), ":1\n")
+```
+
+### Working with Atlas Labels
+
+```{r atlas-demo, eval=FALSE}
+# Create labeled volume set for atlas regions
+atlas_labels <- c("Visual", "Motor", "Default", "Attention", "Limbic")
+label_vols <- list()
+
+for (i in seq_along(atlas_labels)) {
+  # Create a volume for each network
+  vol_data <- array(rnorm(prod(brain_dims)), dim = brain_dims)
+  label_vols[[atlas_labels[i]]] <- NeuroVol(vol_data, NeuroSpace(brain_dims))
+}
+
+# Save as LabeledVolumeSet
+lvs_file <- tempfile(fileext = ".h5")
+# write_labeled_volume_set(label_vols, lvs_file)
+```
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+1. **Memory errors with large datasets**
+   - Use HDF5-backed storage (`as_h5()`)
+   - Process data in chunks
+   - Use summary data instead of full voxel data
+
+2. **Slow data access**
+   - Access contiguous slices when possible
+   - Use clustered/parcellated format for ROI analyses
+   - Consider caching frequently accessed data
+
+3. **File size concerns**
+   - Enable compression: `compression = 4` in write functions
+   - Use summary data (`H5ParcellatedScanSummary`)
+   - Consider latent representations for compression
+
+## Next Steps
+
+- **Basic HDF5 storage**: See `vignette("H5Neuro")`
+- **Clustered data details**: See `vignette("H5ParcellatedScan")`
+- **Multi-scan containers**: See `vignette("H5ParcellatedMultiScan")`
+- **Labeled volumes**: See `vignette("LabeledVolumeSet")`
+
+## Summary
+
+The fmristore package provides:
+
+1. **Efficient storage** through HDF5 format
+2. **Flexible data organization** with clustering support
+3. **Seamless conversion** from neuroim2 structures
+4. **Memory-efficient access** for large datasets
+5. **Multiple storage strategies** for different use cases
+
+Choose the right format for your needs:
+- `H5NeuroVec` for standard 4D fMRI
+- `H5ParcellatedScanSummary` for clustered single scans
+- `H5ParcellatedMultiScan` for multi-run experiments
+- `LabeledVolumeSet` for collections of brain maps

@@ -8,6 +8,7 @@
 \alias{write_dataset,H5NeuroVec-method}
 \alias{write_dataset,H5NeuroVol-method}
 \alias{write_dataset,LatentNeuroVec-method}
+\alias{write_dataset,ClusteredNeuroVec-method}
 \title{Write Dataset to HDF5}
 \usage{
 write_dataset(x, ...)
@@ -43,11 +44,13 @@ write_dataset(x, ...)
 \S4method{write_dataset}{H5NeuroVol}(x, file, overwrite = FALSE, ...)
 
 \S4method{write_dataset}{LatentNeuroVec}(x, file, compression = 6, ...)
+
+\S4method{write_dataset}{ClusteredNeuroVec}(x, file, scan_name = "scan_001", compression = 4, ...)
 }
 \arguments{
-\item{x}{A LatentNeuroVec object}
+\item{x}{A neuroim2::ClusteredNeuroVec object}
 
-\item{...}{Additional arguments passed to as_h5}
+\item{...}{Additional arguments passed to write_parcellated_experiment_h5}
 
 \item{file}{Output HDF5 file path}
 
@@ -61,7 +64,7 @@ write_dataset(x, ...)
 
 \item{scan_name}{Name for the scan (default: "scan_001")}
 
-\item{compression}{Compression level 0-9 (default: 6)}
+\item{compression}{Compression level 0-9 (default: 4)}
 
 \item{scan_names}{Character vector of scan names (auto-generated if not provided)}
 
@@ -81,6 +84,8 @@ Invisible file path
 Invisible file path
 
 Invisible NULL
+
+An H5ParcellatedMultiScan object
 }
 \description{
 Generic function for writing neuroimaging datasets to HDF5 format
@@ -96,6 +101,13 @@ Export an existing H5NeuroVec object to a new HDF5 file
 Export an existing H5NeuroVol object to a new HDF5 file
 
 Write a LatentNeuroVec object to HDF5
+
+Write a neuroim2::ClusteredNeuroVec object to HDF5 using fmristore's clustered format
+}
+\details{
+This method converts a neuroim2::ClusteredNeuroVec to fmristore's HDF5 format.
+The ClusteredNeuroVec stores time series data per cluster (T x K matrix),
+which is written as summary data in the HDF5 file.
 }
 \examples{
 \dontrun{
@@ -106,8 +118,10 @@ write_dataset(nvec, file = "output.h5", clusters = cvol)
 write_dataset(nvec, file = "output_summary.h5", clusters = cvol, summary = TRUE)
 
 # Use median for summarization
-write_dataset(nvec, file = "output_median.h5", clusters = cvol, 
-              summary = TRUE, summary_fun = median)
+write_dataset(nvec,
+  file = "output_median.h5", clusters = cvol,
+  summary = TRUE, summary_fun = median
+)
 }
 
 \dontrun{
@@ -116,8 +130,10 @@ scans <- list(nvec1, nvec2, nvec3)
 write_dataset(scans, file = "multi_scan.h5", clusters = cvol)
 
 # With custom names and summary
-write_dataset(scans, file = "multi_summary.h5", clusters = cvol,
-              summary = TRUE, scan_names = c("rest", "task1", "task2"))
+write_dataset(scans,
+  file = "multi_summary.h5", clusters = cvol,
+  summary = TRUE, scan_names = c("rest", "task1", "task2")
+)
 }
 
 \dontrun{
@@ -129,6 +145,12 @@ write_dataset(h5_obj, file = "copy.h5")
 \dontrun{
 # Write latent representation
 write_dataset(latent_nvec, file = "latent.h5")
+}
+
+\dontrun{
+# Assuming you have a ClusteredNeuroVec object from neuroim2
+# cnvec <- neuroim2::ClusteredNeuroVec(...)
+# write_dataset(cnvec, file = "clustered_data.h5")
 }
 
 }
