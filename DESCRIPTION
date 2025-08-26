@@ -38,6 +38,8 @@ Suggests:
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
+Remotes: 
+    bbuchsbaum/neuroim2
 Collate: 
     'all_class.R'
     'all_generic.R'
