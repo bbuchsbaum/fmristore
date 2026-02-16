@@ -17,6 +17,10 @@
 #' - `fmristore.warn_memory`: Enable/disable warnings
 #' - `fmristore.memory_threshold_mb`: Warning threshold in MB
 #'
+#' @return Invisibly returns a list with the current settings:
+#'   \item{enabled}{Logical indicating if warnings are enabled}
+#'   \item{threshold_mb}{The warning threshold in MB}
+#'
 #' @examples
 #' # Enable warnings for datasets larger than 50MB
 #' configure_memory_warnings(enable = TRUE, threshold_mb = 50)

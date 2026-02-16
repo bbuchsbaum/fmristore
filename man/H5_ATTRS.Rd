@@ -3,14 +3,20 @@
 \docType{data}
 \name{H5_ATTRS}
 \alias{H5_ATTRS}
-\title{HDF5 attribute constants}
+\title{HDF5 Attribute Constants}
 \format{
-An object of class \code{list} of length 7.
+A named list of character strings.
 }
 \usage{
 H5_ATTRS
 }
+\value{
+A named list with HDF5 attribute name constants.
+}
 \description{
-HDF5 attribute constants
+Named constants for HDF5 attribute names used throughout the package.
+}
+\examples{
+H5_ATTRS$N_TIME
 }
 \keyword{datasets}

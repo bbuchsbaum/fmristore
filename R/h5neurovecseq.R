@@ -7,6 +7,14 @@
 #' @param file Path to the HDF5 file created by `neurovecseq_to_h5()`.
 #' @return An object of class `H5NeuroVecSeq`.
 #' @export
+#' @examples
+#' \dontrun{
+#' # Load a sequence of scans from HDF5
+#' seq_obj <- H5NeuroVecSeq("multi_scan.h5")
+#' n_scans(seq_obj)
+#' scan_names(seq_obj)
+#' close(seq_obj)
+#' }
 H5NeuroVecSeq <- function(file) {
   assertthat::assert_that(file.exists(file))
   h5obj <- hdf5r::H5File$new(file, mode = "r")
@@ -31,7 +39,22 @@ setMethod("n_scans", "H5NeuroVecSeq", function(x) length(x@vecs))
 #' @export
 setMethod("scan_names", "H5NeuroVecSeq", function(x) names(x@vecs))
 
-#' @export
+#' Extract a single scan from H5NeuroVecSeq
+#'
+#' @description
+#' Extracts an individual `H5NeuroVec` from an `H5NeuroVecSeq` object
+#' using double bracket notation.
+#'
+#' @param x An `H5NeuroVecSeq` object.
+#' @param i Index (numeric or character) specifying which scan to extract.
+#' @param j Not used.
+#' @param ... Not used.
+#'
+#' @return An `H5NeuroVec` object for the requested scan.
+#'
+#' @rdname extract-methods
+#' @aliases [[,H5NeuroVecSeq,ANY-method
+#' @exportMethod [[
 setMethod(
   "[[", signature(x = "H5NeuroVecSeq", i = "ANY"),
   function(x, i, j, ...) {

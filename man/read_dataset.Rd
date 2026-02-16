@@ -13,10 +13,22 @@ read_dataset(x, ...)
 \item{x}{The file path or H5File object to read from}
 
 \item{...}{Additional arguments passed to methods}
+
+\item{type}{Optional character string specifying the expected type.
+If NULL (default), the type is auto-detected.}
 }
 \value{
 The appropriate fmristore object
 }
 \description{
 Generic function for reading neuroimaging datasets from HDF5 format
+}
+\examples{
+\dontrun{
+# Auto-detect type from HDF5 file
+obj <- read_dataset("data.h5")
+
+# Specify type explicitly
+vec <- read_dataset("data.h5", type = "H5NeuroVec")
+}
 }

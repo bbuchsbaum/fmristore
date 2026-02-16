@@ -9,7 +9,7 @@
 [![pkgcheck](https://github.com/bbuchsbaum/fmristore/actions/workflows/pkgcheck.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/pkgcheck.yaml)
 <!-- badges: end -->
 
-> **Note**: Replace `USER` with your actual GitHub username in the badge URLs above.
+> **Note**: The badge URLs above already use the `bbuchsbaum` GitHub username; update them only if you publish from a different account.
 
 An R package for efficient storage and retrieval of neuroimaging data using HDF5 format with specialized data structures for fMRI analysis.
 
@@ -160,3 +160,10 @@ citation("fmristore")
 
 - [Issue tracker](https://github.com/bbuchsbaum/fmristore/issues) for bug reports and feature requests
 - [Discussions](https://github.com/bbuchsbaum/fmristore/discussions) for questions and community support 
+
+## Albers theme
+This package uses the albersdown theme. Vignettes are styled with `vignettes/albers.css` and a local `vignettes/albers.js`; the palette family is provided via `params$family` (default 'red'). The pkgdown site uses `template: { package: albersdown }`.
+
+
+## Albers theme
+This package uses the albersdown theme. Vignettes are styled with `vignettes/albers.css` and a local `vignettes/albers.js`; the palette family is provided via `params$family` (default 'red'). The pkgdown site uses `template: { package: albersdown }`.

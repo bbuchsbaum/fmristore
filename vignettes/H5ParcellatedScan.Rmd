@@ -1,12 +1,23 @@
 ---
-title: "Working with Individual Scans: H5ParcellatedScan and H5ParcellatedScanSummary"
-author: "fmristore Package"
-date: "`r Sys.Date()`"
+title: 'Working with Individual Scans: H5ParcellatedScan and H5ParcellatedScanSummary'
+author: fmristore Package
+date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Working with Individual Scans: H5ParcellatedScan and H5ParcellatedScanSummary}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r, include = FALSE}
@@ -19,6 +30,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 library(fmristore)
 library(neuroim2)
 ```
@@ -65,18 +77,14 @@ cat("Created brain with", n_voxels, "voxels in", max(cluster_assignments), "clus
 print(table(clusters@clusters))
 ```
 
-```{r visualize-concept, echo=FALSE, fig.height=3}
-# Simple visualization of clustered brain concept
-plot(1:10, 1:10,
-  type = "n", axes = FALSE,
-  xlab = "", ylab = "", main = "Brain Clusters Concept"
-)
-rect(1, 1, 4, 4, col = "lightblue", border = "black", lwd = 2)
-rect(5, 1, 8, 4, col = "lightgreen", border = "black", lwd = 2)
-rect(2, 5, 6, 8, col = "lightcoral", border = "black", lwd = 2)
-text(2.5, 2.5, "Cluster 1\n(Visual)", cex = 0.8)
-text(6.5, 2.5, "Cluster 2\n(Motor)", cex = 0.8)
-text(4, 6.5, "Cluster 3\n(Default)", cex = 0.8)
+```
+Brain voxels grouped into spatial clusters:
+
+  +-----------+  +-----------+  +-----------+
+  | Cluster 1 |  | Cluster 2 |  | Cluster 3 |
+  | (Visual)  |  | (Motor)   |  | (Default) |
+  | 16 voxels |  | 16 voxels |  | 16 voxels |
+  +-----------+  +-----------+  +-----------+
 ```
 
 ### Create Multiple fMRI Runs with Different Characteristics
@@ -146,16 +154,16 @@ write_dataset(list(runs_data[[1]], runs_data[[2]]),
   summary = FALSE
 ) # Full voxel data
 
-# Then add a summary run to the same file
-# Note: In practice, you'd append this or use write_clustered_experiment_h5()
-# For this example, we'll create separate files to show both types clearly
+# Then add a summary run (saved here to a separate file for clarity)
+# Note: Appending additional scans to an existing file currently requires
+# lower-level helpers such as write_parcellated_experiment_h5().
 
 summary_file <- tempfile(fileext = ".h5")
 write_dataset(runs_data[[3]],
   file = summary_file,
   clusters = clusters,
-  scan_names = "task_summary",
-  summary = TRUE
+  summary = TRUE,
+  scan_name = "task_summary"
 ) # Cluster averages only
 
 cat("Created files:\n")
@@ -242,33 +250,7 @@ cat("First scan type:", class(h5_multi@runs[[1]]), "\n")
 close(h5_multi)
 ```
 
-### Combining Multiple ClusteredNeuroVec Objects
-
-If you have multiple ClusteredNeuroVec objects from different runs:
-
-```{r combine-multiple-cnvec}
-# Create a second ClusteredNeuroVec (e.g., from another run)
-ts_data2 <- matrix(rnorm(n_time_cnv * n_clusters_cnv), 
-                   nrow = n_time_cnv, 
-                   ncol = n_clusters_cnv)
-cnvec2 <- neuroim2::ClusteredNeuroVec(x = ts_data2, cvol = cvol)
-
-# Combine into a multi-scan container
-multi_file <- tempfile(fileext = ".h5")
-
-# First scan
-write_dataset(cnvec, 
-             file = multi_file,
-             scan_name = "run1",
-             as_multiscan = TRUE)
-
-# Add second scan to existing file
-# Note: This would require appending functionality
-# For now, create separate files and combine
-
-# Alternative: Create list of NeuroVec objects from ClusteredNeuroVec data
-# This is a workaround until direct multi-scan support is added
-```
+For combining multiple `ClusteredNeuroVec` objects into a multi-scan container, see `vignette("H5ParcellatedMultiScan")`.
 
 ## Step 2: Load the Data with read_dataset()
 
@@ -542,24 +524,6 @@ cluster_peak_times <- apply(summary_matrix, 2, which.max)
 names(cluster_peak_times) <- paste("Cluster", 1:length(cluster_peak_times))
 print("Peak activation timepoints per cluster:")
 print(cluster_peak_times)
-```
-
-## Working with Both Scan Types in Practice
-
-When you have an H5ParcellatedMultiScan container with mixed scan types:
-
-```{r practical-mixed, eval=FALSE}
-# Access different scan types from the same experiment
-full_scan1 <- full_experiment@runs[["task_full"]] # H5ParcellatedScan
-full_scan2 <- full_experiment@runs[["rest_full"]] # H5ParcellatedScan
-summary_scan <- summary_experiment@runs[["task_summary"]] # H5ParcellatedScanSummary
-
-# Use appropriate methods for each type
-voxel_data <- series(full_scan1, i = 1:10) # Voxel time series
-cluster_data <- as.matrix(summary_scan) # Cluster averages
-
-# Cannot use series() on summary scans - this would error:
-# bad_call <- series(summary_scan, i = 1:5)  # ERROR!
 ```
 
 ## Key Individual Scan Operations Summary

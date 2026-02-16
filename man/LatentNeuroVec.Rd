@@ -2,69 +2,41 @@
 % Please edit documentation in R/latent_vec.R
 \name{LatentNeuroVec}
 \alias{LatentNeuroVec}
-\title{Create a Latent Space Representation of Neuroimaging Data}
+\title{LatentNeuroVec constructor (re-exported from fmrilatent)}
 \usage{
-LatentNeuroVec(basis, loadings, space, mask, offset = NULL, label = "")
+LatentNeuroVec(
+  basis,
+  loadings,
+  space,
+  mask,
+  offset = NULL,
+  label = "",
+  meta = list()
+)
 }
 \arguments{
-\item{basis}{A numeric or \code{Matrix} object (\eqn{n \times k}) containing the temporal basis.}
+\item{basis}{A matrix of temporal embeddings (time x components).}
 
-\item{loadings}{A numeric or \code{Matrix} object (\eqn{p \times k}) containing spatial loadings.}
+\item{loadings}{A matrix of spatial loadings (voxels x components).}
 
-\item{space}{A \code{\link[neuroim2]{NeuroSpace-class}} defining the spatial/temporal dims.}
+\item{space}{A `NeuroSpace` object defining the 4D space.}
 
-\item{mask}{A \code{\link[neuroim2]{LogicalNeuroVol-class}} defining the brain mask.}
+\item{mask}{A `LogicalNeuroVol` specifying the brain mask.}
 
-\item{offset}{Optional numeric vector of length \eqn{p} (voxel-wise offsets).}
+\item{offset}{Optional numeric vector of voxel offsets.}
 
-\item{label}{Optional character label for the object.}
+\item{label}{Optional character label for the dataset.}
+
+\item{meta}{Optional named list of additional metadata.}
 }
 \value{
-A new \code{\link{LatentNeuroVec-class}} instance.
+A `LatentNeuroVec` object.
 }
 \description{
-Constructs a \code{\link{LatentNeuroVec-class}} object, which provides a memory-efficient
-representation of neuroimaging data using matrix factorization. This is particularly useful
-for dimensionality reduction techniques (e.g., PCA or ICA).
+Creates a latent representation of neuroimaging data using basis functions
+and loadings. This function is re-exported from the `fmrilatent` package
+for convenience.
 }
-\details{
-Construct a LatentNeuroVec Object
-}
-\examples{
-\dontrun{
-library(Matrix)
-library(neuroim2)
-
-# Example data
-n_timepoints <- 100
-n_components <- 10
-n_voxels <- 1000
-
-# Create basis & loadings
-basis <- Matrix(rnorm(n_timepoints * n_components),
-  nrow = n_timepoints,
-  ncol = n_components
-)
-loadings <- Matrix(rnorm(n_voxels * n_components),
-  nrow = n_voxels,
-  ncol = n_components,
-  sparse = TRUE
-)
-
-# Create space (10x10x10 volume, 100 timepoints)
-spc <- NeuroSpace(c(10, 10, 10, n_timepoints))
-
-# Create mask
-mask_array <- array(TRUE, dim = c(10, 10, 10))
-mask_vol <- LogicalNeuroVol(mask_array, NeuroSpace(c(10, 10, 10)))
-
-# Construct LatentNeuroVec
-lvec <- LatentNeuroVec(
-  basis = basis,
-  loadings = loadings,
-  space = spc,
-  mask = mask_vol
-)
-}
-
+\seealso{
+\code{LatentNeuroVec} in package \pkg{fmrilatent} for full documentation.
 }

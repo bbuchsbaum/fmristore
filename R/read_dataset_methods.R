@@ -347,7 +347,7 @@ read_dataset_typed <- function(file, type, ...) {
 #' The function examines the file structure to determine the appropriate
 #' object type and returns the corresponding fmristore object.
 #'
-#' @param file Path to HDF5 file
+#' @param x Path to HDF5 file.
 #' @param type Optional character string specifying the expected type.
 #'   If NULL (default), the type is auto-detected.
 #' @param ... Additional arguments passed to the object constructor
@@ -404,6 +404,8 @@ setMethod(
 
 #' Read Dataset from H5File Object
 #'
+#' @param type Optional character string specifying the expected type.
+#'   If NULL (default), the type is auto-detected.
 #' @rdname read_dataset
 #' @export
 setMethod(

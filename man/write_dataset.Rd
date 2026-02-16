@@ -45,12 +45,19 @@ write_dataset(x, ...)
 
 \S4method{write_dataset}{LatentNeuroVec}(x, file, compression = 6, ...)
 
-\S4method{write_dataset}{ClusteredNeuroVec}(x, file, scan_name = "scan_001", compression = 4, ...)
+\S4method{write_dataset}{ClusteredNeuroVec}(
+  x,
+  file,
+  scan_name = "scan_001",
+  as_multiscan = FALSE,
+  compression = 4,
+  ...
+)
 }
 \arguments{
 \item{x}{A neuroim2::ClusteredNeuroVec object}
 
-\item{...}{Additional arguments passed to write_parcellated_experiment_h5}
+\item{...}{Additional arguments passed to underlying write functions}
 
 \item{file}{Output HDF5 file path}
 
@@ -69,6 +76,8 @@ write_dataset(x, ...)
 \item{scan_names}{Character vector of scan names (auto-generated if not provided)}
 
 \item{overwrite}{Logical, whether to overwrite existing file (default: FALSE)}
+
+\item{as_multiscan}{Logical, whether to create a multi-scan container (default: FALSE)}
 }
 \value{
 Invisible NULL or file path, depending on the method
@@ -85,7 +94,8 @@ Invisible file path
 
 Invisible NULL
 
-An H5ParcellatedMultiScan object
+An H5ParcellatedScanSummary object (if as_multiscan=FALSE) or 
+        H5ParcellatedMultiScan object (if as_multiscan=TRUE)
 }
 \description{
 Generic function for writing neuroimaging datasets to HDF5 format
@@ -108,6 +118,10 @@ Write a neuroim2::ClusteredNeuroVec object to HDF5 using fmristore's clustered f
 This method converts a neuroim2::ClusteredNeuroVec to fmristore's HDF5 format.
 The ClusteredNeuroVec stores time series data per cluster (T x K matrix),
 which is written as summary data in the HDF5 file.
+
+By default (as_multiscan=FALSE), creates a single scan file and returns
+an H5ParcellatedScanSummary object. When as_multiscan=TRUE, creates a
+multi-scan container with one scan and returns an H5ParcellatedMultiScan object.
 }
 \examples{
 \dontrun{
@@ -150,7 +164,12 @@ write_dataset(latent_nvec, file = "latent.h5")
 \dontrun{
 # Assuming you have a ClusteredNeuroVec object from neuroim2
 # cnvec <- neuroim2::ClusteredNeuroVec(...)
-# write_dataset(cnvec, file = "clustered_data.h5")
+
+# Default: create single scan file
+h5_scan <- write_dataset(cnvec, file = "single_scan.h5")
+
+# Create multi-scan container
+h5_multi <- write_dataset(cnvec, file = "multi_scan.h5", as_multiscan = TRUE)
 }
 
 }

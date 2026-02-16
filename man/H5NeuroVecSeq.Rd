@@ -16,3 +16,12 @@ An object of class `H5NeuroVecSeq`.
 Load a NeuroVecSeq stored in HDF5 format. Each scan is stored
 under `/scans/<name>/data` and will be returned as an `H5NeuroVec`.
 }
+\examples{
+\dontrun{
+# Load a sequence of scans from HDF5
+seq_obj <- H5NeuroVecSeq("multi_scan.h5")
+n_scans(seq_obj)
+scan_names(seq_obj)
+close(seq_obj)
+}
+}

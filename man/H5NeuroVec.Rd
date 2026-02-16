@@ -8,6 +8,9 @@ H5NeuroVec(file_name, dataset_name = "data")
 }
 \arguments{
 \item{file_name}{The path to an existing 4D HDF5 neuroimaging file.}
+
+\item{dataset_name}{Name of the dataset within the HDF5 file containing the 4D data.
+Defaults to "data".}
 }
 \value{
 A new \code{\link{H5NeuroVec-class}} instance with an open HDF5 file handle.

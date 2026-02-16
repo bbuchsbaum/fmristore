@@ -1,121 +1,121 @@
 url: https://bbuchsbaum.github.io/fmristore/
-
 template:
   bootstrap: 5
-  light-switch: true
+  light-switch: yes
   theme: arrow-light
   bslib:
-    primary: "#2E86AB"
-    secondary: "#A23B72" 
-    success: "#A8DADC"
-    info: "#457B9D"
-    warning: "#F1C40F"
-    danger: "#E74C3C"
-    light: "#F8F9FA"
-    dark: "#1D3557"
+    primary: '#2E86AB'
+    secondary: '#A23B72'
+    success: '#A8DADC'
+    info: '#457B9D'
+    warning: '#F1C40F'
+    danger: '#E74C3C'
+    light: '#F8F9FA'
+    dark: '#1D3557'
     base_font:
-      google: "Source Sans Pro"
+      google: Source Sans Pro
     heading_font:
-      google: "Source Sans Pro"
+      google: Source Sans Pro
     code_font:
-      google: "Source Code Pro"
-
+      google: Source Code Pro
+  package: albersdown
 home:
-  title: "fmristore: Efficient Storage of fMRI Data"
-  description: |
-    A powerful R package for efficient storage and retrieval of functional magnetic 
-    resonance imaging (fMRI) data using HDF5 format. Features S4 classes for dense 
-    and sparse 4D neuroimaging data representations, latent space decompositions, 
-    and memory-efficient access patterns for large datasets.
-  
+  title: 'fmristore: Efficient Storage of fMRI Data'
+  description: "A powerful R package for efficient storage and retrieval of functional
+    magnetic \nresonance imaging (fMRI) data using HDF5 format. Features S4 classes
+    for dense \nand sparse 4D neuroimaging data representations, latent space decompositions,
+    \nand memory-efficient access patterns for large datasets.\n"
   sidebar:
-    structure: [links, license, community, citation, authors, dev]
+    structure:
+    - links
+    - license
+    - community
+    - citation
+    - authors
+    - dev
     components:
       citation:
-        title: "Citation"
-        text: |
-          If you use fmristore in your research, please cite:
-          
-          ```
-          Buchsbaum, B. (2024). fmristore: Efficient Storage of fMRI Data. 
-          R package version 0.1.0. https://github.com/bbuchsbaum/fmristore
-          ```
-
+        title: Citation
+        text: "If you use fmristore in your research, please cite:\n\n```\nBuchsbaum,
+          B. (2024). fmristore: Efficient Storage of fMRI Data. \nR package version
+          0.1.0. https://github.com/bbuchsbaum/fmristore\n```\n"
 navbar:
   structure:
-    left: [intro, reference, articles, tutorials, news]
-    right: [search, github]
+    left:
+    - intro
+    - reference
+    - articles
+    - tutorials
+    - news
+    right:
+    - search
+    - github
   components:
     intro:
-      text: "Get Started"
+      text: Get Started
       href: articles/index.html
     tutorials:
-      text: "Tutorials"
+      text: Tutorials
       menu:
-      - text: "H5 Neuroimaging Data"
+      - text: H5 Neuroimaging Data
         href: articles/H5Neuro.html
-      - text: "Labeled Volume Sets"
+      - text: Labeled Volume Sets
         href: articles/LabeledVolumeSet.html
-      - text: "Parcellated Multi-Scan Data"
+      - text: Parcellated Multi-Scan Data
         href: articles/H5ParcellatedMultiScan.html
-      - text: "Parcellated Scan Data"
+      - text: Parcellated Scan Data
         href: articles/H5ParcellatedScan.html
     reference:
-      text: "Reference"
+      text: Reference
       href: reference/index.html
     articles:
-      text: "Articles"
+      text: Articles
       menu:
-      - text: "All Articles"
+      - text: All Articles
         href: articles/index.html
-      - text: "---"
-      - text: "Core Concepts"
-      - text: "H5 Neuroimaging Data"
+      - text: '---'
+      - text: Core Concepts
+      - text: H5 Neuroimaging Data
         href: articles/H5Neuro.html
-      - text: "Labeled Volume Sets"
+      - text: Labeled Volume Sets
         href: articles/LabeledVolumeSet.html
-      - text: "---"
-      - text: "Advanced Usage"
-      - text: "Parcellated Multi-Scan Data"
+      - text: '---'
+      - text: Advanced Usage
+      - text: Parcellated Multi-Scan Data
         href: articles/H5ParcellatedMultiScan.html
-      - text: "Parcellated Scan Data"
+      - text: Parcellated Scan Data
         href: articles/H5ParcellatedScan.html
-
-
-
 articles:
-- title: "Getting Started"
+- title: Getting Started
   navbar: ~
   contents:
+  - fmristore-overview
   - H5Neuro
   - LabeledVolumeSet
-
-- title: "Advanced Topics"
+- title: Advanced Topics
   navbar: ~
   contents:
   - H5ParcellatedMultiScan
   - H5ParcellatedScan
-
 news:
   releases:
-  - text: "Version 0.1.0"
+  - text: Version 0.1.0
     href: https://github.com/bbuchsbaum/fmristore/releases/tag/v0.1.0
-
 footer:
   structure:
-    left: [built_with, package]
-    right: [github]
+    left:
+    - built_with
+    - package
+    right: github
   components:
     github:
       icon: fab fa-github fa-lg
       href: https://github.com/bbuchsbaum/fmristore
-      aria-label: "GitHub"
+      aria-label: GitHub
     package:
       html: |
         <p>Developed by <a href="https://orcid.org/0000-0002-5891-3515">Bradley Buchsbaum</a>.</p>
         <p>Licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html">GPL-3</a>.</p>
-
 authors:
   Bradley Buchsbaum:
-    href: "https://orcid.org/0000-0002-5891-3515"
-
+    href: https://orcid.org/0000-0002-5891-3515

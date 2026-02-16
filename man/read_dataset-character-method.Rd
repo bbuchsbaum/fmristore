@@ -7,12 +7,12 @@
 \S4method{read_dataset}{character}(x, type = NULL, ...)
 }
 \arguments{
+\item{x}{Path to HDF5 file.}
+
 \item{type}{Optional character string specifying the expected type.
 If NULL (default), the type is auto-detected.}
 
 \item{...}{Additional arguments passed to the object constructor}
-
-\item{file}{Path to HDF5 file}
 }
 \value{
 An fmristore object of the appropriate type:

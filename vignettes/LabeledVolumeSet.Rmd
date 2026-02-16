@@ -1,15 +1,27 @@
 ---
-title: "Working with Multiple Brain Maps using LabeledVolumeSet"
-author: "fmristore Package"
-date: "`r Sys.Date()`"
+title: Working with Multiple Brain Maps using LabeledVolumeSet
+author: fmristore Package
+date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Working with Multiple Brain Maps using LabeledVolumeSet}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r setup, include = FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -17,6 +29,13 @@ knitr::opts_chunk$set(
 )
 library(fmristore)
 library(neuroim2)
+```
+
+```{r fmristore-memory-options, include=FALSE}
+# For this vignette, suppress fmristore's large-dataset memory warnings
+# to keep the focus on the API rather than performance diagnostics.
+old_fmristore_warn <- getOption("fmristore.warn_memory", TRUE)
+options(fmristore.warn_memory = FALSE)
 ```
 
 ## What is a LabeledVolumeSet?
@@ -28,6 +47,10 @@ Key benefits:
 - **Efficient**: All volumes stored in a single HDF5 file
 - **Consistent**: All volumes share the same brain mask
 - **Easy Access**: Retrieve volumes by name or index
+
+### Note on memory warnings and lazy loading
+
+`LabeledVolumeSet` stores volume data on disk and loads individual maps on demand. fmristore may warn when a call would materialize a very large dataset in R; for this vignette we temporarily disable those warnings via `options(fmristore.warn_memory = FALSE)` so the examples are not cluttered with performance messages.
 
 ## Quick Example: Storing Statistical Maps
 
@@ -318,6 +341,11 @@ close(lvs) # Always close when done!
 - Keep your neuroimaging data organized
 
 Perfect for storing statistical maps, contrast images, subject data, or any collection of related 3D brain volumes!
+
+```{r fmristore-memory-options-reset, include=FALSE}
+# Restore original fmristore memory warning behaviour
+options(fmristore.warn_memory = old_fmristore_warn)
+```
 
 ```{r cleanup, include=FALSE}
 # Clean up temp files

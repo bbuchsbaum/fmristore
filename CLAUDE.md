@@ -113,3 +113,26 @@ Key HDF5 paths:
 - `/basis/*` - Spatial basis/components
 - `/scans/<run_id>/embedding` - Temporal coefficients
 - `/clusters/*` - Cluster definitions and metadata
+
+## Issue Tracking
+
+This project uses **beads** for issue tracking. See AGENTS.md for full workflow.
+
+```bash
+bd list                   # List open issues
+bd ready                  # Find tasks without blockers
+bd create "title" -p 1    # Create issue (P0-P3 priority)
+bd show <id>              # View issue details
+bd close <id>             # Close issue
+bd sync                   # Sync to git
+```
+
+## Session Management
+
+When ending a work session, always "land the plane":
+
+1. File issues for remaining work
+2. Run quality gates (tests, linting)
+3. Update issue status
+4. `bd sync && git push`
+5. Provide handoff context for next session

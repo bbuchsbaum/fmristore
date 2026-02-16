@@ -17,7 +17,7 @@
 #' @section Key Classes:
 #' \itemize{
 #'   \item \code{\link{H5NeuroVol}} and \code{\link{H5NeuroVec}}: HDF5-backed 3D/4D volumes
-#'   \item \code{\link{LatentNeuroVec}}: Latent representations with spatial basis and temporal loadings
+#'   \item \code{LatentNeuroVec}: Latent representations with spatial basis and temporal loadings
 #'   \item \code{\link{H5ParcellatedMultiScan}}: Container for multiple runs with clustered organization
 #'   \item \code{LabeledVolumeSet}: Collection of labeled brain regions
 #' }

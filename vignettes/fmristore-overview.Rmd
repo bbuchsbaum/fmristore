@@ -1,15 +1,27 @@
 ---
-title: "fmristore: Efficient Storage for Neuroimaging Data"
-author: "fmristore Package"
-date: "`r Sys.Date()`"
+title: 'fmristore: Efficient Storage for Neuroimaging Data'
+author: fmristore Package
+date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{fmristore: Efficient Storage for Neuroimaging Data}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r setup, include = FALSE}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
@@ -33,38 +45,15 @@ The `fmristore` package provides efficient HDF5-based storage solutions for neur
 
 ## Quick Start: Choose Your Storage Format
 
-```{r decision-tree, echo=FALSE, fig.height=6}
-plot(1:10, 1:10, type = "n", axes = FALSE, xlab = "", ylab = "", 
-     main = "Choosing the Right Storage Format")
-
-# Decision tree boxes
-rect(4, 9, 6, 10, col = "lightblue")
-text(5, 9.5, "Your Data", font = 2)
-
-# Branches
-arrows(5, 9, 2, 7.5, length = 0.1)
-arrows(5, 9, 5, 7.5, length = 0.1) 
-arrows(5, 9, 8, 7.5, length = 0.1)
-
-# Data types
-rect(0.5, 7, 3.5, 8, col = "lightgreen")
-text(2, 7.5, "Regular\n4D fMRI")
-
-rect(3.5, 7, 6.5, 8, col = "lightyellow")
-text(5, 7.5, "Clustered\nData")
-
-rect(6.5, 7, 9.5, 8, col = "lightcoral")
-text(8, 7.5, "Multiple\nBrain Maps")
-
-# Storage formats
-rect(0.5, 5, 3.5, 6)
-text(2, 5.5, "H5NeuroVec")
-
-rect(3.5, 5, 6.5, 6)
-text(5, 5.5, "H5Parcellated*")
-
-rect(6.5, 5, 9.5, 6)
-text(8, 5.5, "LabeledVolumeSet")
+```
+                        Your Data
+                       /    |    \
+                      /     |     \
+             Regular    Clustered   Multiple
+             4D fMRI      Data     Brain Maps
+                |          |           |
+                v          v           v
+           H5NeuroVec  H5Parcellated*  LabeledVolumeSet
 ```
 
 ## Data Conversion Workflows
@@ -220,14 +209,14 @@ h5_multi <- as_h5(cnvec, file = "multi.h5", as_multiscan = TRUE)
 ### 3. Data Access Patterns
 
 ```{r access-patterns, eval=FALSE}
-# Efficient: Access contiguous slices
-time_slice <- h5_neurovec[,, , 1:10]  # Good
+# Efficient: Access contiguous slices from an H5NeuroVec
+time_slice <- h5_nvec[, , , 1:10]  # Good
 
-# Less efficient: Random access
-random_times <- h5_neurovec[,, , c(1, 50, 25, 75)]  # Slower
+# Less efficient: Random access in time
+random_times <- h5_nvec[, , , c(1, 50, 25, 75)]  # Slower
 
-# For clustered data: Get summary matrix
-summary_data <- as.matrix(h5_parcellated_scan)  # Efficient
+# For clustered data (H5ParcellatedScanSummary): get summary matrix once
+summary_data <- as.matrix(h5_scan)  # Efficient
 ```
 
 ## Common Use Cases
@@ -328,37 +317,41 @@ cat("  Between-network correlation:",
 For data compression using basis decompositions:
 
 ```{r latent-demo, eval=FALSE}
-# Create basis and loadings for compression
-basis <- matrix(rnorm(n_time * 20), nrow = n_time, ncol = 20)  # 20 components
-loadings <- Matrix::Matrix(rnorm(n_voxels * 20), nrow = n_voxels, ncol = 20, sparse = TRUE)
+n_vox <- 5000
+n_tp <- 200
+n_comp <- 20
 
-# Create LatentNeuroVec
-lnv <- LatentNeuroVec(basis = basis, 
-                      loadings = loadings, 
+basis <- matrix(rnorm(n_tp * n_comp), nrow = n_tp, ncol = n_comp)
+loadings <- Matrix::Matrix(rnorm(n_vox * n_comp), nrow = n_vox, ncol = n_comp, sparse = TRUE)
+
+lnv <- LatentNeuroVec(basis = basis,
+                      loadings = loadings,
                       mask = mask,
-                      space = NeuroSpace(c(brain_dims, n_time)))
+                      space = NeuroSpace(c(brain_dims, n_tp)))
 
-# Compression ratio depends on number of components
-compression_ratio <- (n_voxels * n_time) / (n_time * 20 + n_voxels * 20)
+compression_ratio <- (n_vox * n_tp) / (n_tp * n_comp + n_vox * n_comp)
 cat("Compression ratio:", round(compression_ratio, 1), ":1\n")
 ```
 
 ### Working with Atlas Labels
 
+For storing collections of named brain maps, see `vignette("LabeledVolumeSet")`:
+
 ```{r atlas-demo, eval=FALSE}
-# Create labeled volume set for atlas regions
 atlas_labels <- c("Visual", "Motor", "Default", "Attention", "Limbic")
-label_vols <- list()
+n_labels <- length(atlas_labels)
 
-for (i in seq_along(atlas_labels)) {
-  # Create a volume for each network
-  vol_data <- array(rnorm(prod(brain_dims)), dim = brain_dims)
-  label_vols[[atlas_labels[i]]] <- NeuroVol(vol_data, NeuroSpace(brain_dims))
-}
+atlas_data <- array(rnorm(prod(brain_dims) * n_labels),
+                    dim = c(brain_dims, n_labels))
+atlas_vec <- NeuroVec(atlas_data, NeuroSpace(c(brain_dims, n_labels)))
 
-# Save as LabeledVolumeSet
 lvs_file <- tempfile(fileext = ".h5")
-# write_labeled_volume_set(label_vols, lvs_file)
+h5 <- write_labeled_vec(atlas_vec, mask, atlas_labels, file = lvs_file)
+h5$close_all()
+
+lvs <- read_labeled_vec(lvs_file)
+labels(lvs)
+close(lvs)
 ```
 
 ## Troubleshooting

@@ -3,14 +3,20 @@
 \docType{data}
 \name{H5_DSETS}
 \alias{H5_DSETS}
-\title{HDF5 dataset name constants}
+\title{HDF5 Dataset Name Constants}
 \format{
-An object of class \code{list} of length 3.
+A named list of character strings.
 }
 \usage{
 H5_DSETS
 }
+\value{
+A named list with HDF5 dataset name constants.
+}
 \description{
-HDF5 dataset name constants
+Named constants for HDF5 dataset names used throughout the package.
+}
+\examples{
+H5_DSETS$DATA
 }
 \keyword{datasets}

@@ -190,7 +190,7 @@ validate_runs_data <- function(rd) {
 #'     }
 #'   })
 #' } else {
-#'   message("Skipping write_parcellated_experiment_h5 example: dependencies or helpers not available.")
+#'   message("Skipping example: dependencies not available.")
 #' }
 #' }
 #' @export

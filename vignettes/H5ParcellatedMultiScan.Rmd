@@ -1,12 +1,23 @@
 ---
-title: "Efficient Clustered fMRI Storage with H5ParcellatedMultiScan"
-author: "fmristore Package"
-date: "`r Sys.Date()`"
+title: Efficient Clustered fMRI Storage with H5ParcellatedMultiScan
+author: fmristore Package
+date: '`r Sys.Date()`'
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Efficient Clustered fMRI Storage with H5ParcellatedMultiScan}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
 ---
 
 ```{r, include = FALSE}
@@ -19,6 +30,7 @@ knitr::opts_chunk$set(
 ```
 
 ```{r setup}
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 library(fmristore)
 library(neuroim2)
 ```
@@ -167,37 +179,12 @@ When working with clustered neuroimaging data, it's important to understand the 
 
 ### Converting ClusteredNeuroVec Objects
 
-The neuroim2 package's `ClusteredNeuroVec` class naturally represents a single scan with cluster-averaged time series. Here's how to work with it:
+The neuroim2 package's `ClusteredNeuroVec` class naturally represents a single scan with cluster-averaged time series. You can convert it directly with `as_h5()`:
 
-```{r clustered-neurovec-example}
-# Create a ClusteredNeuroVec (single scan with cluster averages)
-cvol <- neuroim2::ClusteredNeuroVol(mask = mask, clusters = cluster_assignments)
+- **Single scan (default):** `as_h5(cnvec, file = "out.h5")` creates an `H5ParcellatedScanSummary`
+- **Multi-scan container:** `as_h5(cnvec, file = "out.h5", as_multiscan = TRUE)` wraps it in an `H5ParcellatedMultiScan`
 
-# Time series data: time x clusters matrix
-ts_data <- matrix(rnorm(n_timepoints * 3), nrow = n_timepoints, ncol = 3)
-cnvec <- neuroim2::ClusteredNeuroVec(x = ts_data, cvol = cvol)
-
-# Convert to HDF5 - defaults to single scan
-single_scan_file <- tempfile(fileext = ".h5")
-h5_single <- as_h5(cnvec, file = single_scan_file, scan_name = "my_scan")
-
-cat("Default conversion creates:", class(h5_single), "\n")
-cat("This is a single scan, not a container\n")
-
-# If you need a multi-scan container (for future expansion)
-multi_scan_file <- tempfile(fileext = ".h5")
-h5_multi <- as_h5(cnvec, file = multi_scan_file, 
-                  scan_name = "scan1", 
-                  as_multiscan = TRUE)
-
-cat("\nWith as_multiscan=TRUE:", class(h5_multi), "\n")
-cat("Number of scans in container:", length(h5_multi@runs), "\n")
-
-# Clean up
-close(h5_single)
-close(h5_multi)
-unlink(c(single_scan_file, multi_scan_file))
-```
+For a detailed walkthrough of ClusteredNeuroVec conversion, including creating the clustering and accessing the resulting scans, see `vignette("H5ParcellatedScan")`.
 
 ### When to Use Each Format
 

@@ -166,13 +166,19 @@ assert_h5_path <- function(h5, path, desc = "Path") {
             error = function(e) 8 # Default to 8 bytes if size can't be determined
           )
 
+          # If size is non-finite (e.g., variable-length strings report Inf),
+          # we cannot produce a meaningful memory estimate, so skip the warning.
+          if (!is.finite(element_size) || element_size <= 0) {
+            return(invisible(NULL))
+          }
+
           total_elements <- prod(dims)
           estimated_size_mb <- (total_elements * element_size) / (1024^2)
 
-          if (estimated_size_mb > warn_threshold_mb) {
+          if (is.finite(estimated_size_mb) && estimated_size_mb > warn_threshold_mb) {
             warning(sprintf(
-              "[fmristore] Large dataset operation: ~%.1f MB will be loaded into memory. Consider subsetting for large datasets.",
-              estimated_size_mb
+              "[fmristore] Large dataset read (~%.1f MB) from path '%s'. This call materializes the full dataset in R memory; consider subsetting or chunked access for very large arrays.",
+              estimated_size_mb, path
             ), call. = FALSE)
           }
         }, finally = {

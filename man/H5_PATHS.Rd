@@ -5,10 +5,13 @@
 \alias{H5_PATHS}
 \title{HDF5 Path Constants}
 \format{
-An object of class \code{list} of length 21.
+A named list of character strings containing HDF5 path templates.
 }
 \usage{
 H5_PATHS
+}
+\value{
+A named list with HDF5 path constants.
 }
 \description{
 Central definition of HDF5 file layout constants used throughout the package.

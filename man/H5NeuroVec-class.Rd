@@ -20,6 +20,9 @@ dataset and accessed on demand.
 \describe{
 \item{\code{obj}}{An instance of class \code{H5File} from the \pkg{hdf5r} package,
 representing the underlying HDF5 file containing the 4D brain image data.}
+
+\item{\code{dataset_name}}{A \code{character} string specifying the path to the 4D
+dataset within the HDF5 file. Defaults to \code{"data"}.}
 }}
 
 \section{Inheritance}{

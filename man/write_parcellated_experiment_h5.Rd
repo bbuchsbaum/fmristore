@@ -183,7 +183,7 @@ if (requireNamespace("neuroim2", quietly = TRUE) &&
     }
   })
 } else {
-  message("Skipping write_parcellated_experiment_h5 example: dependencies or helpers not available.")
+  message("Skipping example: dependencies not available.")
 }
 }
 }

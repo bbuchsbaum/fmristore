@@ -49,6 +49,8 @@ read_vec <- function(file_name) {
 #' limits or problems with subsequent access to the file.
 #'
 #' @param file_name The path to an existing 4D HDF5 neuroimaging file.
+#' @param dataset_name Name of the dataset within the HDF5 file containing the 4D data.
+#'   Defaults to "data".
 #'
 #' @return A new \code{\link{H5NeuroVec-class}} instance with an open HDF5 file handle.
 #'

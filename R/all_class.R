@@ -1,6 +1,8 @@
 #' @import methods
 #' @importFrom Matrix Matrix sparseMatrix t
 #' @importFrom hdf5r H5File
+#' @importFrom fmrilatent LatentNeuroVec basis loadings offset
+#' @importClassesFrom fmrilatent LatentNeuroVec
 NULL
 
 # S4 needs to know 'H5File' is an S3 class from hdf5r
@@ -98,6 +100,8 @@ setClass("H5NeuroVol",
 #'
 #' @slot obj An instance of class \code{H5File} from the \pkg{hdf5r} package,
 #'   representing the underlying HDF5 file containing the 4D brain image data.
+#' @slot dataset_name A \code{character} string specifying the path to the 4D
+#'   dataset within the HDF5 file. Defaults to \code{"data"}.
 #'
 #' @details
 #' \code{H5NeuroVec} inherits a \code{space} slot from
@@ -201,118 +205,25 @@ setClass("H5NeuroVecSource",
   )
 )
 
-#' LatentNeuroVec Class
-#'
-#' @description
-#' A class that represents a 4-dimensional neuroimaging array using a latent space
-#' decomposition. It stores the data as a set of basis functions (dictionary) and
-#' a corresponding set of loadings (coefficients), enabling efficient representation
-#' and manipulation of high-dimensional data.
-#'
-#' @slot basis A \code{Matrix} object where each column represents a basis vector
-#'   in the latent space.
-#' @slot loadings A \code{Matrix} object (often sparse) containing the coefficients
-#'   for each basis vector across the spatial dimensions.
-#' @slot offset A \code{numeric} vector representing a constant offset term for
-#'   each voxel or spatial location.
-#' @slot map A \code{IndexLookupVol} object representing the mapping from basis to loadings.
-#' @slot label A \code{character} string representing the label for the latent vector.
-#'
-#' @details
-#' \code{LatentNeuroVec} inherits from \code{\link[neuroim2]{NeuroVec-class}}
-#' and \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}. The original 4D data
-#' can be reconstructed as:
-#' \deqn{data[v,t] = \sum_k \bigl(basis[t,k] \times loadings[v,k]\bigr) + offset[v]}.
-#' (Note: `v` indexes voxels within the mask).
-#'
-#' **Important Naming Note:**
-#' * In this R object: `@basis` stores temporal components (`nTime x k`), `@loadings` stores spatial components (`nVox x k`).
-#' * In the HDF5 spec: `/scans/.../embedding` stores temporal (`nTime x k`), `/basis/basis_matrix` stores spatial (`k x nVox`).
-#' The I/O functions handle the mapping and transposition.
-#'
-#' This approach is especially useful for large datasets where storing the full
-#' 4D array is expensive.
-#'
-#' @section Inheritance:
-#' \code{LatentNeuroVec} inherits from:
-#' \itemize{
-#'   \item \code{\link[neuroim2]{NeuroVec-class}}
-#'   \item \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}
-#' }
-#'
-#' @seealso
-#' \code{\link[neuroim2]{NeuroVec-class}},
-#' \code{\link[neuroim2]{AbstractSparseNeuroVec-class}}.
-#'
-#' @examples
-#' \dontrun{
-#' if (requireNamespace("neuroim2", quietly = TRUE) &&
-#'   requireNamespace("Matrix", quietly = TRUE) &&
-#'   !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'   # Create a LatentNeuroVec object using the helper
-#'   # The helper creates a mask, basis, and loadings internally.
-#'   # It uses new("LatentNeuroVec", ...) after creating constituent parts if not directly calling
-#'   # a LatentNeuroVec constructor, or directly calls a constructor.
-#'   # Our helper fmristore:::create_minimal_LatentNeuroVec returns a LatentNeuroVec.
-#'
-#'   latent_vec <- NULL
-#'   tryCatch(
-#'     {
-#'       latent_vec <- fmristore:::create_minimal_LatentNeuroVec(
-#'         space_dims = c(5L, 5L, 3L),
-#'         n_time = 8L,
-#'         n_comp = 2L
-#'       )
-#'
-#'       print(latent_vec)
-#'
-#'       # Access slots (example)
-#'       # print(dim(latent_vec@basis))
-#'       # print(dim(latent_vec@loadings))
-#'
-#'       # Example of accessing data (reconstruction for a voxel would be more complex)
-#'       # This class is more about representation; direct element access is usually via methods.
-#'       # For example, a method might be `series(latent_vec, vox_indices = c(1,2,3))`
-#'       # For a simple demonstration, we can show its dimensions:
-#'       print(dim(latent_vec)) # from NeuroVec inheritance
-#'     },
-#'     error = function(e) {
-#'       message("LatentNeuroVec example failed: ", e$message)
-#'     }
-#'   )
-#' } else {
-#'   message("Skipping LatentNeuroVec example: neuroim2, Matrix, or helper not available.")
-#' }
-#' }
-#'
-#' @export
-#' @rdname LatentNeuroVec-class
-setClass("LatentNeuroVec",
-  slots = c(
-    basis = "Matrix",
-    loadings = "Matrix",
-    offset = "numeric",
-    map = "IndexLookupVol",
-    label = "character"
-  ),
-  contains = c("NeuroVec", "AbstractSparseNeuroVec")
-)
+# LatentNeuroVec class is now imported from fmrilatent package
+# See: fmrilatent::LatentNeuroVec
 
 #' LatentNeuroVecSource Class
 #'
 #' @description
-#' A class used intprotoernally to produce a \code{\linkS4class{LatentNeuroVec}} instance.
+#' A class used internally to produce a \code{\linkS4class{LatentNeuroVec}} instance
+#' from an HDF5 file.
 #'
 #' @slot file_name A \code{character} string specifying the file name.
 #'
-#' @seealso \code{\link{LatentNeuroVec-class}}
+#' @seealso \code{\link[fmrilatent]{LatentNeuroVec-class}}
 #'
 #' @keywords internal
 #' @noRd
 setClass("LatentNeuroVecSource",
   representation(file_name = "character"),
   prototype = list(
-    file_name = character() # Default to empty character vector
+    file_name = character()
   )
 )
 

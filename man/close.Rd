@@ -4,6 +4,8 @@
 \name{close}
 \alias{close}
 \alias{close,H5ParcellatedMultiScan-method}
+\alias{close,H5ParcellatedScanSummary-method}
+\alias{close,H5ParcellatedScan-method}
 \alias{close,H5NeuroVec-method}
 \alias{close,H5NeuroVecSeq-method}
 \alias{close,H5NeuroVol-method}
@@ -14,6 +16,10 @@ close(con, ...)
 
 \S4method{close}{H5ParcellatedMultiScan}(con, ...)
 
+\S4method{close}{H5ParcellatedScanSummary}(con, ...)
+
+\S4method{close}{H5ParcellatedScan}(con, ...)
+
 \S4method{close}{H5NeuroVec}(con, ...)
 
 \S4method{close}{H5NeuroVecSeq}(con, ...)
@@ -23,7 +29,7 @@ close(con, ...)
 \S4method{close}{LabeledVolumeSet}(con, ...)
 }
 \arguments{
-\item{con}{A \\code{LabeledVolumeSet} object.}
+\item{con}{A \code{LabeledVolumeSet} object.}
 
 \item{...}{Additional arguments (ignored).}
 }
@@ -36,7 +42,7 @@ Invisibly returns \code{NULL}.
 
 Invisibly returns \code{NULL}.
 
-Invisibly returns \\code{NULL}.
+Invisibly returns \code{NULL}.
 }
 \description{
 Close connections or release resources associated with an object.
@@ -50,7 +56,7 @@ This method manually closes the HDF5 file handle stored within the
 H5NeuroVol object. It uses the \code{safe_h5_close} helper.
 
 This method manually closes the HDF5 file handle stored within the
-LabeledVolumeSet object. It uses the \\code{safe_h5_close} helper to
+LabeledVolumeSet object. It uses the \code{safe_h5_close} helper to
 ensure the handle is valid before attempting to close. After closing,
 the internal handle reference is nulled to prevent accidental reuse.
 }

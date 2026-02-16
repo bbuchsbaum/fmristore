@@ -13,6 +13,11 @@ configure_memory_warnings(enable = TRUE, threshold_mb = 100, verbose = FALSE)
 
 \item{verbose}{Logical. Whether to print confirmation of setting changes (default: FALSE).}
 }
+\value{
+Invisibly returns a list with the current settings:
+  \item{enabled}{Logical indicating if warnings are enabled}
+  \item{threshold_mb}{The warning threshold in MB}
+}
 \description{
 Control memory usage warnings for large dataset operations in fmristore.
 These warnings help users understand when operations may consume significant memory.

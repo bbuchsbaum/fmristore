@@ -7,9 +7,7 @@ Authors@R:
            family = "Buchsbaum",
            role = c("aut", "cre"),
            email = "brad.buchsbaum@gmail.com",
-           comment = c(ORCID = "0000-0002-5891-3515"))
-Author: Bradley Buchsbaum [aut, cre]
-Maintainer: Bradley Buchsbaum <brad.buchsbaum@gmail.com>
+           comment = c(ORCID = "0000-0002-1108-4866"))
 Description: Provides efficient storage and retrieval of functional magnetic resonance 
     imaging (fMRI) data using HDF5 format. The package offers S4 classes and methods 
     for working with dense and sparse representations of 4D neuroimaging data, latent 
@@ -20,12 +18,14 @@ License: GPL (>= 3)
 URL: https://github.com/bbuchsbaum/fmristore, https://bbuchsbaum.github.io/fmristore/
 BugReports: https://github.com/bbuchsbaum/fmristore/issues
 Encoding: UTF-8
+Language: en-US
 LazyData: false
-RoxygenNote: 7.3.2.9000
-Imports: 
+RoxygenNote: 7.3.3
+Imports:
     assertthat,
     cli,
     crayon,
+    fmrilatent,
     hdf5r,
     lifecycle,
     Matrix,
@@ -33,13 +33,14 @@ Imports:
     neuroim2,
     withr
 Suggests:
+    albersdown,
+    corrplot,
+    ggplot2,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)
 VignetteBuilder: knitr
 Config/testthat/edition: 3
-Remotes: 
-    bbuchsbaum/neuroim2
 Collate: 
     'all_class.R'
     'all_generic.R'
@@ -66,3 +67,4 @@ Collate:
     'write_dataset_methods.R'
     'write_parcellated_scan_h5.R'
     'zzz_example_helpers.R'
+Config/Needs/website: albersdown

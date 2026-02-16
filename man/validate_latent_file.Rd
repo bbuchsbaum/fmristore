@@ -26,53 +26,6 @@ Checks performed:
   \item Presence of mandatory groups: `/header`, `/basis`, `/scans`.
   \item Presence of mandatory datasets: `/header/dim`, `/mask`, `/basis/basis_matrix`,
         at least one scan group under `/scans`, and its `embedding` dataset.
-  \item Dimension consistency:
-    \itemize{
-      \item `/header/dim[2:4]` vs `/mask` dimensions.
-      \item `/basis/basis_matrix` columns vs number of non-zero elements in `/mask`.
-      \item `/basis/basis_matrix` rows (k) vs embedding columns (k).
-      \item `/header/dim[5]` (time) vs embedding rows (time).
-      \item Optional: `/offset` length vs `/basis/basis_matrix` columns.
-    }
+  \item Dimension consistency between header, mask, basis, and embedding.
 }
-Does NOT validate header field *values* extensively beyond dimensions, nor does it
-check data types rigorously.
-}
-\examples{
-\dontrun{
-# Create a temporary latent neuroimaging HDF5 file for validation
-temp_file <- tempfile(fileext = ".h5")
-
-# Create minimal latent data and write to HDF5
-lnv <- fmristore:::create_minimal_LatentNeuroVec()
-
-# Write to HDF5 (using internal structure expected by validate_latent_file)
-# Note: This is a simplified example - real files would use write_vec methods
-h5f <- hdf5r::H5File$new(temp_file, mode = "w")
-
-# Write required groups and datasets
-header_grp <- h5f$create_group("header")
-header_grp$create_dataset("dim", robj = c(4L, dim(lnv@mask), dim(lnv@basis)[1]))
-
-basis_grp <- h5f$create_group("basis")
-basis_grp$create_dataset("basis_matrix", robj = lnv@basis)
-
-scans_grp <- h5f$create_group("scans")
-h5f$create_dataset("mask", robj = as.array(lnv@mask))
-
-h5f$close_all()
-
-# Now validate the file
-result <- validate_latent_file(temp_file)
-
-if (result$is_valid) {
-  message("File is valid!")
-} else {
-  message("File validation failed: ", result$error_message)
-}
-
-# Clean up
-unlink(temp_file)
-}
-
 }

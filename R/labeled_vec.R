@@ -842,7 +842,7 @@ setMethod(
 #' Close the HDF5 file associated with a LabeledVolumeSet
 #'
 #' This method manually closes the HDF5 file handle stored within the
-#' LabeledVolumeSet object. It uses the \\code{safe_h5_close} helper to
+#' LabeledVolumeSet object. It uses the \code{safe_h5_close} helper to
 #' ensure the handle is valid before attempting to close. After closing,
 #' the internal handle reference is nulled to prevent accidental reuse.
 #'
@@ -853,9 +853,9 @@ setMethod(
 #' If the object was created using an existing \code{H5File} handle, closing
 #' remains the responsibility of the code that originally opened the handle.
 #'
-#' @param con A \\code{LabeledVolumeSet} object.
+#' @param con A \code{LabeledVolumeSet} object.
 #' @param ... Additional arguments (ignored).
-#' @return Invisibly returns \\code{NULL}.
+#' @return Invisibly returns \code{NULL}.
 #' @rdname close
 #' @export
 setMethod("close", "LabeledVolumeSet", function(con, ...) {

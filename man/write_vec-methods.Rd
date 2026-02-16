@@ -24,8 +24,8 @@ Writes a \code{LatentNeuroVec} to an HDF5 file with optional compression.
 \details{
 This function saves:
 \itemize{
-  \item \code{basis} matrix
-  \item \code{loadings} matrix
+  \item \code{basis} matrix (as embedding)
+  \item \code{loadings} matrix (as spatial basis)
   \item \code{offset} vector
   \item Spatial metadata
   \item Mask information
@@ -34,44 +34,18 @@ all inside an HDF5 file for future loading.
 }
 \examples{
 \dontrun{
-if (requireNamespace("neuroim2", quietly = TRUE) &&
-  requireNamespace("hdf5r", quietly = TRUE) &&
-  requireNamespace("Matrix", quietly = TRUE) &&
-  exists("write_vec", where = "package:neuroim2") &&
-  !is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-  lnv <- NULL
-  temp_h5_file <- NULL
+library(fmrilatent)
+library(fmristore)
 
-  tryCatch({
-    # Create a minimal LatentNeuroVec
-    lnv <- fmristore:::create_minimal_LatentNeuroVec(
-      space_dims = c(3L, 3L, 2L),
-      n_time = 5L,
-      n_comp = 2L
-    )
+# Create a LatentNeuroVec
+lvec <- LatentNeuroVec(basis, loadings, space, mask)
 
-    # Create a temporary file for output
-    temp_h5_file <- tempfile(fileext = ".h5")
-
-    # Write the LatentNeuroVec to HDF5
-    write_vec(lnv, temp_h5_file, compression = 6)
-
-    # Verify file was created
-    if (file.exists(temp_h5_file)) {
-      cat("Successfully wrote LatentNeuroVec to:", temp_h5_file, "\n")
-    }
-  }, error = function(e) {
-    message("write_vec example failed: ", e$message)
-  }, finally = {
-    # Clean up temporary file
-    if (!is.null(temp_h5_file) && file.exists(temp_h5_file)) {
-      unlink(temp_h5_file)
-    }
-  })
-}
+# Write to HDF5
+temp_file <- tempfile(fileext = ".h5")
+write_vec(lvec, temp_file, compression = 6)
 }
 
 }
 \seealso{
-\code{\link[neuroim2]{read_vec}} for reading back the file.
+\code{LatentNeuroVec} (from \pkg{fmrilatent}) for the class definition.
 }

@@ -221,13 +221,23 @@ setGeneric("h5file", function(x) standardGeneric("h5file"))
 setGeneric("write_dataset", function(x, ...) standardGeneric("write_dataset"))
 
 #' Read Dataset from HDF5
-#' 
+#'
 #' Generic function for reading neuroimaging datasets from HDF5 format
-#' 
+#'
 #' @param x The file path or H5File object to read from
+#' @param type Optional character string specifying the expected type.
+#'   If NULL (default), the type is auto-detected from the file structure.
 #' @param ... Additional arguments passed to methods
 #' @return The appropriate fmristore object
 #' @export
+#' @examples
+#' \dontrun{
+#' # Auto-detect type from HDF5 file
+#' obj <- read_dataset("data.h5")
+#'
+#' # Specify type explicitly
+#' vec <- read_dataset("data.h5", type = "H5NeuroVec")
+#' }
 #' @rdname read_dataset
 setGeneric("read_dataset", function(x, ...) standardGeneric("read_dataset"))
 
@@ -613,13 +623,10 @@ setGeneric(".dataset_path",
 #' @param mask For LabeledVolumeSet method: The mask to use (LogicalNeuroVol)
 #' @param labels For LabeledVolumeSet method: Character vector of labels
 #' @param dtype For LabeledVolumeSet method: HDF5 data type for values. Default H5T_NATIVE_DOUBLE
-#' @param chunk_size For LabeledVolumeSet/list methods: Integer chunk size for HDF5. Default 1024
+#' @param chunk_size For LabeledVolumeSet method: Integer chunk size for HDF5. Default 1024
 #' @param header_values For LabeledVolumeSet method: List of additional header values
-#' @param scan_names For list method: Character vector of scan names
-#' @param clusters For list method: ClusteredNeuroVol with cluster IDs
-#' @param scan_metadata For list method: List of metadata lists, one per scan
-#' @param cluster_metadata For list method: Optional data.frame with cluster descriptions
-#' @param summary_only For list method: If TRUE, save summary data only
+#' @param scan_name For ClusteredNeuroVec method: Character name for this scan (default "scan_001")
+#' @param as_multiscan For ClusteredNeuroVec method: If TRUE, creates multi-scan container
 #'
 #' @section Methods:
 #' \describe{
@@ -654,21 +661,6 @@ setGeneric(".dataset_path",
 #'       \item{\code{header_values}}{List of additional header values}
 #'     }
 #'     Returns an HDF5 file object.
-#'   }
-#'   \item{\code{signature(object = "list")}}{
-#'     Writes a cluster-based time-series dataset to an HDF5 file.
-#'     Additional parameters:
-#'     \describe{
-#'       \item{\code{scan_names}}{Character vector of scan names}
-#'       \item{\code{mask}}{LogicalNeuroVol for 3D geometry}
-#'       \item{\code{clusters}}{ClusteredNeuroVol with cluster IDs}
-#'       \item{\code{scan_metadata}}{List of metadata lists, one per scan}
-#'       \item{\code{cluster_metadata}}{Optional data.frame with cluster descriptions}
-#'       \item{\code{summary_only}}{Logical; if TRUE, store only summary data}
-#'       \item{\code{compression}}{Integer [0..9], default 4}
-#'       \item{\code{chunk_size}}{Chunk dimension for 2D writes, default 1024}
-#'     }
-#'     Returns an HDF5-backed object representing the clustered dataset (e.g., H5ParcellatedMultiScan).
 #'   }
 #'   \item{\code{signature(object = "NeuroVecSeq")}}{
 #'     Writes a sequence of NeuroVec objects (multiple 4D scans) to a single HDF5 file.

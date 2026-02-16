@@ -394,6 +394,49 @@ setMethod(
   }
 )
 
+#' Single-vector indexing for H5NeuroVol
+#'
+#' @description
+#' Handles \code{h5vol[i]} where only \code{i} is provided.
+#' If all indices are within the first dimension range, treats as first-dimension slicing.
+#' Otherwise, treats as linear indexing into the flattened volume.
+#'
+#' @param x An \code{H5NeuroVol} instance
+#' @param i Numeric index vector
+#' @param j Missing
+#' @param drop Logical: whether to drop dimensions of size 1. Default \code{TRUE}.
+#' @param ... Unused
+#'
+#' @return Values from the volume (either as array slice or linear-indexed values)
+#'
+#' @export
+setMethod(
+  f = "[",
+  signature = signature(x = "H5NeuroVol", i = "numeric", j = "missing"),
+  definition = function(x, i, j, ..., drop = TRUE) {
+    dimx <- dim(x)
+
+    # Check if indices are within first dimension range (for slicing)
+    # This handles both positive in-range indices and detects out-of-range/negative
+    if (all(i >= 1 & i <= dimx[1])) {
+      # Treat as first-dimension indices (slice extraction)
+      # Default j and k to full range
+      j_full <- seq_len(dimx[2])
+      k_full <- seq_len(dimx[3])
+
+      # Use the 3D subsetting logic
+      x[i, j_full, k_full, drop = drop]
+    } else if (any(i < 1)) {
+      # Negative or zero indices - reject with Subscript error
+      # (H5NeuroVol doesn't support negative indexing like in-memory arrays)
+      stop("Subscript 'i' out of range for dimension 1")
+    } else {
+      # Indices > dimx[1] - treat as linear indices
+      linear_access(x, i)
+    }
+  }
+)
+
 #' Convert DenseNeuroVol to H5NeuroVol
 #'
 #' @description

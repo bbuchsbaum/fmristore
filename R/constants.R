@@ -4,16 +4,13 @@
 #' Central definition of HDF5 file layout constants used throughout the package.
 #' This provides a single source of truth for the HDF5 file structure.
 #'
-#' @name H5_PATHS
+#' @format A named list of character strings containing HDF5 path templates.
+#' @return A named list with HDF5 path constants.
 #' @export
 #' @examples
 #' # Access constants
 #' H5_PATHS$SCANS_GROUP # "/scans"
 #' sprintf(H5_PATHS$CLUSTER_DSET_TPL, "run1", 5) # "/scans/run1/clusters/cluster_5"
-NULL
-
-#' HDF5 file structure constants
-#' @export
 H5_PATHS <- list(
   # Top-level groups
   SCANS_GROUP = "/scans",
@@ -47,8 +44,16 @@ H5_PATHS <- list(
   N_TIME_METADATA_TPL = "/scans/%s/metadata/n_time"
 )
 
-#' HDF5 attribute constants
+#' HDF5 Attribute Constants
+#'
+#' @description
+#' Named constants for HDF5 attribute names used throughout the package.
+#'
+#' @format A named list of character strings.
+#' @return A named list with HDF5 attribute name constants.
 #' @export
+#' @examples
+#' H5_ATTRS$N_TIME
 H5_ATTRS <- list(
   N_TIME = "n_time",
   COMPRESS = "compress",
@@ -59,8 +64,16 @@ H5_ATTRS <- list(
   N_CLUSTERS = "n_clusters"
 )
 
-#' HDF5 dataset name constants
+#' HDF5 Dataset Name Constants
+#'
+#' @description
+#' Named constants for HDF5 dataset names used throughout the package.
+#'
+#' @format A named list of character strings.
+#' @return A named list with HDF5 dataset name constants.
 #' @export
+#' @examples
+#' H5_DSETS$DATA
 H5_DSETS <- list(
   SUMMARY_DATA = "summary_data",
   ELEMENTS = "elements",

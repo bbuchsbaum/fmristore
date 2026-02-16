@@ -7,7 +7,7 @@
 \method{as.array}{LatentNeuroVec}(x, ...)
 }
 \arguments{
-\item{x}{A \code{LatentNeuroVec} object to convert.}
+\item{x}{A `LatentNeuroVec` object to convert.}
 
 \item{...}{Not used.}
 }
@@ -15,11 +15,12 @@
 A 4D array representing the full reconstructed data.
 }
 \description{
-Converts a \code{LatentNeuroVec} to a standard R 4D array.
+Converts a `LatentNeuroVec` to a standard R 4D array by reconstructing
+the full data from the latent representation.
 }
 \details{
-This method reconstructs the full 4D array from the latent representation, which can be
-memory-intensive for large datasets. It calculates:
-\deqn{array[,,, t] = Map(basis[t,] \%*\% t(loadings)) + offset}
+This method reconstructs the full 4D array from the latent representation,
+which can be memory-intensive for large datasets. It calculates:
+\deqn{array[,,, t] = Map(basis[t,] * t(loadings)) + offset}
 for each time point, where values outside the mask are set to zero.
 }

@@ -32,7 +32,14 @@ as_h5(object, file, ...)
   header_values = list()
 )
 
-\S4method{as_h5}{ClusteredNeuroVec}(object, file = NULL, scan_name = "scan_001", compression = 4, ...)
+\S4method{as_h5}{ClusteredNeuroVec}(
+  object,
+  file = NULL,
+  scan_name = "scan_001",
+  as_multiscan = FALSE,
+  compression = 4,
+  ...
+)
 
 \S4method{as_h5}{NeuroVecSeq}(object, file = NULL, ...)
 }
@@ -56,19 +63,13 @@ Default "FLOAT"}
 
 \item{dtype}{For LabeledVolumeSet method: HDF5 data type for values. Default H5T_NATIVE_DOUBLE}
 
-\item{chunk_size}{For LabeledVolumeSet/list methods: Integer chunk size for HDF5. Default 1024}
+\item{chunk_size}{For LabeledVolumeSet method: Integer chunk size for HDF5. Default 1024}
 
 \item{header_values}{For LabeledVolumeSet method: List of additional header values}
 
-\item{scan_names}{For list method: Character vector of scan names}
+\item{scan_name}{For ClusteredNeuroVec method: Character name for this scan (default "scan_001")}
 
-\item{clusters}{For list method: ClusteredNeuroVol with cluster IDs}
-
-\item{scan_metadata}{For list method: List of metadata lists, one per scan}
-
-\item{cluster_metadata}{For list method: Optional data.frame with cluster descriptions}
-
-\item{summary_only}{For list method: If TRUE, save summary data only}
+\item{as_multiscan}{For ClusteredNeuroVec method: If TRUE, creates multi-scan container}
 }
 \value{
 An object representing the HDF5 storage, typically of a class
@@ -113,21 +114,6 @@ providing a standardized interface for serialization to HDF5.
       \item{\code{header_values}}{List of additional header values}
     }
     Returns an HDF5 file object.
-  }
-  \item{\code{signature(object = "list")}}{
-    Writes a cluster-based time-series dataset to an HDF5 file.
-    Additional parameters:
-    \describe{
-      \item{\code{scan_names}}{Character vector of scan names}
-      \item{\code{mask}}{LogicalNeuroVol for 3D geometry}
-      \item{\code{clusters}}{ClusteredNeuroVol with cluster IDs}
-      \item{\code{scan_metadata}}{List of metadata lists, one per scan}
-      \item{\code{cluster_metadata}}{Optional data.frame with cluster descriptions}
-      \item{\code{summary_only}}{Logical; if TRUE, store only summary data}
-      \item{\code{compression}}{Integer [0..9], default 4}
-      \item{\code{chunk_size}}{Chunk dimension for 2D writes, default 1024}
-    }
-    Returns an HDF5-backed object representing the clustered dataset (e.g., H5ParcellatedMultiScan).
   }
   \item{\code{signature(object = "NeuroVecSeq")}}{
     Writes a sequence of NeuroVec objects (multiple 4D scans) to a single HDF5 file.

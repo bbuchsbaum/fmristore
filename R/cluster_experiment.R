@@ -1056,7 +1056,7 @@ setMethod("close", "H5ParcellatedMultiScan", function(con, ...) {
   invisible(NULL)
 })
 
-#' @rdname close-methods
+#' @rdname close
 #' @export
 setMethod("close", "H5ParcellatedScanSummary", function(con, ...) {
   if (!is.null(con@obj)) {
@@ -1065,7 +1065,7 @@ setMethod("close", "H5ParcellatedScanSummary", function(con, ...) {
   invisible(NULL)
 })
 
-#' @rdname close-methods
+#' @rdname close
 #' @export
 setMethod("close", "H5ParcellatedScan", function(con, ...) {
   if (!is.null(con@obj)) {
