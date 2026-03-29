@@ -7,6 +7,7 @@
 [![Lint](https://github.com/bbuchsbaum/fmristore/actions/workflows/lint.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/lint.yaml)
 [![Dependencies](https://github.com/bbuchsbaum/fmristore/actions/workflows/dependencies.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/dependencies.yaml)
 [![pkgcheck](https://github.com/bbuchsbaum/fmristore/actions/workflows/pkgcheck.yaml/badge.svg)](https://github.com/bbuchsbaum/fmristore/actions/workflows/pkgcheck.yaml)
+[![pkgdown](https://github.com/bbuchsbaum/fmristore/actions/workflows/pkgdown.yaml/badge.svg)](https://bbuchsbaum.github.io/fmristore/)
 <!-- badges: end -->
 
 > **Note**: The badge URLs above already use the `bbuchsbaum` GitHub username; update them only if you publish from a different account.
