@@ -41,3 +41,4 @@
 ^NEWS\.md$
 ^\.gitattributes$
 ^inst/WORDLIST$
+^bids_plan\.md$

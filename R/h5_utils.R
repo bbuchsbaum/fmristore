@@ -284,58 +284,6 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
     stop("h5_read_subset: 'path' must be a single, non-empty character string.")
   }
 
-  # Check memory usage for subset operations if enabled
-  if (warn_memory && getOption("fmristore.warn_memory", TRUE) && !is.null(index)) {
-    # For subsets, estimate based on requested indices
-    tryCatch(
-      {
-        if (h5$exists(path)) {
-          dset <- h5[[path]]
-          tryCatch({
-            dims <- dset$dims
-            dtype <- dset$get_type()
-
-            # Estimate subset size
-            element_size <- tryCatch(dtype$get_size(), error = function(e) 8)
-
-            if (is.list(index)) {
-              # Calculate subset dimensions
-              subset_elements <- 1
-              for (i in seq_along(index)) {
-                if (i <= length(dims)) {
-                  subset_elements <- subset_elements * length(index[[i]])
-                }
-              }
-              # Add remaining dimensions not specified in index
-              for (j in (length(index) + 1):length(dims)) {
-                if (j <= length(dims)) {
-                  subset_elements <- subset_elements * dims[j]
-                }
-              }
-            } else {
-              subset_elements <- prod(dims) # Fallback to full size
-            }
-
-            estimated_size_mb <- (subset_elements * element_size) / (1024^2)
-            threshold <- getOption("fmristore.memory_threshold_mb", 100)
-
-            if (estimated_size_mb > threshold) {
-              warning(sprintf(
-                "[fmristore] Large subset operation: ~%.1f MB will be loaded into memory.",
-                estimated_size_mb
-              ), call. = FALSE)
-            }
-          }, finally = {
-            if (dset$is_valid) try(dset$close(), silent = TRUE)
-          })
-        }
-      },
-      error = function(e) {
-        # Silently ignore memory check errors
-      }
-    )
-  }
-
   if (!h5$exists(path)) {
     stop(sprintf(
       "h5_read_subset: dataset '%s' not found in file '%s'",
@@ -343,36 +291,56 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
     ))
   }
 
+  # Open dataset once and reuse for both memory check and read
   dset <- NULL
   out <- NULL
   tryCatch({
     dset <- h5[[path]]
-    read_args <- list()
-    if (!is.null(index)) {
+
+    # Memory warning check (using already-open handle)
+    if (warn_memory && getOption("fmristore.warn_memory", TRUE) && !is.null(index)) {
+      tryCatch({
+        dims <- dset$dims
+        dtype <- dset$get_type()
+        element_size <- tryCatch(dtype$get_size(), error = function(e) 8)
+        if (is.finite(element_size) && element_size > 0 && is.list(index)) {
+          subset_elements <- 1
+          for (ii in seq_along(index)) {
+            if (ii <= length(dims)) {
+              subset_elements <- subset_elements * length(index[[ii]])
+            }
+          }
+          for (jj in (length(index) + 1):length(dims)) {
+            if (jj <= length(dims)) {
+              subset_elements <- subset_elements * dims[jj]
+            }
+          }
+          estimated_size_mb <- (subset_elements * element_size) / (1024^2)
+          threshold <- getOption("fmristore.memory_threshold_mb", 100)
+          if (estimated_size_mb > threshold) {
+            warning(sprintf(
+              "[fmristore] Large subset operation: ~%.1f MB will be loaded into memory.",
+              estimated_size_mb
+            ), call. = FALSE)
+          }
+        }
+      }, error = function(e) NULL)
+    }
+
+    # Read data
+    if (is.null(index)) {
+      out <- dset$read()
+    } else {
       if (!is.list(index)) {
         stop("h5_read_subset: 'index' must be a list when provided.")
       }
-      read_args$index <- index
-    }
-    if (length(read_args) == 0L) {
-      out <- dset$read()
-    } else {
-      # For subsetting, pass indices directly to read()
-      if (!is.null(index)) {
-        # Check dataset dimensions to handle 1D vs 2D indexing
-        dims <- dset$dims
-        if (length(dims) == 2 && length(index) == 1) {
-          # For 2D datasets, if only row indices provided, select all columns
-          # Use drop=FALSE to ensure matrix output
-          out <- dset[index[[1]], , drop = FALSE]
-        } else if (length(dims) == 2 && length(index) == 2) {
-          # For 2D datasets with row and column indices
-          out <- dset[index[[1]], index[[2]], drop = FALSE]
-        } else {
-          out <- do.call(dset$read, index)
-        }
+      dims <- dset$dims
+      if (length(dims) == 2 && length(index) == 1) {
+        out <- dset[index[[1]], , drop = FALSE]
+      } else if (length(dims) == 2 && length(index) == 2) {
+        out <- dset[index[[1]], index[[2]], drop = FALSE]
       } else {
-        out <- do.call(dset$read, read_args)
+        out <- do.call(dset$read, index)
       }
     }
   }, error = function(e) {
@@ -513,16 +481,66 @@ guess_h5_type <- function(x) {
   stop(sprintf("Unsupported R data type for guess_h5_type(): %s", base_type))
 }
 
-#' Safely close an HDF5 file handle
+# safe_h5_close is now consolidated into close_h5_safely() in io_h5_helpers.R
+# which handles both H5File ($close_all) and other H5 objects ($close).
+safe_h5_close <- function(h5) close_h5_safely(h5)
+
+#' Build a NIfTI-like header field list for HDF5 storage
 #'
-#' Checks if the object is a valid H5File handle before attempting
-#' to close it, silencing potential errors from double-closing etc.
-#' @param h5 An object, expected to be an H5File handle.
+#' Creates the standard set of NIfTI header fields used by multiple writers
+#' (LatentNeuroVec, LabeledVolumeSet, etc.). Callers can override individual
+#' fields via the \code{overrides} argument.
+#'
+#' @param dims Integer vector \code{c(X, Y, Z, T)}.
+#' @param spacing Numeric vector of voxel spacing \code{c(dx, dy, dz)}.
+#' @param quat List with elements \code{quaternion} (length 3), \code{qoffset} (length 3),
+#'   and \code{qfac} (+/-1).
+#' @param tmat 4x4 transformation matrix.
+#' @param datatype_code Integer NIfTI datatype code.
+#' @param bitpix Integer bits per pixel.
+#' @param descrip Character description string.
+#' @param overrides Named list of fields to override in the default header.
+#' @return A named list of NIfTI header fields.
 #' @keywords internal
-safe_h5_close <- function(h5) {
-  if (inherits(h5, "H5File") && h5$is_valid) {
-    try(h5$close_all(), silent = TRUE)
+#' @noRd
+build_nifti_header <- function(dims, spacing, quat, tmat,
+                               datatype_code = 0L, bitpix = 0L,
+                               descrip = "fmristore data",
+                               overrides = list()) {
+  X <- dims[1]; Y <- dims[2]; Z <- dims[3]; T_dim <- dims[4]
+  qfac <- quat$qfac %||% 1.0
+  qb <- if (!is.null(quat$quaternion)) quat$quaternion[1] else 0.0
+  qc <- if (!is.null(quat$quaternion)) quat$quaternion[2] else 0.0
+  qd <- if (!is.null(quat$quaternion)) quat$quaternion[3] else 0.0
+  qox <- if (!is.null(quat$qoffset)) quat$qoffset[1] else 0.0
+  qoy <- if (!is.null(quat$qoffset)) quat$qoffset[2] else 0.0
+  qoz <- if (!is.null(quat$qoffset)) quat$qoffset[3] else 0.0
+
+  hdr <- list(
+    sizeof_hdr = 348L, data_type = "", db_name = "", extents = 0L,
+    session_error = 0L, regular = "", dim_info = 0L,
+    dim = c(4L, X, Y, Z, T_dim, 1L, 1L, 1L),
+    intent_p1 = 0.0, intent_p2 = 0.0, intent_p3 = 0.0, intent_code = 0L,
+    datatype = datatype_code, bitpix = bitpix,
+    slice_start = 0L,
+    pixdim = c(qfac, spacing[1], spacing[2], spacing[3], 0.0, 0.0, 0.0, 0.0),
+    vox_offset = 0.0, scl_slope = 1.0, scl_inter = 0.0,
+    slice_end = 0L, slice_code = 0L, xyzt_units = 0L,
+    cal_max = 0.0, cal_min = 0.0, slice_duration = 0.0, toffset = 0.0,
+    glmax = 0L, glmin = 0L,
+    descrip = descrip,
+    aux_file = "", qform_code = 1L, sform_code = 0L,
+    quatern_b = qb, quatern_c = qc, quatern_d = qd,
+    qoffset_x = qox, qoffset_y = qoy, qoffset_z = qoz,
+    srow_x = tmat[1, ], srow_y = tmat[2, ], srow_z = tmat[3, ],
+    intent_name = "", magic = "n+1"
+  )
+
+  # Apply overrides
+  for (nm in names(overrides)) {
+    hdr[[nm]] <- overrides[[nm]]
   }
+  hdr
 }
 
 # Robust dtype-to-NIfTI mapper

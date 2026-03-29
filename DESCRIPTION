@@ -24,7 +24,6 @@ RoxygenNote: 7.3.3
 Imports:
     assertthat,
     cli,
-    crayon,
     fmrilatent,
     hdf5r,
     lifecycle,

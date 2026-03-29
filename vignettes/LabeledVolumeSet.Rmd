@@ -25,7 +25,8 @@ if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown"
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  echo = TRUE
+  message = FALSE,
+  warning = FALSE
 )
 library(fmristore)
 library(neuroim2)
@@ -48,17 +49,13 @@ Key benefits:
 - **Consistent**: All volumes share the same brain mask
 - **Easy Access**: Retrieve volumes by name or index
 
-### Note on memory warnings and lazy loading
-
-`LabeledVolumeSet` stores volume data on disk and loads individual maps on demand. fmristore may warn when a call would materialize a very large dataset in R; for this vignette we temporarily disable those warnings via `options(fmristore.warn_memory = FALSE)` so the examples are not cluttered with performance messages.
-
 ## Quick Example: Storing Statistical Maps
 
 Let's say you have t-statistic maps from different contrasts in your fMRI study:
 
 ### Step 1: Create Example Data
 
-```{r create_data}
+```{r create-data}
 # Define brain dimensions
 brain_dims <- c(10, 10, 5)
 n_contrasts <- 3
@@ -71,7 +68,7 @@ contrast_data <- array(rnorm(prod(brain_dims) * n_contrasts),
 
 ### Step 2: Create Brain Mask
 
-```{r create_mask}
+```{r create-mask}
 # Create a brain mask (only analyze certain voxels)
 brain_mask <- array(TRUE, dim = brain_dims)
 brain_mask[1:3, 1:3, ] <- FALSE # Exclude corners
@@ -83,7 +80,7 @@ mask <- LogicalNeuroVol(brain_mask, NeuroSpace(brain_dims))
 
 ### Step 3: Save with Labels
 
-```{r save_labeled}
+```{r save-labeled}
 # Define meaningful labels
 contrast_names <- c("Faces_vs_Houses", "Words_vs_Nonwords", "Motion_vs_Static")
 
@@ -95,7 +92,7 @@ h5_handle$close_all()
 
 ### Step 4: Load and Access
 
-```{r load_access}
+```{r load-access}
 # Load the labeled set
 labeled_maps <- read_labeled_vec(h5_file)
 
@@ -115,7 +112,7 @@ unlink(h5_file)
 
 Here's how you might organize results from a group analysis:
 
-```{r group_analysis}
+```{r group-analysis}
 # Simulate group analysis results
 n_subjects <- 20
 brain_dims <- c(20, 20, 10)
@@ -173,7 +170,7 @@ Store individual subject maps for later analysis:
 
 ### Create Subject Data
 
-```{r subject_setup}
+```{r subject-setup}
 # Simulate beta maps from 5 subjects
 n_subjects <- 5
 brain_dims <- c(15, 15, 8)
@@ -186,7 +183,7 @@ subject_data <- array(rnorm(prod(brain_dims) * n_subjects),
 
 ### Add Activation Patterns
 
-```{r add_activations}
+```{r add-activations}
 # Add subject-specific patterns
 for (subj in 1:n_subjects) {
   # Each subject has slightly different activation center
@@ -208,7 +205,7 @@ for (subj in 1:n_subjects) {
 
 ### Save Subject Maps
 
-```{r save_subjects}
+```{r save-subjects}
 # Create objects
 subject_vec <- NeuroVec(subject_data, NeuroSpace(c(brain_dims, n_subjects)))
 mask <- LogicalNeuroVol(array(TRUE, brain_dims), NeuroSpace(brain_dims))
@@ -222,7 +219,7 @@ h5_handle$close_all()
 
 ### Compute Group Statistics
 
-```{r group_stats, fig.width=8, fig.height=6}
+```{r group-stats, fig.width=8, fig.height=6}
 # Load and compute group average
 subjects <- read_labeled_vec(h5_file)
 
@@ -248,7 +245,7 @@ unlink(h5_file)
 
 When working with many volumes, access them efficiently:
 
-```{r efficient_access, fig.width=8, fig.height=6}
+```{r efficient-access, fig.width=8, fig.height=6}
 # Create a dataset with many conditions
 n_conditions <- 10
 brain_dims <- c(20, 20, 10)
@@ -295,7 +292,7 @@ unlink(h5_file)
 ## Best Practices
 
 ### 1. Use Meaningful Labels
-```{r meaningful_labels, eval=FALSE}
+```{r meaningful-labels, eval=FALSE}
 # Good labels
 good_labels <- c(
   "PreTreatment_T1", "PostTreatment_T1",
@@ -307,7 +304,7 @@ bad_labels <- c("map1", "map2", "map3", "map4")
 ```
 
 ### 2. Organize Your Analysis
-```{r organize_analysis, eval=FALSE}
+```{r organize-analysis, eval=FALSE}
 # Save different analysis stages
 write_labeled_vec(raw_maps, mask,
   paste0("Raw_", condition_names),
@@ -326,7 +323,7 @@ write_labeled_vec(stats_maps, mask,
 ```
 
 ### 3. Remember to Close
-```{r close_reminder, eval=FALSE}
+```{r close-reminder, eval=FALSE}
 lvs <- read_labeled_vec("my_maps.h5")
 # ... analysis code ...
 close(lvs) # Always close when done!

@@ -6,7 +6,12 @@
 \usage{
 close_h5_safely(h5obj)
 }
+\arguments{
+\item{h5obj}{An HDF5 object (H5File, H5Group, H5D, etc.) or NULL.}
+}
 \description{
 Checks if the object is valid and not NULL before attempting to close.
+For \code{H5File} objects, uses \code{$close_all()} to also close any
+open child handles. For all other HDF5 objects, uses \code{$close()}.
 }
 \keyword{internal}

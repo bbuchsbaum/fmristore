@@ -3,7 +3,7 @@
 #' @importFrom neuroim2 NeuroSpace space origin trans
 #' @importFrom lifecycle deprecate_warn
 #' @importFrom hdf5r h5attr H5File h5types
-#' @importFrom crayon bold blue silver yellow green italic red
+#' @importFrom cli style_bold style_italic col_blue col_silver col_yellow col_green col_red
 NULL
 
 
@@ -108,7 +108,9 @@ setMethod(
     out_file <- file
     if (is.null(out_file)) {
       out_file <- tempfile(fileext = ".h5")
-      message("Output file not specified, using temp file: ", out_file)
+      if (isTRUE(getOption("fmristore.verbose"))) {
+        message("Output file not specified, using temp file: ", out_file)
+      }
     }
 
     # --- Map data_type string to HDF5 type object ---
@@ -160,7 +162,9 @@ setMethod(
       )
 
       write_success <- TRUE # Mark success if we reached here
-      message("Successfully wrote NeuroVol to: ", out_file)
+      if (isTRUE(getOption("fmristore.verbose"))) {
+        message("Successfully wrote NeuroVol to: ", out_file)
+      }
     }, error = function(e) {
       # Error occurred during writing
       stop("Failed during HDF5 write phase for ", out_file, ": ", e$message)
@@ -459,46 +463,42 @@ setAs(
 #' spacing, origin, and HDF5 file information, without reading voxel data.
 #'
 #' @param object The H5NeuroVol object to display.
-#' @importFrom crayon bold blue silver yellow green italic
+#' @importFrom cli style_bold style_italic col_blue col_silver col_yellow col_green col_red
 #' @export
 setMethod(
   f = "show",
   signature = "H5NeuroVol",
   definition = function(object) {
-    cat("\n", crayon::bold(crayon::blue("H5NeuroVol Object")), "\n")
-    cat(crayon::silver("===================\n"))
+    cat("\n", cli::style_bold(cli::col_blue("H5NeuroVol Object")), "\n")
+    cat(cli::col_silver("===================\n"))
 
-    # Display spatial info from the space slot
     sp <- object@space
     dims <- dim(sp)
     spacing_str <- paste(round(neuroim2::spacing(sp), 2), collapse = " x ")
     origin_str <- paste(round(neuroim2::origin(sp), 2), collapse = " x ")
 
-    cat(crayon::yellow("Dimensions:"), crayon::green(paste(dims, collapse = " x ")), "\n")
-    cat(crayon::yellow("Spacing:"), crayon::green(spacing_str), "\n")
-    cat(crayon::yellow("Origin:"), crayon::green(origin_str), "\n")
+    cat(cli::col_yellow("Dimensions:"), cli::col_green(paste(dims, collapse = " x ")), "\n")
+    cat(cli::col_yellow("Spacing:"), cli::col_green(spacing_str), "\n")
+    cat(cli::col_yellow("Origin:"), cli::col_green(origin_str), "\n")
 
-    # Display HDF5 file info
     h5f <- object@h5obj
     file_status <- "<Invalid Handle>"
-    file_path <- "<unknown>"
 
     if (!is.null(h5f) && inherits(h5f, "H5File")) {
       is_valid <- tryCatch(h5f$is_valid, error = function(e) FALSE)
       if (is_valid) {
         file_path <- tryCatch(h5f$get_filename(), error = function(e) "<error getting path>")
-        file_status <- paste(crayon::green("VALID handle"), "for file:", crayon::italic(file_path))
+        file_status <- paste(cli::col_green("VALID handle"), "for file:", cli::style_italic(file_path))
       } else {
-        # Try to get filename even if closed
         file_path <- tryCatch(h5f$get_filename(), error = function(e) "<unknown path>")
-        file_status <- paste(crayon::red("CLOSED handle"), "for file:", crayon::italic(file_path))
+        file_status <- paste(cli::col_red("CLOSED handle"), "for file:", cli::style_italic(file_path))
       }
     } else {
-      file_status <- crayon::red("INVALID H5File object slot")
+      file_status <- cli::col_red("INVALID H5File object slot")
     }
 
-    cat(crayon::yellow("HDF5 Source:"), file_status, "\n")
-    cat(crayon::silver("===================\n"))
+    cat(cli::col_yellow("HDF5 Source:"), file_status, "\n")
+    cat(cli::col_silver("===================\n"))
     cat("Access data using standard array indexing (e.g., object[1:10, 1:10, 1])\n")
     invisible(NULL)
   }

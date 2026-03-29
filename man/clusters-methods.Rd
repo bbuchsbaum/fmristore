@@ -75,7 +75,7 @@ Other H5Parcellated:
 \code{\link{close}()},
 \code{\link{cluster_metadata,H5ParcellatedMultiScan-method}},
 \code{\link{h5file,H5ParcellatedArray-method}},
-\code{\link{mask}()},
+\code{\link{mask,H5ParcellatedArray-method}},
 \code{\link{matrix_concat}()},
 \code{\link{n_scans,H5ParcellatedMultiScan-method}},
 \code{\link{scan_metadata,H5ParcellatedMultiScan-method}},

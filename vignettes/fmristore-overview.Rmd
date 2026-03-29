@@ -25,7 +25,8 @@ if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown"
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  echo = TRUE,
+  message = FALSE,
+  warning = FALSE,
   fig.width = 7,
   fig.height = 5
 )
@@ -33,15 +34,11 @@ library(fmristore)
 library(neuroim2)
 ```
 
-## Overview
+## Why fmristore?
 
-The `fmristore` package provides efficient HDF5-based storage solutions for neuroimaging data, with special support for:
+A typical fMRI session produces 4D arrays with dimensions like 64 x 64 x 40 x 200 — over 32 million values per run. Load a few runs into R and you quickly exhaust available memory. `fmristore` solves this by storing neuroimaging data in HDF5 format: your data lives on disk and is loaded on demand. The package also supports clustered (parcellated) storage for ROI analyses, multi-run containers, and latent decompositions for compression.
 
-- **Memory-efficient access** to large fMRI datasets
-- **Clustered/parcellated data** organization
-- **Multiple scan management** in unified containers
-- **Seamless conversion** from neuroim2 data structures
-- **Latent representations** for data compression
+This vignette walks you through the main storage formats and when to use each one.
 
 ## Quick Start: Choose Your Storage Format
 
@@ -167,33 +164,27 @@ memory_full <- n_voxels_total * dims[4] * 8 / (1024^2)  # MB
 memory_masked <- n_voxels_brain * dims[4] * 8 / (1024^2)  # MB
 memory_clustered <- 100 * dims[4] * 8 / (1024^2)  # 100 clusters
 
-cat("Storage Comparison for", paste(dims, collapse="x"), "data:\n")
-cat("─────────────────────────────────────────\n")
-cat("Full volume:      ", round(memory_full, 1), "MB\n")
-cat("Masked (30%):     ", round(memory_masked, 1), "MB\n")
-cat("Clustered (100):  ", round(memory_clustered, 1), "MB\n")
-cat("Compression ratio:", round(memory_full/memory_clustered, 0), ":1\n")
+sizes <- c(memory_full, memory_masked, memory_clustered)
+names(sizes) <- c("Full volume", "Masked (30%)", "Clustered (100)")
+cat("Compression ratio (full vs clustered):", round(memory_full / memory_clustered, 0), ":1\n")
+```
+
+```{r performance-plot, echo=FALSE, fig.cap="Memory requirements shrink dramatically with masking and clustering.", fig.height=3.5}
+barplot(sizes,
+        ylab = "Memory (MB)", col = c("#E8A0A0", "#A0C4E8", "#A0E8A0"),
+        main = paste("Storage for", paste(dims, collapse = "x"), "fMRI Data"))
 ```
 
 ## Best Practices
 
 ### 1. Memory Management
 
-Always close HDF5 objects when done:
+Always close HDF5 objects when you're done:
 
 ```{r memory-management, eval=FALSE}
-# Good practice
 h5_obj <- as_h5(data, file = "output.h5")
 # ... work with data ...
 close(h5_obj)
-
-# Or use try-finally for safety
-h5_obj <- as_h5(data, file = "output.h5")
-tryCatch({
-  # ... work with data ...
-}, finally = {
-  close(h5_obj)
-})
 ```
 
 ### 2. Choosing Between Single and Multi-Scan
@@ -249,65 +240,69 @@ for (run in 1:n_runs) {
 }
 ```
 
-### Use Case 2: Group Study with ROI Analysis
+### Use Case 2: Storing Subject Maps with LabeledVolumeSet
 
 ```{r use-case-2}
-# Multiple subjects, same ROI parcellation
-n_subjects <- 20
-n_rois <- 50  # Brain regions
+# Store activation maps from multiple subjects in a single HDF5 file
+n_subjects <- 5
+subject_data <- array(rnorm(prod(brain_dims) * n_subjects),
+                      dim = c(brain_dims, n_subjects))
+subject_vec <- NeuroVec(subject_data, NeuroSpace(c(brain_dims, n_subjects)))
+subject_labels <- paste0("Subject_", sprintf("%02d", 1:n_subjects))
 
-# Simulate group data
-group_data <- list()
-for (subj in 1:n_subjects) {
-  # Each subject has different activation patterns
-  subj_ts <- matrix(rnorm(n_time * n_rois), nrow = n_time, ncol = n_rois)
-  
-  # Add subject-specific effects
-  subj_ts <- subj_ts + rnorm(1, sd = 0.5)  # Individual differences
-  
-  group_data[[subj]] <- subj_ts
-}
+# Write to HDF5 with meaningful labels
+h5_file <- tempfile(fileext = ".h5")
+h5 <- write_labeled_vec(subject_vec, mask, subject_labels, file = h5_file)
+h5$close_all()
 
-cat("Group study setup:\n")
-cat("  Subjects:", n_subjects, "\n")
-cat("  ROIs:", n_rois, "\n")
-cat("  Time points:", n_time, "\n")
-cat("  Total data points:", n_subjects * n_rois * n_time, "\n")
+# Load and access individual maps by name
+lvs <- read_labeled_vec(h5_file)
+cat("Stored", length(labels(lvs)), "subject maps:",
+    paste(labels(lvs), collapse = ", "), "\n")
+
+subj1 <- lvs[["Subject_01"]]
+cat("Subject_01 map dimensions:", paste(dim(subj1), collapse = "x"), "\n")
+
+close(lvs)
+unlink(h5_file)
 ```
 
-### Use Case 3: Resting State Connectivity
+### Use Case 3: Resting State Connectivity from Parcellated Data
 
 ```{r use-case-3}
-# Resting state data often uses parcellations for connectivity
-# Create sample resting state data with network structure
-
-# Define network membership for ROIs
-n_networks <- 3
-network_assignment <- rep(1:n_networks, length.out = n_clusters)
-
-# Generate data with network structure
+# Store clustered resting-state time series and compute connectivity
 rest_ts <- matrix(rnorm(n_time * n_clusters), nrow = n_time, ncol = n_clusters)
 
-# Add network-specific correlations
-for (net in 1:n_networks) {
-  net_rois <- which(network_assignment == net)
-  if (length(net_rois) > 1) {
-    # Add shared signal within network
-    shared_signal <- rnorm(n_time, sd = 0.5)
-    for (roi in net_rois) {
-      rest_ts[, roi] <- rest_ts[, roi] + shared_signal
-    }
-  }
-}
+# Add shared signal to clusters 1 and 2 (simulating a network)
+shared_signal <- rnorm(n_time, sd = 0.8)
+rest_ts[, 1] <- rest_ts[, 1] + shared_signal
+rest_ts[, 2] <- rest_ts[, 2] + shared_signal
 
-# Calculate connectivity
-connectivity <- cor(rest_ts)
+# Save as parcellated scan via ClusteredNeuroVec
+cnvec_rest <- ClusteredNeuroVec(x = rest_ts, cvol = cvol)
+h5_file <- tempfile(fileext = ".h5")
+h5_rest <- as_h5(cnvec_rest, file = h5_file, scan_name = "rest")
 
-cat("Resting state connectivity:\n")
-cat("  Within-network correlation:", 
-    round(mean(connectivity[network_assignment == 1, network_assignment == 1]), 2), "\n")
-cat("  Between-network correlation:", 
-    round(mean(connectivity[network_assignment == 1, network_assignment == 2]), 2), "\n")
+# Retrieve the cluster-average matrix and compute connectivity
+rest_matrix <- as.matrix(h5_rest)
+connectivity <- cor(rest_matrix)
+```
+
+```{r use-case-3-plot, echo=FALSE, fig.cap="Inter-cluster connectivity from parcellated resting-state data.", fig.width=5, fig.height=4}
+# Visualize the connectivity matrix
+image(1:ncol(connectivity), 1:nrow(connectivity),
+      connectivity,
+      main = "Cluster Connectivity",
+      xlab = "Cluster", ylab = "Cluster",
+      col = hcl.colors(20, "RdBu", rev = TRUE),
+      zlim = c(-1, 1))
+```
+
+Clusters 1 and 2 show elevated correlation because they share an underlying signal — exactly the kind of structure you would look for in resting-state connectivity analyses.
+
+```{r use-case-3-cleanup, include=FALSE}
+close(h5_rest)
+unlink(h5_file)
 ```
 
 ## Advanced Features
@@ -380,18 +375,12 @@ close(lvs)
 - **Multi-scan containers**: See `vignette("H5ParcellatedMultiScan")`
 - **Labeled volumes**: See `vignette("LabeledVolumeSet")`
 
-## Summary
+## Format Chooser
 
-The fmristore package provides:
-
-1. **Efficient storage** through HDF5 format
-2. **Flexible data organization** with clustering support
-3. **Seamless conversion** from neuroim2 structures
-4. **Memory-efficient access** for large datasets
-5. **Multiple storage strategies** for different use cases
-
-Choose the right format for your needs:
-- `H5NeuroVec` for standard 4D fMRI
-- `H5ParcellatedScanSummary` for clustered single scans
-- `H5ParcellatedMultiScan` for multi-run experiments
-- `LabeledVolumeSet` for collections of brain maps
+| Your data | Best format | Key function |
+|:----------|:------------|:-------------|
+| Standard 4D fMRI | `H5NeuroVec` | `as_h5()` |
+| Clustered single scan | `H5ParcellatedScanSummary` | `as_h5()` or `write_dataset()` |
+| Multi-run clustered | `H5ParcellatedMultiScan` | `write_dataset()` |
+| Named brain maps | `LabeledVolumeSet` | `write_labeled_vec()` |
+| Compressed via PCA/ICA | `LatentNeuroVec` | `LatentNeuroVec()` |

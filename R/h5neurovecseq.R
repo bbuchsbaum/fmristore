@@ -18,6 +18,8 @@
 H5NeuroVecSeq <- function(file) {
   assertthat::assert_that(file.exists(file))
   h5obj <- hdf5r::H5File$new(file, mode = "r")
+  # Attach a finalizer so the handle is closed if the object is garbage collected
+  reg.finalizer(h5obj, function(x) close_h5_safely(x), onexit = TRUE)
   rtype <- try(hdf5r::h5attr(h5obj, "rtype"), silent = TRUE)
   if (!is.character(rtype) || rtype != "NeuroVecSeq") {
     stop("Invalid NeuroVecSeq HDF5 file: ", file)
@@ -74,6 +76,6 @@ setMethod("h5file", "H5NeuroVecSeq", function(x) {
 #' @rdname close
 #' @export
 setMethod("close", "H5NeuroVecSeq", function(con, ...) {
-  if (!is.null(con@obj)) safe_h5_close(con@obj)
+  if (!is.null(con@obj)) close_h5_safely(con@obj)
   invisible(NULL)
 })

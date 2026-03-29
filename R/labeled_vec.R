@@ -180,57 +180,26 @@ write_labeled_vec <- function(vec,
   single_dtype <- dtype
 
   # --- Use map_dtype function to get NIFTI codes ---
-  # Call the centralized function using :::
   databit <- map_dtype(single_dtype)
   nifti_datatype_code <- databit[1]
   nifti_bitpix <- databit[2]
   if (nifti_datatype_code == 0L) {
     warning("Could not map HDF5 dtype to NIfTI codes. Header datatype/bitpix may be incorrect.")
   }
-  # --- End mapping section ---
 
-  # Build minimal NIfTI-like header fields
-  # Add common unused fields, initialized
-  hdr_default <- list(
-    sizeof_hdr = 348L,
-    data_type = "", # Unused
-    db_name = "", # Unused
-    extents = 0L, # Unused
-    session_error = 0L, # Unused
-    regular = 0L, # Unused
-    dim_info = 0L, # Unused
-    dim = c(4L, X, Y, Z, nVols, 1L, 1L, 1L),
-    intent_p1 = 0.0, intent_p2 = 0.0, intent_p3 = 0.0, # Unused
-    intent_code = 0L, # Unused
-    datatype = nifti_datatype_code,
+  # Build NIfTI-like header using shared builder
+  hdr_default <- build_nifti_header(
+    dims = c(X, Y, Z, nVols),
+    spacing = sp,
+    quat = q,
+    tmat = tmat,
+    datatype_code = nifti_datatype_code,
     bitpix = nifti_bitpix,
-    slice_start = 0L, # Unused
-    pixdim = c(0.0, sp[1], sp[2], sp[3], 0, 0, 0, 0), # Keep pixdim[1]=0, qfac stored elsewhere
-    vox_offset = 0.0, # Unused
-    scl_slope = 1.0, # Unused
-    scl_inter = 0.0, # Unused
-    slice_end = 0L, # Unused
-    slice_code = 0L, # Unused
-    xyzt_units = 0L, # Unused
-    cal_max = 0.0, cal_min = 0.0, # Unused
-    slice_duration = 0.0, # Unused
-    toffset = 0.0, # Unused
-    glmax = 0L, glmin = 0L, # Unused
-    descrip = "fmristore labeled volume set", # Basic description
-    aux_file = "", # Unused
-    qform_code = 1L, # Default to NIFTI_XFORM_SCANNER_ANAT
-    sform_code = 0L, # Default to NIFTI_XFORM_UNKNOWN
-    quatern_b = q$quaternion[1],
-    quatern_c = q$quaternion[2],
-    quatern_d = q$quaternion[3],
-    qoffset_x = org[1],
-    qoffset_y = org[2],
-    qoffset_z = org[3],
-    srow_x = c(tmat[1, 1], tmat[1, 2], tmat[1, 3], tmat[1, 4]), # Store sform rows
-    srow_y = c(tmat[2, 1], tmat[2, 2], tmat[2, 3], tmat[2, 4]),
-    srow_z = c(tmat[3, 1], tmat[3, 2], tmat[3, 3], tmat[3, 4]),
-    intent_name = "", # Unused
-    magic = "n+1" # Keep writing variable length for now
+    descrip = "fmristore labeled volume set",
+    overrides = list(
+      qoffset_x = org[1], qoffset_y = org[2], qoffset_z = org[3],
+      pixdim = c(0.0, sp[1], sp[2], sp[3], 0, 0, 0, 0)
+    )
   )
 
   # Merge user overrides from header_values, preventing overwrite of critical fields
@@ -352,11 +321,10 @@ read_labeled_vec <- function(file_path) {
   # Call simplified open_h5 (no auto_close)
   fh <- open_h5(file_path, mode = "r")
   h5obj <- fh$h5
-  # CRITICAL: Remove on.exit/defer call for h5obj.
-  # Closing is now the responsibility of the user via the close() method
-  # if fh$owns is TRUE.
-  # Example removed call:
-  # if (fh$owns) on.exit(safe_h5_close(h5obj), add = TRUE)
+  # Attach a finalizer so the handle is closed if the object is garbage collected
+  if (fh$owns) {
+    reg.finalizer(h5obj, function(x) close_h5_safely(x), onexit = TRUE)
+  }
 
   hdr_grp <- NULL # Initialize for finally block
   hdr_values <- list()
@@ -741,7 +709,7 @@ setMethod(
 #' and storage paths.
 #'
 #' @param object A \code{\link{LabeledVolumeSet-class}} instance
-#' @importFrom crayon bold blue silver yellow green italic
+#' @importFrom cli style_bold col_blue col_silver col_yellow col_green
 #' @importFrom methods show
 #' @export
 setMethod(
@@ -765,41 +733,41 @@ setMethod(
       # We could add a check here if the file exists, but might be slow/unnecessary for 'show'
     }
 
-    cat("\n", crayon::bold(crayon::blue("LabeledVolumeSet")), "\n", sep = "")
+    cat("\n", cli::style_bold(cli::col_blue("LabeledVolumeSet")), "\n", sep = "")
 
     sp <- space(object@mask)
     nd3 <- dim(sp)
     nvol <- length(object@labels)
 
-    cat(crayon::bold("\n+= Volume Info "), crayon::silver("---------------------------"), "\n", sep = "")
-    cat("| ", crayon::yellow("3D Dimensions"), " : ", paste(nd3, collapse = " x "), "\n", sep = "")
-    cat("| ", crayon::yellow("Total Volumes"), " : ", nvol, "\n", sep = "")
+    cat(cli::style_bold("\n+= Volume Info "), cli::col_silver("---------------------------"), "\n", sep = "")
+    cat("| ", cli::col_yellow("3D Dimensions"), " : ", paste(nd3, collapse = " x "), "\n", sep = "")
+    cat("| ", cli::col_yellow("Total Volumes"), " : ", nvol, "\n", sep = "")
 
     lbl_preview <- object@labels[1:min(3, nvol)]
-    cat("| ", crayon::yellow("Labels"), "        : ",
+    cat("| ", cli::col_yellow("Labels"), "        : ",
       paste(lbl_preview, collapse = ", "),
-      if (nvol > 3) crayon::silver(paste0(" ... (", nvol - 3, " more)")), "\n",
+      if (nvol > 3) cli::col_silver(paste0(" ... (", nvol - 3, " more)")), "\n",
       sep = ""
     )
 
-    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep = "")
-    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
-    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse = " x "), "\n", sep = "")
+    cat(cli::style_bold("\n+= Spatial Info "), cli::col_silver("---------------------------"), "\n", sep = "")
+    cat("| ", cli::col_yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
+    cat("| ", cli::col_yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse = " x "), "\n", sep = "")
 
     if (length(sp@axes@ndim) == 1 && sp@axes@ndim >= 3) {
-      cat("| ", crayon::yellow("Orientation"), "   : ",
+      cat("| ", cli::col_yellow("Orientation"), "   : ",
         paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n",
         sep = ""
       )
     } else {
-      cat("| ", crayon::yellow("Orientation"), "   : Unknown / Not specified\n")
+      cat("| ", cli::col_yellow("Orientation"), "   : Unknown / Not specified\n")
     }
 
-    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep = "")
-    cat("  ", crayon::yellow("HDF5 File"), "    : ", file_status, "\n", sep = "")
-    cat("  ", crayon::yellow("Data Path"), "    : /data/<label>\n", sep = "")
-    cat("  ", crayon::yellow("Mask Path"), "    : /mask\n", sep = "")
-    cat("  ", crayon::yellow("Labels Path"), "  : /labels\n", sep = "") # Added label path info
+    cat(cli::style_bold("\n+= Storage Info "), cli::col_silver("--------------------------"), "\n", sep = "")
+    cat("  ", cli::col_yellow("HDF5 File"), "    : ", file_status, "\n", sep = "")
+    cat("  ", cli::col_yellow("Data Path"), "    : /data/<label>\n", sep = "")
+    cat("  ", cli::col_yellow("Mask Path"), "    : /mask\n", sep = "")
+    cat("  ", cli::col_yellow("Labels Path"), "  : /labels\n", sep = "")
 
     cat("\n")
   }
@@ -842,16 +810,8 @@ setMethod(
 #' Close the HDF5 file associated with a LabeledVolumeSet
 #'
 #' This method manually closes the HDF5 file handle stored within the
-#' LabeledVolumeSet object. It uses the \code{safe_h5_close} helper to
-#' ensure the handle is valid before attempting to close. After closing,
-#' the internal handle reference is nulled to prevent accidental reuse.
-#'
-#' **Important:** If this \code{LabeledVolumeSet} object was created from
-#' a file path using \code{\link{read_labeled_vec}}, the user is responsible
-#' for calling this \code{close} method when finished with the object to release
-#' the file handle. Failure to do so will leave the file open until the R session ends.
-#' If the object was created using an existing \code{H5File} handle, closing
-#' remains the responsibility of the code that originally opened the handle.
+#' LabeledVolumeSet object. It uses the \code{close_h5_safely} helper to
+#' ensure the handle is valid before attempting to close.
 #'
 #' @param con A \code{LabeledVolumeSet} object.
 #' @param ... Additional arguments (ignored).
@@ -860,10 +820,7 @@ setMethod(
 #' @export
 setMethod("close", "LabeledVolumeSet", function(con, ...) {
   if (!is.null(con@obj)) {
-    safe_h5_close(con@obj)
-    # Nulling out the reference is problematic if the slot expects an H5File object.
-    # The hdf5r object itself will become invalid after closing.
-    # con@obj <- NULL # This line can cause S4 validation error
+    close_h5_safely(con@obj)
   }
   invisible(NULL)
 })

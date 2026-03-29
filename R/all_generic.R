@@ -341,9 +341,10 @@ setGeneric("loadings", function(x, ...) standardGeneric("loadings"))
 #' }
 #' }
 #'
+#' @name offset
+#' @importFrom fmrilatent offset
 #' @export
-#' @rdname offset-methods
-setGeneric("offset", function(x, ...) standardGeneric("offset"))
+offset
 
 #' Get the mask volume
 #' @param x An object with a mask, like LatentNeuroVec or H5ParcellatedMultiScan
@@ -389,9 +390,10 @@ setGeneric("offset", function(x, ...) standardGeneric("offset"))
 #' }
 #' }
 #'
+#' @name mask
+#' @importFrom neuroim2 mask
 #' @export
-#' @rdname mask-methods
-setGeneric("mask", function(x, ...) standardGeneric("mask"))
+mask
 
 #' Get the index map volume
 #' @param x An object with an index map, like LatentNeuroVec

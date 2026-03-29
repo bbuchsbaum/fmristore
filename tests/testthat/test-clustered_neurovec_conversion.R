@@ -146,11 +146,12 @@ test_that("as_h5 method for ClusteredNeuroVec defaults to single scan", {
   result3 <- as_h5(cnvec, file = temp_file3, as_multiscan = TRUE)
   expect_s4_class(result3, "H5ParcellatedMultiScan")  # Multi-scan when requested
   
-  # Clean up
+  # Clean up - save paths before closing handles
+  result2_path <- result2@obj$get_filename()
   close(result)
   close(result2)
   close(result3)
-  unlink(h5file(result2))
+  unlink(result2_path)
   unlink(temp_file3)
 })
 

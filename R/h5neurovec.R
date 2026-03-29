@@ -99,6 +99,9 @@ H5NeuroVec <- function(file_name, dataset_name = "data") {
     stop("Dataset '", dataset_name, "' not found in HDF5 file")
   }
 
+  # Attach a finalizer so the handle is closed if the object is garbage collected
+  reg.finalizer(h5obj, function(x) close_h5_safely(x), onexit = TRUE)
+
   new("H5NeuroVec", space = sp, obj = h5obj, dataset_name = dataset_name)
 }
 
@@ -120,75 +123,7 @@ setAs(
   }
 )
 
-#' @export
-setMethod(
-  f = "series",
-  signature = signature(x = "H5NeuroVec", i = "integer"),
-  definition = function(x, i) {
-    assertthat::assert_that(max(i) <= dim(x)[4])
-    assertthat::assert_that(min(i) >= 1)
-    x@obj[[x@dataset_name]][, , , i, drop = FALSE]
-  }
-)
-
-#' @export
-setMethod(
-  f = "series",
-  signature = signature(x = "H5NeuroVec", i = "numeric"),
-  definition = function(x, i) {
-    callGeneric(x, as.integer(i))
-  }
-)
-
-#' @export
-setMethod(
-  f = "series",
-  signature = signature(x = "H5NeuroVec", i = "matrix"),
-  definition = function(x, i) {
-    assertthat::assert_that(ncol(i) == 3)
-    assertthat::assert_that(max(i) <= prod(dim(x)[1:3]))
-    assertthat::assert_that(min(i) >= 1)
-    x@obj[[x@dataset_name]][i]
-  }
-)
-
-#' @param drop Whether to drop dimensions of length 1
-#' @rdname series-methods
-#' @export
-setMethod(
-  f = "series",
-  signature = signature(x = "H5NeuroVec", i = "integer"),
-  definition = function(x, i, j, k, drop = TRUE) {
-    if (missing(j) && missing(k)) {
-      # i is a linear index; convert to (x,y,z)
-      grid <- indexToGridCpp(i, dim(x)[1:3])
-      callGeneric(x, grid)
-    } else {
-      # Possibly expand.grid approach
-      assertthat::assert_that(
-        length(i) == 1 && length(j) == 1 && length(k) == 1,
-        msg = "Expecting single-voxel indices for i,j,k"
-      )
-      ret <- x@obj[[x@dataset_name]][i, j, k, ]
-      if (drop) drop(ret) else ret
-    }
-  }
-)
-
-#' @rdname series-methods
-#' @export
-setMethod(
-  f = "series",
-  signature = signature(x = "H5NeuroVec", i = "numeric"),
-  definition = function(x, i, j, k) {
-    if (missing(j) && missing(k)) {
-      callGeneric(x, as.integer(i))
-    } else {
-      callGeneric(x, as.integer(i), as.integer(j), as.integer(k))
-    }
-  }
-)
-
+#' @param drop Whether to drop dimensions of length 1 (default TRUE).
 #' @rdname series-methods
 #' @export
 setMethod(
@@ -196,27 +131,25 @@ setMethod(
   signature = signature(x = "H5NeuroVec", i = "matrix"),
   definition = function(x, i) {
     assertthat::assert_that(ncol(i) == 3)
-    d4 <- dim(x)[4]
 
-    # Build bounding box for i
-    ir <- lapply(seq_len(ncol(i)), function(j) seq(min(i[, j]), max(i[, j])))
+    # Build bounding box ranges for each spatial dimension
+    mins <- apply(i, 2, min)
+    maxs <- apply(i, 2, max)
 
-    # e.g. sub-block
-    ret <- x@obj[[x@dataset_name]][
-      ir[[1]][1]:ir[[1]][length(ir[[1]])],
-      ir[[2]][1]:ir[[2]][length(ir[[2]])],
-      ir[[3]][1]:ir[[3]][length(ir[[3]])], ,
-      drop = FALSE
-    ]
+    # Read sub-block from HDF5 with proper handle cleanup
+    ret <- with_h5_dataset(x@obj, x@dataset_name, function(dset) {
+      dset[mins[1]:maxs[1], mins[2]:maxs[2], mins[3]:maxs[3], , drop = FALSE]
+    })
 
-    # flatten
+    # flatten spatial dims: result is [nTime x nSpatial]
     ret2 <- t(array(ret, c(prod(dim(ret)[1:3]), dim(ret)[4])))
-    # check if shape matches nrow(i)
+    # If bounding box is exact match, return directly
     if (ncol(ret2) != nrow(i)) {
-      i2 <- apply(i, 2, function(ind) {
-        ind - min(ind) + 1
-      })
-      i3 <- gridToIndex3DCpp(dim(ret)[1:3], i2)
+      # Map requested coords to local offsets within bounding box
+      i2 <- apply(i, 2, function(ind) ind - min(ind) + 1)
+      # Convert grid coordinates to linear indices (base R replacement for gridToIndex3DCpp)
+      ret_dims <- dim(ret)[1:3]
+      i3 <- i2[, 1] + (i2[, 2] - 1L) * ret_dims[1] + (i2[, 3] - 1L) * ret_dims[1] * ret_dims[2]
       ret2[, i3, drop = FALSE]
     } else {
       ret2
@@ -245,9 +178,10 @@ setMethod(
     minT <- min(coords[, 4])
     maxT <- max(coords[, 4])
 
-    # 3) Read sub-block
-    dset <- x@obj[[x@dataset_name]]
-    sub4d <- dset[minX:maxX, minY:maxY, minZ:maxZ, minT:maxT, drop = FALSE]
+    # 3) Read sub-block (with proper handle cleanup)
+    sub4d <- with_h5_dataset(x@obj, x@dataset_name, function(dset) {
+      dset[minX:maxX, minY:maxY, minZ:maxZ, minT:maxT, drop = FALSE]
+    })
 
     # 4) Flatten sub4d
     sub4d_vec <- as.vector(sub4d)
@@ -329,8 +263,9 @@ setMethod(
     minL <- min(l)
     maxL <- max(l)
 
-    dset <- x@obj[[x@dataset_name]]
-    subvol <- dset[minI:maxI, minJ:maxJ, minK:maxK, minL:maxL, drop = FALSE]
+    subvol <- with_h5_dataset(x@obj, x@dataset_name, function(dset) {
+      dset[minI:maxI, minJ:maxJ, minK:maxK, minL:maxL, drop = FALSE]
+    })
 
     i_off <- i - minI + 1
     j_off <- j - minJ + 1
@@ -441,7 +376,11 @@ setMethod(
   f = "series",
   signature = signature(x = "H5NeuroVec", i = "numeric"),
   definition = function(x, i, j, k, drop = TRUE) {
-    callGeneric(x, as.integer(i), as.integer(j), as.integer(k), drop = drop)
+    if (missing(j) && missing(k)) {
+      callGeneric(x, as.integer(i))
+    } else {
+      callGeneric(x, as.integer(i), as.integer(j), as.integer(k), drop = drop)
+    }
   }
 )
 
@@ -578,49 +517,40 @@ to_nih5_vec <- function(vec,
 #'
 #' @param object An \code{H5NeuroVec} object to show.
 #'
-#' @importFrom crayon bold blue silver yellow green
+#' @importFrom cli style_bold col_blue col_silver col_yellow col_green
 #' @importFrom utils object.size
 #' @export
 setMethod(
   f = "show",
   signature = signature(object = "H5NeuroVec"),
   definition = function(object) {
-    # Basic header
-    cat("\n", crayon::bold(crayon::blue("H5NeuroVec")), "\n", sep = "")
+    cat("\n", cli::style_bold(cli::col_blue("H5NeuroVec")), "\n", sep = "")
 
-    # Gather dimension info
-    d <- dim(object) # c(X, Y, Z, nVol)
-    cat(crayon::bold("\n+= Dimensions "), crayon::silver("---------------------------"), "\n", sep = "")
-    cat("| ", crayon::yellow("Spatial (XxYxZ)"), " : ",
-      paste(d[1:3], collapse = " x "), "\n",
-      sep = ""
-    )
-    cat("| ", crayon::yellow("Number of Volumes"), " : ", d[4], "\n", sep = "")
+    d <- dim(object)
+    cat(cli::style_bold("\n+= Dimensions "), cli::col_silver("---------------------------"), "\n", sep = "")
+    cat("| ", cli::col_yellow("Spatial (XxYxZ)"), " : ",
+      paste(d[1:3], collapse = " x "), "\n", sep = "")
+    cat("| ", cli::col_yellow("Number of Volumes"), " : ", d[4], "\n", sep = "")
 
-    # Spacing, origin
     sp <- space(object)
-    cat(crayon::bold("\n+= Spatial Info "), crayon::silver("---------------------------"), "\n", sep = "")
-    cat("| ", crayon::yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
-    cat("| ", crayon::yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse = " x "), "\n", sep = "")
+    cat(cli::style_bold("\n+= Spatial Info "), cli::col_silver("---------------------------"), "\n", sep = "")
+    cat("| ", cli::col_yellow("Spacing"), "       : ", paste(round(sp@spacing, 2), collapse = " x "), "\n", sep = "")
+    cat("| ", cli::col_yellow("Origin"), "        : ", paste(round(sp@origin, 2), collapse = " x "), "\n", sep = "")
 
-    # If axes are known, show them; else fallback
     if (length(sp@axes@ndim) >= 3) {
-      cat("| ", crayon::yellow("Orientation"), "   : ",
-        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n",
-        sep = ""
-      )
+      cat("| ", cli::col_yellow("Orientation"), "   : ",
+        paste(sp@axes@i@axis, sp@axes@j@axis, sp@axes@k@axis), "\n", sep = "")
     } else {
-      cat("| ", crayon::yellow("Orientation"), "   : Unknown\n")
+      cat("| ", cli::col_yellow("Orientation"), "   : Unknown\n")
     }
 
-    # HDF5 file info
-    cat(crayon::bold("\n+= Storage Info "), crayon::silver("--------------------------"), "\n", sep = "")
+    cat(cli::style_bold("\n+= Storage Info "), cli::col_silver("--------------------------"), "\n", sep = "")
     if (object@obj$is_valid) {
-      cat("  ", crayon::yellow("File"), " : ", object@obj$get_filename(), "\n", sep = "")
+      cat("  ", cli::col_yellow("File"), " : ", object@obj$get_filename(), "\n", sep = "")
     } else {
-      cat("  ", crayon::yellow("File"), " : (CLOSED HDF5 File)\n", sep = "")
+      cat("  ", cli::col_yellow("File"), " : (CLOSED HDF5 File)\n", sep = "")
     }
-    cat("  ", crayon::yellow("Dataset"), " : ", object@dataset_name, "\n", sep = "")
+    cat("  ", cli::col_yellow("Dataset"), " : ", object@dataset_name, "\n", sep = "")
     cat("\n")
   }
 )
@@ -628,7 +558,7 @@ setMethod(
 #' Close the HDF5 file associated with an H5NeuroVec
 #'
 #' This method manually closes the HDF5 file handle stored within the
-#' H5NeuroVec object. It uses the \code{safe_h5_close} helper.
+#' H5NeuroVec object. It uses the \code{close_h5_safely} helper.
 #'
 #' @param con An \code{H5NeuroVec} object.
 #' @param ... Additional arguments (ignored).
@@ -637,9 +567,7 @@ setMethod(
 #' @export
 setMethod("close", "H5NeuroVec", function(con, ...) {
   if (!is.null(con@obj) && inherits(con@obj, "H5File")) {
-    safe_h5_close(con@obj)
-    # Do not null out con@obj, as this can cause S4 validation errors
-    # The hdf5r object will become invalid upon closing.
+    close_h5_safely(con@obj)
   }
   invisible(NULL)
 })

@@ -20,17 +20,19 @@ includes:
 
 ---
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
+  message = FALSE,
+  warning = FALSE,
   fig.width = 7,
   fig.height = 4
 )
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 ```
 
-```{r setup}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+```{r load-packages}
 library(fmristore)
 library(neuroim2)
 ```
@@ -429,14 +431,14 @@ cat(
 
 ## When to Use H5ParcellatedMultiScan
 
-✅ **Good for:**
+**Good for:**
 - Multi-run studies with consistent brain parcellation
 - ROI-based analyses
 - Large datasets that don't fit in memory
 - Studies where you primarily analyze regional averages
 - Storing preprocessed data with known brain organization
 
-❌ **Not ideal for:**
+**Not ideal for:**
 - Single volumes (use `H5NeuroVol`)
 - Analyses requiring voxel-level flexibility across the whole brain
 - Data where the clustering might change between runs

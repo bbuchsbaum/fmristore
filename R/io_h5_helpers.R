@@ -88,10 +88,17 @@ read_h5_clusters_to_ClusteredNeuroVol <- function(h5, mask,
 #' Safely close an HDF5 object (file, group, dataset, attribute, dataspace, property list)
 #'
 #' Checks if the object is valid and not NULL before attempting to close.
+#' For \code{H5File} objects, uses \code{$close_all()} to also close any
+#' open child handles. For all other HDF5 objects, uses \code{$close()}.
 #'
+#' @param h5obj An HDF5 object (H5File, H5Group, H5D, etc.) or NULL.
 #' @keywords internal
 close_h5_safely <- function(h5obj) {
   if (!is.null(h5obj) && h5obj$is_valid) {
-    try(h5obj$close(), silent = TRUE)
+    if (inherits(h5obj, "H5File")) {
+      try(h5obj$close_all(), silent = TRUE)
+    } else {
+      try(h5obj$close(), silent = TRUE)
+    }
   }
 }

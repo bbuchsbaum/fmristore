@@ -6,9 +6,9 @@
 \alias{series,H5ParcellatedScan,numeric-method}
 \alias{series,H5ParcellatedScan,matrix-method}
 \alias{series,H5ParcellatedScanSummary,ANY-method}
+\alias{series,H5NeuroVec,matrix-method}
 \alias{series,H5NeuroVec,integer-method}
 \alias{series,H5NeuroVec,numeric-method}
-\alias{series,H5NeuroVec,matrix-method}
 \title{Extract Time Series Data}
 \usage{
 series(x, i, ...)
@@ -18,10 +18,6 @@ series(x, i, ...)
 \S4method{series}{H5ParcellatedScan,matrix}(x, i, ...)
 
 \S4method{series}{H5ParcellatedScanSummary,ANY}(x, i, ...)
-
-\S4method{series}{H5NeuroVec,integer}(x, i, j, k, drop = TRUE)
-
-\S4method{series}{H5NeuroVec,numeric}(x, i, j, k, drop = TRUE)
 
 \S4method{series}{H5NeuroVec,matrix}(x, i)
 
@@ -42,7 +38,7 @@ It can be numeric indices, a matrix of coordinates, etc.}
 
 \item{k}{Optional z-coordinate or further index specification used by some methods.}
 
-\item{drop}{Whether to drop dimensions of length 1}
+\item{drop}{Whether to drop dimensions of length 1 (default TRUE).}
 }
 \value{
 A matrix or vector containing the time series data. The exact format

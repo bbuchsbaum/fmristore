@@ -20,22 +20,24 @@ includes:
 
 ---
 
-```{r, include = FALSE}
+```{r setup, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
+  message = FALSE,
+  warning = FALSE,
   fig.width = 7,
   fig.height = 5
 )
+if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
 ```
 
-```{r setup}
-if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown", quietly = TRUE)) ggplot2::theme_set(albersdown::theme_albers(params$family))
+```{r load-packages}
 library(fmristore)
 library(neuroim2)
 ```
 
-## Overview: The Individual Scan Components
+## How are individual scans organized?
 
 In the fmristore parcellated data system, **H5ParcellatedMultiScan** serves as a container that holds multiple individual scan objects. Each scan within the container is either:
 

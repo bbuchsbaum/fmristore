@@ -50,23 +50,14 @@ This generic is used for objects that manage external resources like
 HDF5 file handles.
 
 This method manually closes the HDF5 file handle stored within the
-H5NeuroVec object. It uses the \code{safe_h5_close} helper.
+H5NeuroVec object. It uses the \code{close_h5_safely} helper.
 
 This method manually closes the HDF5 file handle stored within the
 H5NeuroVol object. It uses the \code{safe_h5_close} helper.
 
 This method manually closes the HDF5 file handle stored within the
-LabeledVolumeSet object. It uses the \code{safe_h5_close} helper to
-ensure the handle is valid before attempting to close. After closing,
-the internal handle reference is nulled to prevent accidental reuse.
-}
-\details{
-**Important:** If this \code{LabeledVolumeSet} object was created from
-a file path using \code{\link{read_labeled_vec}}, the user is responsible
-for calling this \code{close} method when finished with the object to release
-the file handle. Failure to do so will leave the file open until the R session ends.
-If the object was created using an existing \code{H5File} handle, closing
-remains the responsibility of the code that originally opened the handle.
+LabeledVolumeSet object. It uses the \code{close_h5_safely} helper to
+ensure the handle is valid before attempting to close.
 }
 \examples{
 \dontrun{
@@ -91,7 +82,7 @@ Other H5Parcellated:
 \code{\link{cluster_metadata,H5ParcellatedMultiScan-method}},
 \code{\link{clusters}()},
 \code{\link{h5file,H5ParcellatedArray-method}},
-\code{\link{mask}()},
+\code{\link{mask,H5ParcellatedArray-method}},
 \code{\link{matrix_concat}()},
 \code{\link{n_scans,H5ParcellatedMultiScan-method}},
 \code{\link{scan_metadata,H5ParcellatedMultiScan-method}},

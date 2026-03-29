@@ -3,9 +3,6 @@
 \name{offset}
 \alias{offset}
 \title{Get the offset vector}
-\usage{
-offset(x, ...)
-}
 \arguments{
 \item{x}{An object, likely a LatentNeuroVec or similar}
 

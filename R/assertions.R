@@ -89,11 +89,14 @@ validate_same_dims <- function(a, b, dims_to_compare = NULL, msg = NULL) {
   return(result)
 }
 
-#' Helper for default value if NULL (copied from cluster_experiment.R temporarily, should be centralized)
+#' Null-coalescing operator
+#'
+#' Returns \code{b} if \code{a} is \code{NULL}, otherwise \code{a}.
+#' Provided for compatibility with R < 4.4.0 which lacks the base version.
 #'
 #' @param a First object.
 #' @param b Second object.
-#' @return `b` if `a` is `NULL`, otherwise `a`.
+#' @return \code{b} if \code{a} is \code{NULL}, otherwise \code{a}.
 #' @keywords internal
 #' @noRd
 `%||%` <- function(a, b) if (is.null(a)) b else a

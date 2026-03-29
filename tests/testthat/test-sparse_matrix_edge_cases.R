@@ -139,8 +139,8 @@ test_that("LatentNeuroVec handles numerical edge cases", {
   mask <- fmristore:::create_minimal_LogicalNeuroVol(dims)
   n_mask_voxels <- sum(mask@.Data)
 
-  # Test 1: Inf and -Inf values in basis
-  basis_inf <- matrix(rnorm(n_time * n_comp), nrow = n_time, ncol = n_comp)
+  # Test 1: Inf and -Inf values in basis (must be Matrix for validation to trigger)
+  basis_inf <- Matrix::Matrix(rnorm(n_time * n_comp), nrow = n_time, ncol = n_comp)
   basis_inf[1, 1] <- Inf
   basis_inf[2, 2] <- -Inf
 
