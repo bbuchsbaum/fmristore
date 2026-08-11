@@ -2,8 +2,10 @@
 
 * Added reconstructible `h5_array_source()` descriptors implementing the
   `fmridataset` lazy source protocol without serialized file handles.
-* Added atomic provisional `write_frame_h5()` and metadata-only
-  `open_frame_h5()` support for `fmri_frame` persistence.
+* Replaced the provisional frame format with an atomic FDS v1 codec.
+  `write_frame_h5()` now streams separately bound assays and aligned blocks
+  under a hard memory budget; `open_frame_h5()` validates semantic and storage
+  manifests while leaving every numerical array lazy.
 
 # fmristore 0.1.0
 

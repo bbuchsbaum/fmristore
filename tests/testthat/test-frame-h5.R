@@ -41,7 +41,7 @@
   )
 }
 
-test_that("provisional HDF5 frames round trip without realizing on open", {
+test_that("FDS v1 HDF5 frames round trip without realizing arrays on open", {
   frame <- .example_h5_frame()
   path <- tempfile(fileext = ".fds.h5")
   on.exit(unlink(path), add = TRUE)
@@ -62,6 +62,16 @@ test_that("provisional HDF5 frames round trip without realizing on open", {
     fmridataset::block_components(fmridataset::obs_blocks(frame)$embedding)
   )
   expect_s3_class(fmridataset::assay(reopened, "beta")$source, "h5_array_source")
+  expect_s3_class(
+    fmridataset::axis_block_data(fmridataset::obs_blocks(reopened)$embedding),
+    "h5_array_source"
+  )
+  expect_equal(
+    fmridataset::source_read(
+      fmridataset::axis_block_data(fmridataset::obs_blocks(reopened)$embedding)
+    ),
+    fmridataset::axis_block_data(fmridataset::obs_blocks(frame)$embedding)
+  )
   expect_equal(fmridataset::collect_assay(reopened, "beta"), fmridataset::collect_assay(frame, "beta"))
   expect_equal(
     fmridataset::collect_assay(reopened, "variance"),
@@ -73,18 +83,28 @@ test_that("provisional HDF5 frames round trip without realizing on open", {
   )
 })
 
-test_that("frame writes are bounded and atomically fail", {
+test_that("frame writes stream under a hard block budget and atomically fail", {
   frame <- .example_h5_frame()
   parent <- tempfile("frame-write-")
   dir.create(parent)
   on.exit(unlink(parent, recursive = TRUE), add = TRUE)
   path <- file.path(parent, "study.fds.h5")
 
-  expect_error(write_frame_h5(frame, path, memory_budget = 8L), "memory_budget")
+  counted <- fmridataset::counting_source(fmridataset::assay(frame, "beta")$source)
+  frame$assays$beta$source <- counted
+  expect_identical(write_frame_h5(frame, path, memory_budget = 8L), normalizePath(path))
+  expect_gt(fmridataset::source_counts(counted)$reads, 1)
+  expect_equal(
+    fmridataset::collect_assay(open_frame_h5(path), "beta"),
+    fmridataset::collect_assay(frame, "beta")
+  )
+  unlink(path)
+
+  expect_error(write_frame_h5(frame, path, memory_budget = 7L), "memory_budget")
   expect_false(file.exists(path))
   expect_length(list.files(parent, pattern = "partial", all.files = TRUE), 0L)
 
-  withr::local_options(fmristore.frame_writer_fault_after_assay = 1L)
+  withr::local_options(fmristore.frame_writer_fault_after_array = 1L)
   expect_error(write_frame_h5(frame, path), "Injected")
   expect_false(file.exists(path))
   expect_length(list.files(parent, pattern = "partial", all.files = TRUE), 0L)
@@ -99,10 +119,31 @@ test_that("frame writers protect existing destinations and schema", {
   expect_error(write_frame_h5(frame, path), "already exists")
   expect_silent(write_frame_h5(frame, path, overwrite = TRUE))
 
+  h5 <- hdf5r::H5File$new(path, mode = "r")
+  expect_identical(hdf5r::h5attr(h5, "fds_schema_id"), "org.fmridataset.fds/v1")
+  expect_identical(hdf5r::h5attr(h5, "fds_schema_version"), 1L)
+  expect_identical(hdf5r::h5attr(h5, "fds_commit_state"), "complete")
+  expect_true(h5$exists("manifest/semantic_rds"))
+  expect_true(h5$exists("manifest/storage_rds"))
+  h5$close_all()
+
   invalid <- tempfile(fileext = ".h5")
   on.exit(unlink(invalid), add = TRUE)
   h5 <- hdf5r::H5File$new(invalid, mode = "w")
   h5[["data"]] <- 1
   h5$close_all()
   expect_error(open_frame_h5(invalid), "schema")
+})
+
+test_that("failed overwrite preserves the previously committed frame", {
+  frame <- .example_h5_frame()
+  path <- tempfile(fileext = ".fds.h5")
+  on.exit(unlink(path), add = TRUE)
+  write_frame_h5(frame, path)
+  before <- unname(tools::md5sum(path))
+
+  withr::local_options(fmristore.frame_writer_fault_after_array = 1L)
+  expect_error(write_frame_h5(frame, path, overwrite = TRUE), "Injected")
+  expect_identical(unname(tools::md5sum(path)), before)
+  expect_s3_class(open_frame_h5(path), "fmri_frame")
 })

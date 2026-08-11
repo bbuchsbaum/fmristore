@@ -3,14 +3,14 @@
 \name{write_frame_h5}
 \alias{write_frame_h5}
 \alias{open_frame_h5}
-\title{Write and open provisional HDF5 fmri frames}
+\title{Write and open FDS v1 HDF5 fmri frames}
 \usage{
 write_frame_h5(
   x,
   path,
   overwrite = FALSE,
   chunk_dims = NULL,
-  memory_budget = getOption("fmridataset.collect_budget", 2 * 1024^3)
+  memory_budget = getOption("fmridataset.block_budget", 512 * 1024^2)
 )
 
 open_frame_h5(path)
@@ -20,23 +20,20 @@ open_frame_h5(path)
 
 \item{path}{Destination or source HDF5 path.}
 
-\item{overwrite}{Replace an existing destination.}
+\item{overwrite}{Atomically replace an existing destination.}
 
-\item{chunk_dims}{Optional two-element HDF5 chunk shape.}
+\item{chunk_dims}{Optional two-element HDF5 chunk shape applied to arrays.}
 
-\item{memory_budget}{Maximum bytes allowed for one realized assay.}
+\item{memory_budget}{Hard maximum bytes for one source-read block.}
 }
 \value{
-`write_frame_h5()` invisibly returns the normalized path;
-  `open_frame_h5()` returns an `fmri_frame` backed by HDF5 sources.
+`write_frame_h5()` invisibly returns the normalized committed path;
+  `open_frame_h5()` returns a lazy `fmri_frame`.
 }
 \description{
-`write_frame_h5()` persists aligned assays plus a serializable semantic
-manifest. `open_frame_h5()` reads only the manifest and HDF5 dataset
-metadata; assay values remain lazy through [h5_array_source()].
-}
-\details{
-The provisional schema is intentionally versioned separately from the
-frozen FDS 1.0 schema. Files are written through a sibling temporary file
-and renamed only after every assay and the manifest have been committed.
+`write_frame_h5()` validates the source-free FDS v1 semantic manifest, then
+streams every separately bound array into a sibling temporary HDF5 file.
+The destination becomes visible only after arrays, manifests, digests, and a
+complete commit marker have been flushed. `open_frame_h5()` reads manifests
+and dataset metadata only; numerical arrays remain lazy.
 }

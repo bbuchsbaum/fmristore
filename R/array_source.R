@@ -66,9 +66,13 @@ h5_array_source <- function(
   if (length(shape) != 2L) {
     stop("An HDF5 ArraySource dataset must be two dimensional.", call. = FALSE)
   }
+  declared_dtype <- tryCatch(
+    hdf5r::h5attr(dset, "fds_dtype"),
+    error = function(error) NULL
+  )
   list(
     shape = shape,
-    dtype = .h5_source_dtype(dset),
+    dtype = declared_dtype %||% .h5_source_dtype(dset),
     chunks = .h5_source_chunks(dset, shape)
   )
 }
