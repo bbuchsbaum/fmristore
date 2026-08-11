@@ -32,8 +32,12 @@
     assays = list(beta = beta, variance = beta / 10 + 0.1),
     observations = observations,
     features = features,
-    entities = list(subject = data.frame(subject_id = c("s01", "s02", "s03"))),
-    relations = list(observation_subject = observations$data$subject_id),
+    entities = list(subject = fmridataset::entity_frame(
+      data.frame(subject_id = c("s01", "s02", "s03")), key = "subject_id"
+    )),
+    relations = list(observation_subject = fmridataset::key_relation(
+      "subject_id", target = "subject"
+    )),
     tables = list(contrasts = data.frame(name = c("A", "B"))),
     active_assay = "beta",
     metadata = list(label = "roundtrip"),
@@ -177,4 +181,17 @@ test_that("failed overwrite preserves the previously committed frame", {
   expect_error(write_frame_h5(frame, path, overwrite = TRUE), "Injected")
   expect_identical(unname(tools::md5sum(path)), before)
   expect_s3_class(open_frame_h5(path), "fmri_frame")
+})
+
+test_that("empty frame views retain their declared HDF5 axes", {
+  frame <- .example_h5_frame()[integer(), ]
+  path <- tempfile(fileext = ".fds.h5")
+  on.exit(unlink(path), add = TRUE)
+
+  write_frame_h5(frame, path)
+  reopened <- open_frame_h5(path)
+
+  expect_identical(dim(reopened), c(0L, 4L))
+  expect_identical(fmridataset::observation_ids(reopened), character())
+  expect_identical(dim(fmridataset::collect_assay(reopened, "beta")), c(0L, 4L))
 })

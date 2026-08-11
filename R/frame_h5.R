@@ -50,6 +50,11 @@
     layout = c("balanced", "imagewise", "featurewise"),
     target_chunk_bytes = 1024^2) {
   layout <- match.arg(layout)
+  shape <- as.integer(shape)
+  if (length(shape) != 2L || anyNA(shape) || any(shape < 0L)) {
+    stop("Frame array shape must contain two non-negative integers.", call. = FALSE)
+  }
+  chunk_shape <- pmax(shape, 1L)
   if (!is.numeric(target_chunk_bytes) || length(target_chunk_bytes) != 1L ||
     is.na(target_chunk_bytes) || !is.finite(target_chunk_bytes) ||
     target_chunk_bytes <= 0) {
@@ -65,33 +70,33 @@
     if (length(requested) != 2L || anyNA(requested) || any(requested < 1L)) {
       stop("`chunk_dims` must contain two positive integers.", call. = FALSE)
     }
-    chunks <- pmin(requested, shape)
+    chunks <- pmin(requested, chunk_shape)
   } else {
     capacity <- min(capacity, floor(target_chunk_bytes / bytes))
     if (capacity < 1L) {
       stop("`target_chunk_bytes` cannot hold one source value.", call. = FALSE)
     }
     if (layout == "imagewise") {
-      feature <- min(shape[[2L]], capacity)
-      observation <- min(shape[[1L]], max(1L, floor(capacity / feature)))
+      feature <- min(chunk_shape[[2L]], capacity)
+      observation <- min(chunk_shape[[1L]], max(1L, floor(capacity / feature)))
       chunks <- as.integer(c(observation, feature))
     } else if (layout == "featurewise") {
-      observation <- min(shape[[1L]], capacity)
-      feature <- min(shape[[2L]], max(1L, floor(capacity / observation)))
+      observation <- min(chunk_shape[[1L]], capacity)
+      feature <- min(chunk_shape[[2L]], max(1L, floor(capacity / observation)))
       chunks <- as.integer(c(observation, feature))
     } else {
-      base <- pmin(as.integer(shape), c(64L, 4096L))
+      base <- pmin(chunk_shape, c(64L, 4096L))
       scale <- sqrt(capacity / prod(as.double(base)))
-      observation <- min(shape[[1L]], max(1L, floor(base[[1L]] * scale)))
-      feature <- min(shape[[2L]], max(1L, floor(capacity / observation)))
+      observation <- min(chunk_shape[[1L]], max(1L, floor(base[[1L]] * scale)))
+      feature <- min(chunk_shape[[2L]], max(1L, floor(capacity / observation)))
       chunks <- as.integer(c(observation, feature))
     }
   }
   if (prod(as.double(chunks)) > capacity) {
     observation <- floor(sqrt(capacity * chunks[[1L]] / chunks[[2L]]))
-    observation <- min(shape[[1L]], max(1L, observation))
-    feature <- min(shape[[2L]], max(1L, floor(capacity / observation)))
-    observation <- min(shape[[1L]], max(1L, floor(capacity / feature)))
+    observation <- min(chunk_shape[[1L]], max(1L, observation))
+    feature <- min(chunk_shape[[2L]], max(1L, floor(capacity / observation)))
+    observation <- min(chunk_shape[[1L]], max(1L, floor(capacity / feature)))
     chunks <- as.integer(c(observation, feature))
   }
   chunks
@@ -150,6 +155,17 @@
   )
   on.exit(close_h5_safely(dataset), add = TRUE)
   hdf5r::h5attr(dataset, "fds_dtype") <- declaration$dtype
+  if (any(shape == 0L)) {
+    return(list(
+      key = declaration$key,
+      dataset = paste0("/", dataset_path),
+      shape = shape,
+      dtype = declaration$dtype,
+      chunks = chunks,
+      layout = layout,
+      target_chunk_bytes = as.double(target_chunk_bytes)
+    ))
+  }
   observation_starts <- seq.int(1L, shape[[1L]], by = chunks[[1L]])
   feature_starts <- seq.int(1L, shape[[2L]], by = chunks[[2L]])
   for (observation_start in observation_starts) {
