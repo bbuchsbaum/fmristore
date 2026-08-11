@@ -1,5 +1,9 @@
 # fmristore 0.1.0.9000 (Development)
 
+* Added metadata-only frame-store inspection, conservative rollback of proven
+  uncommitted write artifacts, and an atomic streaming migration from the real
+  `0.1-provisional` HDF5 frame layout to FDS v1.
+
 * Added atomic sharded-frame directories. New observation shards are committed
   as immutable FDS v1 HDF5 files before a small root-manifest swap, so appends
   never rewrite prior assay data and reopen as canonical row-sharded sources.
