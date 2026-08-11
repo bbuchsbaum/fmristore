@@ -1,7 +1,7 @@
 Package: fmristore
 Type: Package
 Title: Efficient Storage of fMRI Data
-Version: 0.1.0
+Version: 0.1.0.9000
 Authors@R: 
     person(given = "Bradley",
            family = "Buchsbaum",
@@ -51,6 +51,7 @@ Collate:
     'constants.R'
     'constructors.R'
     'fmristore-package.R'
+    'frame_h5.R'
     'globals.R'
     'h5_utils.R'
     'h5neurovec.R'

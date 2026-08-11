@@ -1,3 +1,10 @@
+# fmristore 0.1.0.9000 (Development)
+
+* Added reconstructible `h5_array_source()` descriptors implementing the
+  `fmridataset` lazy source protocol without serialized file handles.
+* Added atomic provisional `write_frame_h5()` and metadata-only
+  `open_frame_h5()` support for `fmri_frame` persistence.
+
 # fmristore 0.1.0
 
 * Initial CRAN release.
