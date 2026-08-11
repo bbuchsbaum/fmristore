@@ -1,5 +1,9 @@
 # fmristore 0.1.0.9000 (Development)
 
+* Added atomic sharded-frame directories. New observation shards are committed
+  as immutable FDS v1 HDF5 files before a small root-manifest swap, so appends
+  never rewrite prior assay data and reopen as canonical row-sharded sources.
+
 * HDF5 frame writers now support balanced, imagewise, and featurewise chunk
   layouts under explicit byte targets. `h5_read_plan()` and
   `validate_h5_read_amplification()` expose enforceable, metadata-only I/O

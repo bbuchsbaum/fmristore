@@ -52,6 +52,7 @@ Collate:
     'constructors.R'
     'fmristore-package.R'
     'frame_h5.R'
+    'frame_shards_h5.R'
     'globals.R'
     'h5_utils.R'
     'h5neurovec.R'
