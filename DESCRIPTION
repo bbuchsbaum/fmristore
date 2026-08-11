@@ -24,6 +24,7 @@ RoxygenNote: 7.3.3
 Imports:
     assertthat,
     cli,
+    fmridataset,
     fmrilatent,
     hdf5r,
     lifecycle,
@@ -43,6 +44,7 @@ Config/testthat/edition: 3
 Collate: 
     'all_class.R'
     'all_generic.R'
+    'array_source.R'
     'assertions.R'
     'cluster_array.R'
     'cluster_experiment.R'
@@ -67,6 +69,7 @@ Collate:
     'write_parcellated_scan_h5.R'
     'zzz_example_helpers.R'
 Remotes:
+    bbuchsbaum/fmridataset,
     bbuchsbaum/neuroim2,
     bbuchsbaum/fmrilatent,
     bbuchsbaum/albersdown
