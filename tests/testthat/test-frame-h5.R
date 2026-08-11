@@ -110,6 +110,37 @@ test_that("frame writes stream under a hard block budget and atomically fail", {
   expect_length(list.files(parent, pattern = "partial", all.files = TRUE), 0L)
 })
 
+test_that("frame chunk layouts encode workload intent and meet aligned gates", {
+  shape <- c(200000L, 50000L)
+  budget <- 16 * 1024^2
+  target <- 4 * 1024^2
+  balanced <- fmristore:::.frame_chunk_dims(
+    shape, "float32", budget, layout = "balanced", target_chunk_bytes = target
+  )
+  imagewise <- fmristore:::.frame_chunk_dims(
+    shape, "float32", budget, layout = "imagewise", target_chunk_bytes = target
+  )
+  featurewise <- fmristore:::.frame_chunk_dims(
+    shape, "float32", budget, layout = "featurewise", target_chunk_bytes = target
+  )
+  expect_identical(balanced, c(128L, 8192L))
+  expect_gt(imagewise[[2L]], balanced[[2L]])
+  expect_lt(imagewise[[1L]], balanced[[1L]])
+  expect_gt(featurewise[[1L]], balanced[[1L]])
+  expect_lt(featurewise[[2L]], balanced[[2L]])
+  expect_lte(prod(as.double(balanced)) * 4, target)
+
+  frame <- .example_h5_frame()
+  path <- tempfile(fileext = ".fds.h5")
+  on.exit(unlink(path), add = TRUE)
+  write_frame_h5(frame, path, layout = "featurewise", target_chunk_bytes = 32)
+  source <- fmridataset::assay(open_frame_h5(path), "beta")$source
+  expect_identical(fmridataset::source_chunks(source), c(4L, 1L))
+  plan <- h5_read_plan(source, observations = 1:4, features = 1L)
+  expect_identical(plan$amplification, 1)
+  expect_silent(validate_h5_read_amplification(plan, max = 1.5))
+})
+
 test_that("frame writers protect existing destinations and schema", {
   frame <- .example_h5_frame()
   path <- tempfile(fileext = ".fds.h5")

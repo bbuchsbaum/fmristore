@@ -136,6 +136,91 @@ h5_array_source <- function(
   index
 }
 
+.h5_dtype_bytes <- function(dtype) {
+  sizes <- c(
+    logical = 1, uint8 = 1, int8 = 1,
+    uint16 = 2, int16 = 2, float16 = 2, bfloat16 = 2,
+    uint32 = 4, int32 = 4, float32 = 4,
+    uint64 = 8, int64 = 8, float64 = 8
+  )
+  value <- unname(sizes[dtype])
+  if (length(value) != 1L || is.na(value)) {
+    stop("Unsupported HDF5 source dtype: ", dtype, call. = FALSE)
+  }
+  value
+}
+
+#' Plan and enforce HDF5 read amplification
+#'
+#' `h5_read_plan()` estimates the physical HDF5 chunks touched by a logical
+#' observation-by-feature selection. It uses descriptor metadata only and does
+#' not open or read the dataset. `validate_h5_read_amplification()` turns the
+#' estimate into an executable performance gate.
+#'
+#' @param x An `h5_array_source` descriptor.
+#' @param observations,features Logical selectors accepted by
+#'   [fmridataset::source_read()]. Duplicate positions do not cause additional
+#'   physical reads.
+#' @param plan A plan returned by `h5_read_plan()`.
+#' @param max Maximum permitted ratio of physically touched values to unique
+#'   requested values.
+#' @return `h5_read_plan()` returns a serializable `h5_read_plan` list;
+#'   `validate_h5_read_amplification()` returns `plan` invisibly or errors.
+#' @export
+h5_read_plan <- function(x, observations = NULL, features = NULL) {
+  if (!inherits(x, "h5_array_source")) {
+    stop("`x` must be an h5_array_source descriptor.", call. = FALSE)
+  }
+  observations <- unique(.h5_source_index(observations, x$shape[[1L]], "Observation"))
+  features <- unique(.h5_source_index(features, x$shape[[2L]], "Feature"))
+  bytes_per_value <- .h5_dtype_bytes(x$dtype)
+  requested_values <- length(observations) * length(features)
+
+  touched_extent <- function(index, shape, chunk) {
+    if (!length(index)) return(0)
+    chunk_id <- unique((index - 1L) %/% chunk)
+    starts <- chunk_id * chunk + 1
+    sum(pmin(chunk, shape - starts + 1))
+  }
+  physical_values <- touched_extent(observations, x$shape[[1L]], x$chunks[[1L]]) *
+    touched_extent(features, x$shape[[2L]], x$chunks[[2L]])
+  amplification <- if (requested_values == 0) 0 else physical_values / requested_values
+
+  structure(
+    list(
+      shape = x$shape,
+      chunks = x$chunks,
+      dtype = x$dtype,
+      requested_values = as.double(requested_values),
+      physical_values = as.double(physical_values),
+      requested_bytes = as.double(requested_values * bytes_per_value),
+      physical_bytes = as.double(physical_values * bytes_per_value),
+      amplification = as.double(amplification)
+    ),
+    class = "h5_read_plan"
+  )
+}
+
+#' @rdname h5_read_plan
+#' @export
+validate_h5_read_amplification <- function(plan, max = 1.5) {
+  if (!inherits(plan, "h5_read_plan")) {
+    stop("`plan` must be an h5_read_plan.", call. = FALSE)
+  }
+  if (!is.numeric(max) || length(max) != 1L || is.na(max) ||
+    !is.finite(max) || max < 1) {
+    stop("`max` must be one finite number greater than or equal to one.", call. = FALSE)
+  }
+  if (plan$amplification > max) {
+    stop(
+      "HDF5 read amplification ", format(plan$amplification, digits = 4L),
+      " exceeds the configured gate of ", format(max, digits = 4L), ".",
+      call. = FALSE
+    )
+  }
+  invisible(plan)
+}
+
 #' @export
 source_shape.h5_array_source <- function(x, ...) x$shape
 

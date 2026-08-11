@@ -14,20 +14,6 @@
   invisible(assay_names)
 }
 
-.frame_dtype_bytes <- function(dtype) {
-  sizes <- c(
-    logical = 1, uint8 = 1, int8 = 1,
-    uint16 = 2, int16 = 2, float16 = 2, bfloat16 = 2,
-    uint32 = 4, int32 = 4, float32 = 4,
-    uint64 = 8, int64 = 8, float64 = 8
-  )
-  value <- unname(sizes[dtype])
-  if (length(value) != 1L || is.na(value)) {
-    stop("The HDF5 frame codec does not support dtype: ", dtype, call. = FALSE)
-  }
-  value
-}
-
 .frame_h5_dtype <- function(dtype) {
   switch(
     dtype,
@@ -56,7 +42,24 @@
   as.double(memory_budget)
 }
 
-.frame_chunk_dims <- function(shape, dtype, memory_budget, requested = NULL) {
+.frame_chunk_dims <- function(
+    shape,
+    dtype,
+    memory_budget,
+    requested = NULL,
+    layout = c("balanced", "imagewise", "featurewise"),
+    target_chunk_bytes = 1024^2) {
+  layout <- match.arg(layout)
+  if (!is.numeric(target_chunk_bytes) || length(target_chunk_bytes) != 1L ||
+    is.na(target_chunk_bytes) || !is.finite(target_chunk_bytes) ||
+    target_chunk_bytes <= 0) {
+    stop("`target_chunk_bytes` must be one positive finite number.", call. = FALSE)
+  }
+  bytes <- .h5_dtype_bytes(dtype)
+  capacity <- floor(memory_budget / bytes)
+  if (capacity < 1L) {
+    stop("`memory_budget` cannot hold one source value.", call. = FALSE)
+  }
   if (!is.null(requested)) {
     requested <- as.integer(requested)
     if (length(requested) != 2L || anyNA(requested) || any(requested < 1L)) {
@@ -64,11 +67,25 @@
     }
     chunks <- pmin(requested, shape)
   } else {
-    chunks <- pmin(as.integer(shape), c(64L, 4096L))
-  }
-  capacity <- floor(memory_budget / .frame_dtype_bytes(dtype))
-  if (capacity < 1L) {
-    stop("`memory_budget` cannot hold one source value.", call. = FALSE)
+    capacity <- min(capacity, floor(target_chunk_bytes / bytes))
+    if (capacity < 1L) {
+      stop("`target_chunk_bytes` cannot hold one source value.", call. = FALSE)
+    }
+    if (layout == "imagewise") {
+      feature <- min(shape[[2L]], capacity)
+      observation <- min(shape[[1L]], max(1L, floor(capacity / feature)))
+      chunks <- as.integer(c(observation, feature))
+    } else if (layout == "featurewise") {
+      observation <- min(shape[[1L]], capacity)
+      feature <- min(shape[[2L]], max(1L, floor(capacity / observation)))
+      chunks <- as.integer(c(observation, feature))
+    } else {
+      base <- pmin(as.integer(shape), c(64L, 4096L))
+      scale <- sqrt(capacity / prod(as.double(base)))
+      observation <- min(shape[[1L]], max(1L, floor(base[[1L]] * scale)))
+      feature <- min(shape[[2L]], max(1L, floor(capacity / observation)))
+      chunks <- as.integer(c(observation, feature))
+    }
   }
   if (prod(as.double(chunks)) > capacity) {
     observation <- floor(sqrt(capacity * chunks[[1L]] / chunks[[2L]]))
@@ -110,7 +127,9 @@
     declaration,
     dataset_path,
     memory_budget,
-    chunk_dims = NULL) {
+    chunk_dims = NULL,
+    layout = "balanced",
+    target_chunk_bytes = 1024^2) {
   shape <- as.integer(declaration$shape)
   if (length(shape) != 2L) {
     stop(
@@ -119,7 +138,10 @@
       call. = FALSE
     )
   }
-  chunks <- .frame_chunk_dims(shape, declaration$dtype, memory_budget, chunk_dims)
+  chunks <- .frame_chunk_dims(
+    shape, declaration$dtype, memory_budget, chunk_dims,
+    layout = layout, target_chunk_bytes = target_chunk_bytes
+  )
   dataset <- h5$create_dataset(
     dataset_path,
     dtype = .frame_h5_dtype(declaration$dtype),
@@ -147,7 +169,9 @@
     dataset = paste0("/", dataset_path),
     shape = shape,
     dtype = declaration$dtype,
-    chunks = chunks
+    chunks = chunks,
+    layout = layout,
+    target_chunk_bytes = as.double(target_chunk_bytes)
   )
 }
 
@@ -163,6 +187,10 @@
 #' @param path Destination or source HDF5 path.
 #' @param overwrite Atomically replace an existing destination.
 #' @param chunk_dims Optional two-element HDF5 chunk shape applied to arrays.
+#' @param layout Workload profile used when `chunk_dims` is absent: balanced,
+#'   imagewise, or featurewise.
+#' @param target_chunk_bytes Desired physical chunk size. The hard
+#'   `memory_budget` always takes precedence.
 #' @param memory_budget Hard maximum bytes for one source-read block.
 #' @return `write_frame_h5()` invisibly returns the normalized committed path;
 #'   `open_frame_h5()` returns a lazy `fmri_frame`.
@@ -172,6 +200,8 @@ write_frame_h5 <- function(
     path,
     overwrite = FALSE,
     chunk_dims = NULL,
+    layout = c("balanced", "imagewise", "featurewise"),
+    target_chunk_bytes = getOption("fmristore.target_chunk_bytes", 1024^2),
     memory_budget = getOption("fmridataset.block_budget", 512 * 1024^2)) {
   if (!inherits(x, "fmri_frame")) {
     stop("`x` must be an fmri_frame.", call. = FALSE)
@@ -181,6 +211,7 @@ write_frame_h5 <- function(
   }
   .validate_frame_assay_names(x)
   memory_budget <- .validate_frame_budget(memory_budget)
+  layout <- match.arg(layout)
   semantic <- fmridataset::fds_frame_manifest(x)
   bindings <- fmridataset::fds_frame_bindings(x)
   path <- normalizePath(path, winslash = "/", mustWork = FALSE)
@@ -225,7 +256,9 @@ write_frame_h5 <- function(
       declaration = semantic$arrays[[key]],
       dataset_path = paste0("arrays/a", sprintf("%06d", index)),
       memory_budget = memory_budget,
-      chunk_dims = chunk_dims
+      chunk_dims = chunk_dims,
+      layout = layout,
+      target_chunk_bytes = target_chunk_bytes
     )
     if (is.finite(fail_after) && index >= fail_after) {
       stop("Injected HDF5 frame writer failure.", call. = FALSE)

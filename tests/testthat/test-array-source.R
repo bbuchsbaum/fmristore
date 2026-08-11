@@ -39,6 +39,35 @@ test_that("h5_array_source implements the reconstructible source contract", {
   expect_equal(fmridataset::source_read(restored), matrix)
 })
 
+test_that("HDF5 read plans account for aligned, edge, and sparse chunk reads", {
+  path <- tempfile(fileext = ".h5")
+  h5 <- hdf5r::H5File$new(path, mode = "w")
+  h5$create_dataset("beta", robj = matrix(seq_len(30), 5L, 6L), chunk_dims = c(2L, 3L))
+  h5$close_all()
+  on.exit(unlink(path), add = TRUE)
+  source <- h5_array_source(path, "beta")
+
+  aligned <- h5_read_plan(source, 1:2, 1:3)
+  expect_identical(aligned$requested_values, 6)
+  expect_identical(aligned$physical_values, 6)
+  expect_identical(aligned$amplification, 1)
+  expect_identical(validate_h5_read_amplification(aligned), aligned)
+
+  edge <- h5_read_plan(source, 5L, 4:6)
+  expect_identical(edge$physical_values, 3)
+  expect_identical(edge$amplification, 1)
+
+  sparse <- h5_read_plan(source, c(1L, 5L), c(1L, 6L))
+  expect_identical(sparse$requested_values, 4)
+  expect_identical(sparse$physical_values, 18)
+  expect_identical(sparse$amplification, 4.5)
+  expect_error(validate_h5_read_amplification(sparse), "exceeds")
+  expect_silent(validate_h5_read_amplification(sparse, max = 5))
+
+  restored <- unserialize(serialize(sparse, NULL))
+  expect_identical(restored, sparse)
+})
+
 test_that("h5_array_source normalizes transposed physical axes", {
   path <- tempfile(fileext = ".h5")
   matrix <- matrix(seq_len(20), nrow = 4L, ncol = 5L)

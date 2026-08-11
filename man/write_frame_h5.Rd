@@ -10,6 +10,8 @@ write_frame_h5(
   path,
   overwrite = FALSE,
   chunk_dims = NULL,
+  layout = c("balanced", "imagewise", "featurewise"),
+  target_chunk_bytes = getOption("fmristore.target_chunk_bytes", 1024^2),
   memory_budget = getOption("fmridataset.block_budget", 512 * 1024^2)
 )
 
@@ -23,6 +25,12 @@ open_frame_h5(path)
 \item{overwrite}{Atomically replace an existing destination.}
 
 \item{chunk_dims}{Optional two-element HDF5 chunk shape applied to arrays.}
+
+\item{layout}{Workload profile used when `chunk_dims` is absent: balanced,
+imagewise, or featurewise.}
+
+\item{target_chunk_bytes}{Desired physical chunk size. The hard
+`memory_budget` always takes precedence.}
 
 \item{memory_budget}{Hard maximum bytes for one source-read block.}
 }

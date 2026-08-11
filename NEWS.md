@@ -1,5 +1,10 @@
 # fmristore 0.1.0.9000 (Development)
 
+* HDF5 frame writers now support balanced, imagewise, and featurewise chunk
+  layouts under explicit byte targets. `h5_read_plan()` and
+  `validate_h5_read_amplification()` expose enforceable, metadata-only I/O
+  amplification gates, including exact partial-edge chunk accounting.
+
 * Added reconstructible `h5_array_source()` descriptors implementing the
   `fmridataset` lazy source protocol without serialized file handles.
 * Replaced the provisional frame format with an atomic FDS v1 codec.
