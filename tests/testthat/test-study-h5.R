@@ -59,10 +59,10 @@
     frames = list(bold = bold, beta = beta, native = native),
     entities = entities,
     links = list(beta_from_bold = fmridataset::frame_link(
-      "beta", "bold", "derived_from",
+      "bold", "beta", "derivation",
       map = tibble::tibble(
-        .from_id = fmridataset::observation_ids(beta),
-        .to_id = fmridataset::observation_ids(bold)
+        .source_id = fmridataset::observation_ids(bold),
+        .target_id = fmridataset::observation_ids(beta)
       )
     )),
     tables = list(events = fmridataset::event_table(tibble::tibble(
@@ -179,7 +179,7 @@ test_that("study stores reject incomplete roots and semantic substitution", {
   expect_error(open_study_h5(path), "digest")
 })
 
-test_that("filtered study views persist as compact self-contained studies", {
+test_that("filtered studies persist as compact self-contained studies", {
   fixture <- .study_h5_fixture()
   selected <- fmridataset::filter_entities(fixture$study, subject, age >= 65)
   path <- tempfile("study-filtered-")
