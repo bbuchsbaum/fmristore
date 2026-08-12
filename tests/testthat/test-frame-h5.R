@@ -38,10 +38,12 @@
     relations = list(observation_subject = fmridataset::key_relation(
       "subject_id", target = "subject"
     )),
-    tables = list(contrasts = data.frame(name = c("A", "B"))),
+    tables = list(contrasts = fmridataset::auxiliary_table(
+      data.frame(name = c("A", "B")), role = "contrasts"
+    )),
     active_assay = "beta",
     metadata = list(label = "roundtrip"),
-    provenance = list(step = "fixture")
+    provenance = fmridataset::as_provenance_graph(list(step = "fixture"))
   )
 }
 

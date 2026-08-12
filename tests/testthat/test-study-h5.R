@@ -71,7 +71,7 @@
       onset = c(0, 2), duration = c(1, 1)
     ))),
     metadata = list(title = "atomic study"),
-    provenance = list(step = "fixture")
+    provenance = fmridataset::as_provenance_graph(list(step = "fixture"))
   )
   list(study = study, phenotype = phenotype)
 }

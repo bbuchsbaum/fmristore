@@ -23,7 +23,7 @@
     ),
     active_assay = "beta",
     metadata = list(label = "legacy-fixture"),
-    provenance = list(step = "fixture")
+    provenance = fmridataset::as_provenance_graph(list(step = "fixture"))
   )
 }
 
