@@ -43,3 +43,4 @@
 ^\.gitattributes$
 ^inst/WORDLIST$
 ^bids_plan\.md$
+^design$
