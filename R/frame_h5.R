@@ -229,12 +229,15 @@ write_frame_h5 <- function(
     fileext = ".h5"
   )
   committed <- FALSE
+  h5 <- NULL
+  # The handle must be closed before the partial file is unlinked: on Windows
+  # an open HDF5 handle blocks deletion, leaving the partial file behind.
   on.exit({
-    if (!committed && file.exists(temporary)) unlink(temporary)
+    close_h5_safely(h5)
+    if (!committed && file.exists(temporary)) unlink(temporary, force = TRUE)
   }, add = TRUE)
 
   h5 <- hdf5r::H5File$new(temporary, mode = "w")
-  on.exit(close_h5_safely(h5), add = TRUE)
   hdf5r::h5attr(h5, "fds_schema_id") <- .frame_schema_id
   hdf5r::h5attr(h5, "fds_schema_version") <- .frame_schema_version
   hdf5r::h5attr(h5, "fds_object_type") <- "fmri_frame"
