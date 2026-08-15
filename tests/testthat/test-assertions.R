@@ -1,9 +1,32 @@
 library(testthat)
-library(hdf5r)
-library(neuroim2)
 library(fmristore)
 
-# Tests for check_same_dims with dimension vectors
+# Tests for assert_non_empty_numeric
+
+test_that("assert_non_empty_numeric errors on invalid input", {
+  expect_error(assert_non_empty_numeric(NULL, "x", "fn"),
+               "must be a non-empty numeric vector")
+  expect_error(assert_non_empty_numeric("a", "x", "fn"),
+               "must be a non-empty numeric vector")
+  expect_error(assert_non_empty_numeric(numeric(0), "x", "fn"),
+               "must be a non-empty numeric vector")
+})
+
+# Tests for validate_same_dims
+
+test_that("validate_same_dims returns NULL when dimensions match", {
+  a <- array(1, dim = c(2, 3, 4))
+  b <- array(1, dim = c(2, 3, 4))
+  expect_null(validate_same_dims(a, b))
+})
+
+test_that("validate_same_dims returns message when dimensions do not match", {
+  a <- array(1, dim = c(2, 3, 4))
+  b <- array(1, dim = c(2, 3, 5))
+  msg <- validate_same_dims(a, b)
+  expect_type(msg, "character")
+  expect_match(msg, "Dimension mismatch")
+})
 
 test_that("check_same_dims works with numeric dimension vectors", {
   expect_silent(fmristore:::check_same_dims(c(10, 5, 2), c(10, 5, 2)))
