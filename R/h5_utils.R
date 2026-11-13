@@ -130,20 +130,6 @@ assert_h5_path <- function(h5, path, desc = "Path") {
   invisible(TRUE)
 }
 
-#' Read data from an HDF5 dataset
-#'
-#' Safely reads data from a specified dataset path within an HDF5 file,
-#' handling existence checks and optional return of NULL if missing.
-#'
-#' @param h5 An open `H5File` object handle.
-#' @param path The full path to the dataset within the HDF5 file (e.g., "/data/my_dataset").
-#' @param missing_ok Logical, if `TRUE`, returns `NULL` if the dataset doesn't exist.
-#'   If `FALSE` (default), stops with an error if the dataset is missing.
-#' @param read_args A list of additional arguments passed to the HDF5 dataset's `$read()` method
-#'   (e.g., for subsetting: `list(args = list(i = 1:10))`)
-#'
-#' @return The data read from the dataset, or `NULL` if `missing_ok=TRUE` and the dataset is not found.
-#' @keywords internal
 #' Check dataset size and warn about memory usage if large
 #'
 #' @param h5 H5File object
@@ -192,6 +178,22 @@ assert_h5_path <- function(h5, path, desc = "Path") {
   )
 }
 
+#' Read data from an HDF5 dataset
+#'
+#' Safely reads data from a specified dataset path within an HDF5 file,
+#' handling existence checks and optional return of NULL if missing.
+#'
+#' @param h5 An open `H5File` object handle.
+#' @param path The full path to the dataset within the HDF5 file (e.g., "/data/my_dataset").
+#' @param missing_ok Logical, if `TRUE`, returns `NULL` if the dataset doesn't exist.
+#'   If `FALSE` (default), stops with an error if the dataset is missing.
+#' @param read_args A list of additional arguments passed to the HDF5 dataset's `$read()` method
+#'   (e.g., for subsetting: `list(args = list(i = 1:10))`)
+#'
+#' @return The data read from the dataset, or `NULL` if `missing_ok=TRUE` and the dataset is not found.
+#' @param warn_memory Logical; warn before materializing a large dataset.
+#' @keywords internal
+#' @noRd
 h5_read <- function(h5, path, missing_ok = FALSE, read_args = NULL, warn_memory = TRUE) {
   if (!inherits(h5, "H5File") || !h5$is_valid) {
     stop("h5_read: 'h5' must be a valid and open H5File object.")
@@ -304,17 +306,12 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
         dtype <- dset$get_type()
         element_size <- tryCatch(dtype$get_size(), error = function(e) 8)
         if (is.finite(element_size) && element_size > 0 && is.list(index)) {
-          subset_elements <- 1
-          for (ii in seq_along(index)) {
-            if (ii <= length(dims)) {
-              subset_elements <- subset_elements * length(index[[ii]])
-            }
-          }
-          for (jj in (length(index) + 1):length(dims)) {
-            if (jj <= length(dims)) {
-              subset_elements <- subset_elements * dims[jj]
-            }
-          }
+          # Indexed dimensions contribute their selection length; the rest
+          # are read in full.
+          extent <- as.double(dims)
+          indexed <- seq_len(min(length(index), length(dims)))
+          extent[indexed] <- lengths(index)[indexed]
+          subset_elements <- prod(extent)
           estimated_size_mb <- (subset_elements * element_size) / (1024^2)
           threshold <- getOption("fmristore.memory_threshold_mb", 100)
           if (estimated_size_mb > threshold) {
@@ -340,7 +337,11 @@ h5_read_subset <- function(h5, path, index = NULL, warn_memory = TRUE) {
       } else if (length(dims) == 2 && length(index) == 2) {
         out <- dset[index[[1]], index[[2]], drop = FALSE]
       } else {
-        out <- do.call(dset$read, index)
+        # Unindexed trailing dimensions are read in full.
+        if (length(index) < length(dims)) {
+          index <- c(index, lapply(dims[-seq_along(index)], seq_len))
+        }
+        out <- dset$read(args = index, drop = FALSE)
       }
     }
   }, error = function(e) {
