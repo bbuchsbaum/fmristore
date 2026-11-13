@@ -380,17 +380,24 @@ write_parcellated_experiment_h5 <- function(filepath,
     # hdr_grp <- h5f$create_group("header") # h5_write creates parent
     sp <- space(mask)
     dims_vol <- dim(sp)
-    hdr_dim <- c(4L, dims_vol[1], dims_vol[2], dims_vol[3], length(runs_data), 1L, 1L, 1L)
+    # dim[5] is the number of time points. Each scan stores its own length;
+    # when runs differ, the header records the longest.
+    hdr_n_time <- if (length(run_n_time) > 0) max(run_n_time) else 0L
+    hdr_dim <- c(4L, dims_vol[1], dims_vol[2], dims_vol[3], hdr_n_time, 1L, 1L, 1L)
     hdr_pixdim <- c(0.0, spacing(sp)[1], spacing(sp)[2], spacing(sp)[3], 0.0, 0.0, 0.0, 0.0)
+    # matrixToQuatern() returns list(quaternion, qfac); the quaternion offsets
+    # are the translation column of the transform.
     q_info <- tryCatch(neuroim2::matrixToQuatern(sp@trans), error = function(e) NULL)
+    quat <- q_info$quaternion %||% c(0.0, 0.0, 0.0)
+    qoffset <- sp@trans[1:3, 4]
     h5_write(h5f, "/header/dim", hdr_dim, overwrite = TRUE)
     h5_write(h5f, "/header/pixdim", hdr_pixdim, overwrite = TRUE)
-    h5_write(h5f, "/header/quatern_b", q_info$qb %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/quatern_c", q_info$qc %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/quatern_d", q_info$qd %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/qoffset_x", q_info$qx %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/qoffset_y", q_info$qy %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/qoffset_z", q_info$qz %||% 0.0, overwrite = TRUE)
+    h5_write(h5f, "/header/quatern_b", quat[1], overwrite = TRUE)
+    h5_write(h5f, "/header/quatern_c", quat[2], overwrite = TRUE)
+    h5_write(h5f, "/header/quatern_d", quat[3], overwrite = TRUE)
+    h5_write(h5f, "/header/qoffset_x", qoffset[1], overwrite = TRUE)
+    h5_write(h5f, "/header/qoffset_y", qoffset[2], overwrite = TRUE)
+    h5_write(h5f, "/header/qoffset_z", qoffset[3], overwrite = TRUE)
     h5_write(h5f, "/header/qfac", q_info$qfac %||% 1.0, overwrite = TRUE)
     # hdr_grp$close() # No longer needed
 

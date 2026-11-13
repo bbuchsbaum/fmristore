@@ -227,3 +227,44 @@ test_that("full-data writer validates matrices against clusters and metadata", {
   expect_equal(exp@runs[[1]]@n_time, 5L)
   expect_equal(unname(series(exp@runs[[1]], seq_len(9))), t(fx$full))
 })
+
+# --- Spatial metadata and header round trip ---------------------------------
+
+test_that("parcellated writers preserve origin, spacing and orientation", {
+  ang <- pi / 6
+  rot <- matrix(c(cos(ang), sin(ang), 0, -sin(ang), cos(ang), 0, 0, 0, 1), 3)
+  oblique <- diag(4)
+  oblique[1:3, 1:3] <- rot %*% diag(c(-2, 2.5, 3)) # rotated, x flipped
+  oblique[1:3, 4] <- c(12.5, -7, 3)
+
+  fixtures <- list(
+    shifted = make_parcel_fixture(origin = c(-10, -20, -30)),
+    oblique = make_parcel_fixture(trans = oblique)
+  )
+  for (nm in names(fixtures)) {
+    fx <- fixtures[[nm]]
+    tf_exp <- tempfile(fileext = ".h5")
+    tf_scan <- tempfile(fileext = ".h5")
+    write_parcel_fixture(fx, tf_exp)
+    run <- write_parcellated_scan_h5(tf_scan, fx$mask, fx$cvol,
+      parcel_cluster_list(fx),
+      data_type = "full"
+    )
+    close(run)
+
+    for (tf in c(tf_exp, tf_scan)) {
+      exp <- open_parcel_exp(tf)
+      sp_read <- space(mask(exp))
+      close(exp)
+      expect_equal(trans(sp_read), trans(fx$sp), tolerance = 1e-6, info = nm)
+      expect_equal(origin(sp_read), origin(fx$sp), tolerance = 1e-6, info = nm)
+      expect_equal(spacing(sp_read), spacing(fx$sp), tolerance = 1e-6, info = nm)
+
+      h <- hdf5r::H5File$new(tf, "r")
+      hdr_dim <- h[["header/dim"]][]
+      h$close_all()
+      expect_equal(hdr_dim[5], fx$n_time, info = nm)
+    }
+    unlink(c(tf_exp, tf_scan))
+  }
+})
