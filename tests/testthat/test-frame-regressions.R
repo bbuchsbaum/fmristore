@@ -113,3 +113,53 @@ test_that("h5_read_plan sizes very large sources without integer overflow", {
   expect_identical(block$physical_values, 50048 * 50000)
   expect_lt(block$amplification, 1.2)
 })
+
+test_that("a crash while appending a shard leaves only artifacts recovery removes", {
+  frame <- .regression_frame()
+  path <- tempfile("crash-shards-")
+  saved <- tempfile("crash-artifacts-")
+  dir.create(saved)
+  on.exit(unlink(c(path, saved), recursive = TRUE), add = TRUE)
+  write_sharded_frame_h5(frame[1:2, ], path, shard_id = "a")
+  committed <- .store_hashes(path)
+  shard_dir <- file.path(path, "shards")
+
+  # A killed process never runs its cleanup handlers. Capture what is on disk
+  # at the moment of the injected failure, before the writer unwinds.
+  artifacts <- character()
+  capture <- function(condition) {
+    present <- list.files(shard_dir, all.files = TRUE, full.names = TRUE, no.. = TRUE)
+    artifacts <<- setdiff(present, names(committed))
+    file.copy(artifacts, saved)
+  }
+  withr::with_options(
+    list(fmristore.frame_writer_fault_after_array = 1L),
+    expect_error(
+      withCallingHandlers(
+        append_frame_shard_h5(frame[3:4, ], path, shard_id = "b"),
+        error = capture
+      ),
+      "Injected"
+    )
+  )
+  expect_gte(length(artifacts), 1L)
+  expect_identical(.store_hashes(path), committed)
+  file.copy(file.path(saved, basename(artifacts)), artifacts)
+
+  info <- frame_store_info(path)
+  reported <- info$recovery[info$recovery$kind == "shard_partial", , drop = FALSE]
+  expect_setequal(reported$path, normalizePath(artifacts, winslash = "/"))
+  expect_true(all(reported$removable))
+
+  rolled_back <- recover_frame_store(path, "rollback")
+  expect_true(all(rolled_back$removed))
+  expect_false(any(file.exists(artifacts)))
+  expect_identical(.store_hashes(path), committed)
+
+  append_frame_shard_h5(frame[3:4, ], path, shard_id = "b")
+  expect_identical(nrow(recover_frame_store(path, "report")), 0L)
+  expect_equal(
+    fmridataset::collect_assay(open_sharded_frame_h5(path)),
+    fmridataset::collect_assay(frame)
+  )
+})

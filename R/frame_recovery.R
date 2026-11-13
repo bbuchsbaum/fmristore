@@ -49,7 +49,11 @@
     } else {
       character()
     }
-    shard_partials <- shard_files[startsWith(basename(shard_files), ".shard-")]
+    # Appends stage through write_frame_h5() as ".sNNNNNN.fds.h5.partial-*";
+    # earlier releases left ".shard-*" and the nested "..shard-*" partials.
+    shard_partials <- shard_files[grepl(
+      "^(\\.{1,2}shard-|\\.s[0-9]{6}\\.fds\\.h5\\.partial-)", basename(shard_files)
+    )]
     targets <- c(targets, shard_partials)
     kinds <- c(kinds, rep("shard_partial", length(shard_partials)))
     removable <- c(removable, rep(TRUE, length(shard_partials)))

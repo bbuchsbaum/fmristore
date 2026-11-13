@@ -204,17 +204,16 @@ append_frame_shard_h5 <- function(
   relative <- file.path("shards", paste0("s", sprintf("%06d", index), ".fds.h5"))
   final <- file.path(path, relative)
   if (file.exists(final)) stop("Target shard file already exists.", call. = FALSE)
-  temporary <- tempfile(pattern = ".shard-", tmpdir = file.path(path, "shards"), fileext = ".h5")
   committed <- FALSE
-  on.exit({
-    if (!committed && file.exists(temporary)) unlink(temporary)
-    if (!committed && file.exists(final)) unlink(final)
-  }, add = TRUE)
+  written <- FALSE
+  on.exit(if (!committed && written && file.exists(final)) unlink(final), add = TRUE)
+  # write_frame_h5() is already atomic: it stages beside `final` under the
+  # `.sNNNNNN.fds.h5.partial-*` name that frame recovery recognises.
   write_frame_h5(
-    x, temporary, chunk_dims = chunk_dims, layout = layout,
+    x, final, chunk_dims = chunk_dims, layout = layout,
     target_chunk_bytes = target_chunk_bytes, memory_budget = memory_budget
   )
-  if (!file.rename(temporary, final)) stop("Could not commit new frame shard.", call. = FALSE)
+  written <- TRUE
   if (isTRUE(getOption("fmristore.shard_writer_fault_after_file", FALSE))) {
     stop("Injected sharded frame append failure.", call. = FALSE)
   }
