@@ -441,3 +441,46 @@ test_that("[[ and names() give access to the runs of an experiment", {
   expect_error(exp[["missing"]], "No scan named 'missing'")
   expect_error(exp[[3]], "out of range")
 })
+
+test_that("series_concat() and matrix_concat() select runs by name or position", {
+  dims <- c(4L, 4L, 2L)
+  arr <- array(FALSE, dims)
+  arr[2:3, 2:3, ] <- TRUE
+  mask <- neuroim2::LogicalNeuroVol(arr, neuroim2::NeuroSpace(dims))
+  cvol <- neuroim2::ClusteredNeuroVol(mask, rep(1:2, length.out = sum(arr)))
+  full_run <- function(name, n_time) {
+    full <- matrix(seq_len(sum(arr) * n_time), nrow = sum(arr))
+    list(scan_name = name, type = "full", data = list(
+      cluster_1 = full[cvol@clusters == 1L, , drop = FALSE],
+      cluster_2 = full[cvol@clusters == 2L, , drop = FALSE]
+    ))
+  }
+  summary_run <- function(name, n_time) {
+    list(scan_name = name, type = "summary", data = matrix(seq_len(2 * n_time), n_time, 2))
+  }
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  write_parcellated_experiment_h5(
+    path, mask, cvol, list(full_run("a", 3L), full_run("b", 4L)),
+    overwrite = TRUE, verbose = FALSE
+  )
+  exp <- suppressMessages(H5ParcellatedMultiScan(path))
+  on.exit(close(exp), add = TRUE, after = FALSE)
+  expect_identical(
+    series_concat(exp, mask_idx = 1:2, run_indices = c("b", "a")),
+    series_concat(exp, mask_idx = 1:2, run_indices = c(2, 1))
+  )
+  expect_identical(dim(series_concat(exp, mask_idx = 1:2, run_indices = "b")), c(4L, 2L))
+  expect_error(series_concat(exp, mask_idx = 1, run_indices = "zzz"), "Unknown scan name")
+  expect_error(series_concat(exp, mask_idx = 1, run_indices = 3), "between 1 and 2")
+
+  spath <- tempfile(fileext = ".h5")
+  on.exit(unlink(spath), add = TRUE)
+  write_parcellated_experiment_h5(
+    spath, mask, cvol, list(summary_run("s1", 3L), summary_run("s2", 5L)),
+    overwrite = TRUE, verbose = FALSE
+  )
+  sexp <- suppressMessages(H5ParcellatedMultiScan(spath))
+  on.exit(close(sexp), add = TRUE, after = FALSE)
+  expect_identical(dim(matrix_concat(sexp, run_indices = "s2")), c(5L, 2L))
+})

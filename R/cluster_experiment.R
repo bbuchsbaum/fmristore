@@ -85,6 +85,34 @@ NULL
   invisible(NULL)
 }
 
+# Resolve `run_indices` (NULL for all runs, positions, or scan names) to
+# integer positions into experiment@runs.
+.resolve_run_indices <- function(experiment, run_indices, fn) {
+  n_runs <- length(experiment@runs)
+  if (is.null(run_indices)) {
+    return(seq_len(n_runs))
+  }
+  if (is.character(run_indices)) {
+    positions <- match(run_indices, names(experiment@runs))
+    if (anyNA(positions)) {
+      stop(sprintf(
+        "[%s] Unknown scan name(s) in 'run_indices': %s. Available scans: %s",
+        fn, paste(run_indices[is.na(positions)], collapse = ", "),
+        paste(names(experiment@runs), collapse = ", ")
+      ), call. = FALSE)
+    }
+    return(positions)
+  }
+  if (!is.numeric(run_indices) || anyNA(run_indices) || any(run_indices < 1) ||
+    any(run_indices > n_runs)) {
+    stop(sprintf(
+      "[%s] Invalid 'run_indices'. Give scan names or positions between 1 and %d.",
+      fn, n_runs
+    ), call. = FALSE)
+  }
+  as.integer(run_indices)
+}
+
 #' @describeIn series_concat Concatenate voxel time series for H5ParcellatedMultiScan
 #' @export
 #' @family H5Parcellated
@@ -99,15 +127,7 @@ setMethod(
     # Use the assertion helper
     assert_non_empty_numeric(mask_idx, arg = "mask_idx", fn = "series_concat")
 
-    # Validate run_indices if provided
-    if (is.null(run_indices)) {
-      run_indices <- seq_along(experiment@runs)
-    } else {
-      if (!is.numeric(run_indices) || any(run_indices < 1) || any(run_indices > length(experiment@runs))) {
-        stop(sprintf("[series_concat] Invalid 'run_indices'. Must be between 1 and %d.", length(experiment@runs)))
-      }
-      run_indices <- as.integer(run_indices)
-    }
+    run_indices <- .resolve_run_indices(experiment, run_indices, "series_concat")
     if (length(run_indices) == 0) {
       warning("[series_concat] No runs selected by 'run_indices'. Returning empty matrix.")
       return(matrix(numeric(0), nrow = 0, ncol = length(mask_idx)))
@@ -183,15 +203,7 @@ setMethod(
       return(matrix(numeric(0), nrow = 0, ncol = 0))
     }
 
-    # Validate run_indices if provided
-    if (is.null(run_indices)) {
-      run_indices <- seq_along(experiment@runs)
-    } else {
-      if (!is.numeric(run_indices) || any(run_indices < 1) || any(run_indices > length(experiment@runs))) {
-        stop(sprintf("[matrix_concat] Invalid 'run_indices'. Must be between 1 and %d.", length(experiment@runs)))
-      }
-      run_indices <- as.integer(run_indices)
-    }
+    run_indices <- .resolve_run_indices(experiment, run_indices, "matrix_concat")
     if (length(run_indices) == 0) {
       warning("[matrix_concat] No runs selected by 'run_indices'. Returning empty matrix.")
       return(matrix(numeric(0), nrow = 0, ncol = 0))
