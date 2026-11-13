@@ -141,6 +141,10 @@ write_sharded_frame_h5 <- function(
     target_chunk_bytes = getOption("fmristore.target_chunk_bytes", 1024^2),
     memory_budget = getOption("fmridataset.block_budget", 512 * 1024^2)) {
   if (!inherits(x, "fmri_frame")) stop("`x` must be an fmri_frame.", call. = FALSE)
+  # The root manifest requires every shard to hold at least one observation.
+  if (nrow(x) < 1L) {
+    stop("Frame shards must contain at least one observation.", call. = FALSE)
+  }
   shard_id <- .validate_frame_shard_id(shard_id)
   layout <- match.arg(layout)
   path <- normalizePath(path, winslash = "/", mustWork = FALSE)
@@ -185,6 +189,10 @@ append_frame_shard_h5 <- function(
     target_chunk_bytes = getOption("fmristore.target_chunk_bytes", 1024^2),
     memory_budget = getOption("fmridataset.block_budget", 512 * 1024^2)) {
   if (!inherits(x, "fmri_frame")) stop("`x` must be an fmri_frame.", call. = FALSE)
+  # The root manifest requires every shard to hold at least one observation.
+  if (nrow(x) < 1L) {
+    stop("Frame shards must contain at least one observation.", call. = FALSE)
+  }
   shard_id <- .validate_frame_shard_id(shard_id)
   layout <- match.arg(layout)
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)

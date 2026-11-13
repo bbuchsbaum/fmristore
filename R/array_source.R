@@ -101,16 +101,18 @@ h5_array_source <- function(
 }
 
 .h5_source_chunks <- function(dset, shape) {
+  # Unchunked datasets read as one chunk; chunks stay positive for empty axes.
+  whole <- pmax(1L, shape)
   plist <- tryCatch(dset$get_create_plist(), error = function(e) NULL)
   if (is.null(plist)) {
-    return(shape)
+    return(whole)
   }
   on.exit(close_h5_safely(plist), add = TRUE)
   chunks <- tryCatch(
     plist$get_chunk(max_ndims = length(shape)),
     error = function(e) NULL
   )
-  if (is.null(chunks) || length(chunks) != 2L) shape else as.integer(chunks)
+  if (is.null(chunks) || length(chunks) != 2L) whole else as.integer(chunks)
 }
 
 .h5_source_fingerprint <- function(path, dataset, metadata) {

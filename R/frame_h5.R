@@ -180,9 +180,12 @@
     )
   }
   chunks <- .frame_chunk_dims(
-    shape, declaration$dtype, memory_budget, chunk_dims,
+    pmax(1L, shape), declaration$dtype, memory_budget, chunk_dims,
     layout = layout, target_chunk_bytes = target_chunk_bytes
   )
+  # HDF5 rejects zero-sized chunks and an empty array has nothing to stream,
+  # so it is stored unchunked once the chunking arguments have been checked.
+  if (any(shape == 0L)) chunks <- NULL
   dataset <- h5$create_dataset(
     dataset_path,
     dtype = .frame_h5_dtype(declaration$dtype),
@@ -191,8 +194,11 @@
   )
   on.exit(close_h5_safely(dataset), add = TRUE)
   hdf5r::h5attr(dataset, "fds_dtype") <- declaration$dtype
-  observation_starts <- seq.int(1L, shape[[1L]], by = chunks[[1L]])
-  feature_starts <- seq.int(1L, shape[[2L]], by = chunks[[2L]])
+  observation_starts <- feature_starts <- integer()
+  if (!is.null(chunks)) {
+    observation_starts <- seq.int(1L, shape[[1L]], by = chunks[[1L]])
+    feature_starts <- seq.int(1L, shape[[2L]], by = chunks[[2L]])
+  }
   for (observation_start in observation_starts) {
     observations <- observation_start:min(
       shape[[1L]], observation_start + chunks[[1L]] - 1L

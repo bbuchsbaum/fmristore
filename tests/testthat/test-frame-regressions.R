@@ -260,3 +260,59 @@ test_that("frame writes reject unrepresentable integer data before commit", {
   expect_identical(unname(tools::md5sum(path)), before)
   expect_identical(list.files(parent, all.files = TRUE, no.. = TRUE), basename(path))
 })
+
+test_that("zero-row and zero-feature frames round trip", {
+  frame <- .regression_frame(4L)
+  cases <- list(rows = frame[integer(0), ], features = frame[, integer(0)])
+  for (case in names(cases)) {
+    empty <- cases[[case]]
+    path <- tempfile(fileext = ".fds.h5")
+    on.exit(unlink(path), add = TRUE)
+    expect_identical(write_frame_h5(empty, path), normalizePath(path))
+    expect_identical(frame_store_info(path)$status, "complete")
+
+    reopened <- open_frame_h5(path)
+    expect_identical(dim(reopened), dim(empty))
+    expect_identical(
+      fmridataset::observation_ids(reopened),
+      fmridataset::observation_ids(empty)
+    )
+    expect_identical(fmridataset::feature_ids(reopened), fmridataset::feature_ids(empty))
+    for (name in c("beta", "variance")) {
+      expect_identical(
+        dim(fmridataset::collect_assay(reopened, name)),
+        dim(fmridataset::collect_assay(empty, name))
+      )
+    }
+    expect_identical(
+      dim(fmridataset::source_read(
+        fmridataset::axis_block_data(fmridataset::observation_blocks(reopened)$motion)
+      )),
+      dim(fmridataset::axis_block_data(fmridataset::observation_blocks(empty)$motion))
+    )
+  }
+})
+
+test_that("sharded writers reject zero-row shards before touching the store", {
+  frame <- .regression_frame(4L)
+  path <- tempfile("empty-shards-")
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  expect_error(
+    write_sharded_frame_h5(frame[integer(0), ], path, shard_id = "a"),
+    "at least one observation"
+  )
+  expect_false(dir.exists(path))
+  expect_length(
+    list.files(dirname(path), pattern = paste0("^\\.", basename(path)), all.files = TRUE),
+    0L
+  )
+
+  write_sharded_frame_h5(frame[1:2, ], path, shard_id = "a")
+  before <- .store_hashes(path)
+  expect_error(
+    append_frame_shard_h5(frame[integer(0), ], path, shard_id = "b"),
+    "at least one observation"
+  )
+  expect_identical(.store_hashes(path), before)
+  expect_identical(frame_shard_manifest(path)$.shard_id, "a")
+})
