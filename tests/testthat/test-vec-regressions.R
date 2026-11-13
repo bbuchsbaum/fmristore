@@ -133,3 +133,29 @@ test_that("load_data reads a CSR-stored sparse basis", {
     tolerance = 1e-5, ignore_attr = TRUE
   )
 })
+
+# --- H5NeuroVol ---
+
+test_that("H5NeuroVol [i, , k] honours k and [i] indexes linearly", {
+  arr <- array(as.numeric(seq_len(4 * 5 * 6)), c(4, 5, 6))
+  vol <- NeuroVol(arr, NeuroSpace(c(4, 5, 6)))
+  h <- as_h5(vol, tempfile(fileext = ".h5"), data_type = "DOUBLE")
+  on.exit(close(h), add = TRUE)
+
+  # neuroim2's DenseNeuroVol is the reference behaviour
+  expect_equal(h[1:2, , 3], vol[1:2, , 3])
+  expect_equal(h[2, , 4], vol[2, , 4])
+  expect_equal(h[2, , 4, drop = FALSE], vol[2, , 4, drop = FALSE])
+  expect_equal(h[2L, , 4L], vol[2L, , 4L])
+  expect_equal(h[c(3, 1), , c(6, 2)], vol[c(3, 1), , c(6, 2)])
+  expect_equal(h[1:2, , ], vol[1:2, , ])
+  expect_equal(h[1, , , drop = FALSE], vol[1, , , drop = FALSE])
+
+  expect_equal(h[2], vol[2])
+  expect_equal(h[1:3], vol[1:3])
+  expect_equal(h[c(2, 50)], vol[c(2, 50)])
+  expect_equal(h[3L], vol[3L])
+
+  expect_error(h[2, , 7], "out of range")
+  expect_error(h[length(arr) + 1], "out of range")
+})
