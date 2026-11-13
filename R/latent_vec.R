@@ -859,6 +859,8 @@ validate_latent_file <- function(file_path) {
 #' @param offset Optional numeric vector of voxel offsets.
 #' @param label Optional character label for the dataset.
 #' @param meta Optional named list of additional metadata.
+#' @param expect_dense Logical; if `TRUE`, suppress the warning issued when a
+#'   dense base-matrix `basis` or `loadings` is stored as a dense `dgeMatrix`.
 #'
 #' @return A `LatentNeuroVec` object.
 #'
@@ -866,7 +868,7 @@ validate_latent_file <- function(file_path) {
 #' @seealso \code{LatentNeuroVec} in package \pkg{fmrilatent} for full documentation.
 #' @export
 #' @importFrom fmrilatent LatentNeuroVec
-LatentNeuroVec <- fmrilatent::LatentNeuroVec
+LatentNeuroVec
 
 #' @rdname mask-methods
 #' @export

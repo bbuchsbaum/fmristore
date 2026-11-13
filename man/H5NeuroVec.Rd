@@ -10,7 +10,9 @@ H5NeuroVec(file_name, dataset_name = "data")
 \item{file_name}{The path to an existing 4D HDF5 neuroimaging file.}
 
 \item{dataset_name}{Name of the dataset within the HDF5 file containing the 4D data.
-Defaults to "data".}
+Defaults to "data". If this names a group holding an \code{elements}
+dataset (the layout written by \code{as_h5()} and \code{to_nih5_vec()}),
+that dataset is used.}
 }
 \value{
 A new \code{\link{H5NeuroVec-class}} instance with an open HDF5 file handle.
