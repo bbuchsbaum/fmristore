@@ -101,3 +101,27 @@ test_that("write_parcellated_scan_h5 rejects missing or mis-sized clusters", {
 
   expect_error(write_full(unname(dl)), "cluster_<id>")
 })
+
+# --- `[` on H5ParcellatedScan with j missing -------------------------------
+
+test_that("[ on H5ParcellatedScan keeps k and l when j is missing", {
+  fx <- make_parcel_fixture()
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+  write_parcel_fixture(fx, tf)
+  exp <- open_parcel_exp(tf)
+  on.exit(close(exp), add = TRUE, after = FALSE)
+  run <- exp@runs[[1]]
+
+  expect_equal(run[1:3, , , 2], fx$ref[1:3, , , 2])
+  expect_equal(run[, , , 1], fx$ref[, , , 1])
+  expect_equal(run[2, , 2, ], fx$ref[2, , 2, ])
+  expect_equal(run[, , 1:2, 3:4], fx$ref[, , 1:2, 3:4])
+  expect_equal(run[4, , ], fx$ref[4, , , ])
+
+  # A single subscript still means mask indices.
+  expect_equal(run[c(1, 2)], fx$full[c(1, 2), ])
+  expect_equal(run[c(9, 1), drop = FALSE], fx$full[c(9, 1), , drop = FALSE])
+  # Fully specified subscripts are unchanged.
+  expect_equal(run[1:4, 1:3, 1:2, 2], fx$ref[, , , 2])
+})

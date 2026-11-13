@@ -356,11 +356,32 @@ setMethod(
 setMethod("[",
   signature(x = "H5ParcellatedScan", i = "ANY", j = "missing", drop = "ANY"),
   definition = function(x, i, j, ..., drop = TRUE) {
-    # Handle cases: x[mask_indices], x[coords_matrix], x[i,j,k] (falls through if l missing)
-    # Let the main helper sort it out.
-    .subset_h5crunfull(x, i = i, j = NULL, k = NULL, l = NULL, drop = drop)
+    # x[i] (optionally with drop =): a single subscript, i.e. mask indices or
+    # coordinates. Let the main helper sort it out. nargs() counts x and every
+    # subscript, blank ones included, so x[i] gives 2 and x[i, , , l] gives 5.
+    n_args <- nargs() - as.integer(!missing(drop))
+    if (n_args <= 2) {
+      return(.subset_h5crunfull(x, i = i, j = NULL, k = NULL, l = NULL, drop = drop))
+    }
+    # x[i, , k, l] and similar: j is blank, so it spans the whole y axis.
+    # k and l arrive through `...` and may be blank too.
+    dims <- dim(x@mask)
+    kl <- .blank_subscripts_kl(...)
+    .subset_h5crunfull(x,
+      i = if (missing(i)) seq_len(dims[1]) else i,
+      j = seq_len(dims[2]),
+      k = kl$k, l = kl$l, drop = drop
+    )
   }
 )
+
+# Collect the k and l subscripts forwarded through `...`; blank ones become NULL.
+.blank_subscripts_kl <- function(k, l, ...) {
+  list(
+    k = if (missing(k)) NULL else k,
+    l = if (missing(l)) NULL else l
+  )
+}
 
 
 #' @export
