@@ -217,8 +217,9 @@ test_that("concat falls back to NeuroVecSeq when masks are incompatible", {
   # Should return a NeuroVecSeq
   expect_s4_class(result, "NeuroVecSeq")
 
-  # Check that both original objects are stored within the sequence
+  # fmrilatent densifies each input in the fallback sequence; the values
+  # (not the latent representation) are what must be preserved.
   expect_equal(length(result@vecs), 2)
-  expect_identical(result@vecs[[1]], lvec1)
-  expect_identical(result@vecs[[2]], lvec2)
+  expect_equal(as.array(result@vecs[[1]]), as.array(lvec1), tolerance = 1e-12)
+  expect_equal(as.array(result@vecs[[2]]), as.array(lvec2), tolerance = 1e-12)
 })

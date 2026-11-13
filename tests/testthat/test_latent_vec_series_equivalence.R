@@ -126,11 +126,10 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - numeri
   dvec <- test_data$dense
   mask <- test_data$mask
 
-  # Test with numeric (potentially non-integer) coordinates
+  # Integer-valued doubles must behave exactly like integer indices
   test_coords <- list(
     c(1.0, 1.0, 1.0),
     c(3.0, 3.0, 2.0),
-    c(2.5, 3.5, 1.5), # Non-integer coords (should be rounded/interpolated)
     c(4.0, 4.0, 4.0)
   )
 
@@ -138,29 +137,16 @@ test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - numeri
     i <- coords[1]
     j <- coords[2]
     k <- coords[3]
-
-    # For the comparison, we need to handle how neuroim2 deals with non-integer indices
-    # Typically they get rounded or interpolated
-    latent_series <- series(lvec, i, j, k)
-    dense_series <- series(dvec, i, j, k)
-
-    # Check if the rounded coordinates are in mask
-    i_round <- round(i)
-    j_round <- round(j)
-    k_round <- round(k)
-    if (i_round >= 1 && i_round <= dim(mask)[1] &&
-      j_round >= 1 && j_round <= dim(mask)[2] &&
-      k_round >= 1 && k_round <= dim(mask)[3]) {
-      is_in_mask <- mask[i_round, j_round, k_round]
-
-      if (is_in_mask) {
-        expect_equal(latent_series, dense_series,
-          tolerance = 1e-8,
-          info = sprintf("Series mismatch at numeric coords (%.1f,%.1f,%.1f)", i, j, k)
-        )
-      }
+    if (mask[i, j, k]) {
+      expect_equal(series(lvec, i, j, k), series(dvec, i, j, k),
+        tolerance = 1e-8,
+        info = sprintf("Series mismatch at numeric coords (%.1f,%.1f,%.1f)", i, j, k)
+      )
     }
   }
+
+  # Fractional coordinates are rejected rather than silently truncated
+  expect_error(series(lvec, 2.5, 3.5, 1.5), class = "fmrilatent_error_invalid_index")
 })
 
 test_that("LatentNeuroVec series() behaves identically to DenseNeuroVec - matrix ROI", {

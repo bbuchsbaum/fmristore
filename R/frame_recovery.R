@@ -217,6 +217,7 @@ recover_frame_store <- function(path, action = c("report", "rollback")) {
     )
   })
   names(assay_values) <- vapply(manifest$assays, `[[`, character(1), "name")
+  lineage <- .legacy_frame_provenance(manifest$provenance, manifest$metadata)
   fmridataset::fmri_frame(
     assays = assay_values,
     observations = manifest$observations,
@@ -225,9 +226,29 @@ recover_frame_store <- function(path, action = c("report", "rollback")) {
     relations = manifest$relations,
     tables = manifest$tables,
     active_assay = manifest$active_assay,
-    metadata = manifest$metadata,
-    provenance = manifest$provenance
+    metadata = lineage$metadata,
+    provenance = lineage$provenance
   )
+}
+
+# Provisional files predate fmridataset's provenance_graph contract and may
+# carry free-form provenance lists, which fmri_frame() now rejects. Keep a
+# graph (or a list of records) as lineage; preserve anything else verbatim in
+# metadata so migration never discards it.
+.legacy_frame_provenance <- function(provenance, metadata) {
+  metadata <- metadata %||% list()
+  if (is.null(provenance) || inherits(provenance, "provenance_graph")) {
+    return(list(provenance = provenance, metadata = metadata))
+  }
+  if (is.list(provenance) && length(provenance) &&
+    all(vapply(provenance, inherits, logical(1), "provenance_record"))) {
+    return(list(
+      provenance = fmridataset::provenance_graph(provenance),
+      metadata = metadata
+    ))
+  }
+  metadata$legacy_provenance <- provenance
+  list(provenance = NULL, metadata = metadata)
 }
 
 #' Migrate historical HDF5 frames to FDS v1
