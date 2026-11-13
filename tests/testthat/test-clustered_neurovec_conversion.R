@@ -263,3 +263,27 @@ test_that("ClusteredNeuroVec conversion preserves data integrity", {
   
   close(result)
 })
+test_that("write_dataset() stores a list of ClusteredNeuroVec runs in one experiment", {
+  set.seed(11)
+  dims <- c(6L, 6L, 3L)
+  arr <- array(FALSE, dims)
+  arr[2:5, 2:5, 2] <- TRUE
+  mask <- LogicalNeuroVol(arr, NeuroSpace(dims))
+  cvol <- ClusteredNeuroVol(mask, rep(1:3, length.out = sum(arr)))
+  runs <- lapply(c(12L, 8L), function(n) ClusteredNeuroVec(x = matrix(rnorm(n * 3), n, 3), cvol = cvol))
+
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  write_dataset(runs, file = path, scan_names = c("task", "rest"), verbose = FALSE)
+  exp <- suppressMessages(read_dataset(path))
+  on.exit(close(exp), add = TRUE, after = FALSE)
+  expect_s4_class(exp, "H5ParcellatedMultiScan")
+  expect_identical(names(exp), c("task", "rest"))
+  expect_s4_class(exp[["rest"]], "H5ParcellatedScanSummary")
+  expect_equal(unname(as.matrix(exp[["rest"]])), unname(runs[[2]]@ts), tolerance = 1e-6)
+
+  other <- ClusteredNeuroVol(mask, rep(1:2, length.out = sum(arr)))
+  bad <- list(runs[[1]], ClusteredNeuroVec(x = matrix(0, 4, 2), cvol = other))
+  expect_error(write_dataset(bad, file = tempfile(fileext = ".h5")), "share the same clusters")
+  expect_error(write_dataset(list(runs[[1]], "x"), file = tempfile(fileext = ".h5")), "NeuroVec")
+})

@@ -61,7 +61,8 @@ write_dataset(x, ...)
 
 \item{file}{Output HDF5 file path}
 
-\item{clusters}{A ClusteredNeuroVol object defining spatial clusters}
+\item{clusters}{A ClusteredNeuroVol object defining spatial clusters.
+Optional for ClusteredNeuroVec runs, which carry their own.}
 
 \item{mask}{Optional LogicalNeuroVol mask (extracted from first element if not provided)}
 
@@ -102,7 +103,9 @@ Generic function for writing neuroimaging datasets to HDF5 format
 
 Write a single NeuroVec object with clustering to HDF5
 
-Write multiple NeuroVec objects with clustering to HDF5
+Write multiple NeuroVec objects with clustering to HDF5, or several
+\code{ClusteredNeuroVec} runs that share one clustering. Runs are stored in
+list order.
 
 Export an existing H5ParcellatedMultiScan object to a new HDF5 file
 

@@ -197,11 +197,15 @@ setMethod(
 
 #' Write Dataset Method for List of NeuroVecs
 #'
-#' Write multiple NeuroVec objects with clustering to HDF5
+#' Write multiple NeuroVec objects with clustering to HDF5, or several
+#' \code{ClusteredNeuroVec} runs that share one clustering. Runs are stored in
+#' list order.
 #'
-#' @param x A list of NeuroVec objects
+#' @param x A list of NeuroVec objects, or a list of ClusteredNeuroVec objects
+#'   (stored as summary scans).
 #' @param file Output HDF5 file path
-#' @param clusters A ClusteredNeuroVol object defining spatial clusters
+#' @param clusters A ClusteredNeuroVol object defining spatial clusters.
+#'   Optional for ClusteredNeuroVec runs, which carry their own.
 #' @param mask Optional LogicalNeuroVol mask (extracted from first element if not provided)
 #' @param summary Logical, whether to summarize data by clusters (default: FALSE)
 #' @param summary_fun Function to use for summarization (default: mean)
@@ -232,15 +236,24 @@ setMethod(
            summary_fun = mean, scan_names = NULL, compression = 4, ...) {
     # Validate inputs
     if (missing(file)) stop("'file' argument is required")
-    if (missing(clusters)) stop("'clusters' argument is required")
+    if (length(x) == 0) stop("List cannot be empty")
+
+    # ClusteredNeuroVec runs already hold cluster averages and carry their
+    # clustering, so `clusters` is optional and every run is a summary scan.
+    clustered_runs <- all(vapply(x, function(v) is(v, "ClusteredNeuroVec"), logical(1)))
+    if (clustered_runs) {
+      if (missing(clusters)) clusters <- x[[1]]@cvol
+      same <- vapply(x, function(v) identical(v@cvol@clusters, clusters@clusters), logical(1))
+      if (!all(same)) {
+        stop("All ClusteredNeuroVec runs must share the same clusters")
+      }
+    } else if (!all(vapply(x, function(v) is(v, "NeuroVec"), logical(1)))) {
+      stop("All elements must be NeuroVec objects, or all ClusteredNeuroVec objects")
+    } else if (missing(clusters)) {
+      stop("'clusters' argument is required")
+    }
     if (!is(clusters, "ClusteredNeuroVol")) {
       stop("'clusters' must be a ClusteredNeuroVol object")
-    }
-
-    # Validate all elements are NeuroVec
-    if (length(x) == 0) stop("List cannot be empty")
-    if (!all(sapply(x, function(v) is(v, "NeuroVec")))) {
-      stop("All elements must be NeuroVec objects")
     }
 
     # Check dimensions match (first 3 dimensions should be spatial)
@@ -280,7 +293,10 @@ setMethod(
 
     # Convert each NeuroVec to runs_data format
     runs_data <- lapply(seq_along(x), function(i) {
-      if (summary) {
+      if (clustered_runs) {
+        data <- x[[i]]@ts # T x K, columns in sorted cluster-ID order
+        type <- "summary"
+      } else if (summary) {
         data <- summarize_by_clusters(x[[i]], clusters, summary_fun)
         type <- "summary"
       } else {
