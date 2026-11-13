@@ -893,7 +893,7 @@ setMethod("$", "H5ParcellatedMultiScan", function(x, name) {
     }
     first_run <- x@runs[[1]]
     if (name == "h5file") name <- "obj" # Map generic to slot name
-    if (!hasMethod("slot", signature = class(first_run)) || !(name %in% slotNames(first_run))) {
+    if (!(name %in% slotNames(first_run))) {
       stop(sprintf("Cannot access property '%s': Slot not found in the first run object of class '%s'.", name, class(first_run)[1]))
     }
     return(slot(first_run, name))

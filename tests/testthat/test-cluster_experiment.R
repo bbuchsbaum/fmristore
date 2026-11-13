@@ -72,9 +72,12 @@ test_that("writer + reader round-trip", {
   # --- Test Reading ---
   # Can we open it?
   exp <- H5ParcellatedMultiScan(tf, keep_handle_open = TRUE)
-  on.exit(try(exp$h5file$close_all(), silent = TRUE), add = TRUE) # Ensure cleanup
+  on.exit(close(exp), add = TRUE, after = FALSE) # Close before unlinking
 
   expect_s4_class(exp, "H5ParcellatedMultiScan")
+  expect_true(inherits(exp$h5file, "H5File"))
+  expect_true(exp$h5file$is_valid)
+  expect_identical(exp$h5file, exp@runs[[1]]@obj)
   expect_equal(n_scans(exp), 2)
   expect_equal(scan_names(exp), c("run1", "run2"))
 

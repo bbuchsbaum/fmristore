@@ -268,3 +268,23 @@ test_that("parcellated writers preserve origin, spacing and orientation", {
     unlink(c(tf_exp, tf_scan))
   }
 })
+
+# --- `$` accessor --------------------------------------------------------------
+
+test_that("$ on H5ParcellatedMultiScan returns shared run properties", {
+  fx <- make_parcel_fixture()
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+  write_parcel_fixture(fx, tf)
+  exp <- open_parcel_exp(tf)
+  on.exit(close(exp), add = TRUE, after = FALSE)
+
+  expect_identical(exp$mask, mask(exp))
+  expect_identical(exp$clusters, clusters(exp))
+  expect_true(inherits(exp$obj, "H5File"))
+  expect_identical(exp$h5file, exp$obj)
+  expect_true(exp$h5file$is_valid)
+  expect_equal(exp$n_voxels, 9L)
+  expect_identical(exp$runs, exp@runs)
+  expect_null(exp$not_a_property)
+})
