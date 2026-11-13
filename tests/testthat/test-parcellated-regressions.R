@@ -125,3 +125,105 @@ test_that("[ on H5ParcellatedScan keeps k and l when j is missing", {
   # Fully specified subscripts are unchanged.
   expect_equal(run[1:4, 1:3, 1:2, 2], fx$ref[, , , 2])
 })
+
+# --- overwrite = TRUE must not destroy the file on invalid input ------------
+
+test_that("overwrite = TRUE keeps the existing file when validation fails", {
+  fx <- make_parcel_fixture()
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+  write_parcel_fixture(fx, tf)
+  before <- unname(tools::md5sum(tf))
+  overwrite_with <- function(runs, ...) {
+    write_parcellated_experiment_h5(tf, fx$mask, fx$cvol, runs,
+      overwrite = TRUE, verbose = FALSE, ...
+    )
+  }
+  unchanged <- function() {
+    file.exists(tf) && identical(unname(tools::md5sum(tf)), before)
+  }
+
+  bad_names <- list(list(
+    scan_name = "run1", type = "full",
+    data = list(bad_name = matrix(1, 1, 1))
+  ))
+  expect_error(overwrite_with(bad_names), "invalid cluster names")
+  expect_true(unchanged())
+
+  expect_error(
+    overwrite_with(list(parcel_full_run(fx)),
+      cluster_metadata = data.frame(cluster_id = 1:2)
+    ),
+    "Cluster IDs in metadata"
+  )
+  expect_true(unchanged())
+
+  dl <- parcel_cluster_list(fx)
+  dl$cluster_3 <- dl$cluster_3[1:2, , drop = FALSE]
+  expect_error(overwrite_with(list(parcel_full_run(fx, data = dl))), "cluster_3")
+  expect_true(unchanged())
+
+  bad_summary <- list(list(
+    scan_name = "s", type = "summary", data = matrix(0, 5, 2)
+  ))
+  expect_error(overwrite_with(bad_summary), "columns")
+  expect_true(unchanged())
+
+  dup <- list(parcel_full_run(fx, "a"), parcel_full_run(fx, "a"))
+  expect_error(overwrite_with(dup), "unique")
+  expect_true(unchanged())
+})
+
+# --- Full-data writer validation ---------------------------------------------
+
+test_that("full-data writer validates matrices against clusters and metadata", {
+  fx <- make_parcel_fixture()
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+  write_run <- function(rd) {
+    write_parcellated_experiment_h5(tf, fx$mask, fx$cvol, list(rd),
+      overwrite = TRUE, verbose = FALSE
+    )
+  }
+
+  expect_error(
+    write_run(parcel_full_run(fx, meta = list(n_time = 3L))),
+    "n_time \\(3\\).*5 columns"
+  )
+
+  dl <- parcel_cluster_list(fx)
+  dl$cluster_10 <- NULL
+  expect_error(write_run(parcel_full_run(fx, data = dl)), "missing.*cluster_10")
+
+  dl <- parcel_cluster_list(fx)
+  dl$cluster_3 <- dl$cluster_3[1:2, , drop = FALSE]
+  expect_error(
+    write_run(parcel_full_run(fx, data = dl)),
+    "cluster_3.*2 rows.*4 voxels"
+  )
+
+  dl <- parcel_cluster_list(fx)
+  dl$cluster_7 <- cbind(dl$cluster_7, 0)
+  expect_error(
+    write_run(parcel_full_run(fx, data = dl)),
+    "same number of columns"
+  )
+
+  dl <- parcel_cluster_list(fx)
+  dl$cluster_99 <- matrix(0, 1, fx$n_time)
+  expect_error(write_run(parcel_full_run(fx, data = dl)), "cluster_99")
+
+  dl <- parcel_cluster_list(fx)
+  dl$cluster_7 <- array(as.character(dl$cluster_7), dim(dl$cluster_7))
+  expect_error(write_run(parcel_full_run(fx, data = dl)), "numeric matrix")
+
+  # Valid data, in any order and with matching metadata, still round-trips.
+  dl <- rev(parcel_cluster_list(fx))
+  expect_no_error(
+    write_run(parcel_full_run(fx, meta = list(n_time = 5L), data = dl))
+  )
+  exp <- open_parcel_exp(tf)
+  on.exit(close(exp), add = TRUE, after = FALSE)
+  expect_equal(exp@runs[[1]]@n_time, 5L)
+  expect_equal(unname(series(exp@runs[[1]], seq_len(9))), t(fx$full))
+})

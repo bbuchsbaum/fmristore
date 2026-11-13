@@ -40,6 +40,106 @@ validate_runs_data <- function(rd) {
   }
 }
 
+# Helper: check each run's data against the clusters and its metadata before
+# anything is written. Returns the number of time points of each run.
+validate_runs_data_content <- function(rd, clusters) {
+  scan_names <- vapply(rd, function(el) el$scan_name, character(1))
+  if (anyDuplicated(scan_names) > 0) {
+    stop(sprintf(
+      "Scan names in `runs_data` must be unique. Duplicated: %s",
+      paste(unique(scan_names[duplicated(scan_names)]), collapse = ", ")
+    ))
+  }
+
+  cluster_ids <- sort(unique(clusters@clusters))
+  cluster_sizes <- tabulate(match(clusters@clusters, cluster_ids), nbins = length(cluster_ids))
+  # Full data must cover every labelled cluster; ID 0 marks unclustered voxels.
+  required_ids <- cluster_ids[cluster_ids > 0]
+
+  n_time <- integer(length(rd))
+  for (i in seq_along(rd)) {
+    el <- rd[[i]]
+    run_label <- sprintf("Run %d ('%s')", i, el$scan_name)
+    sdata <- el$data
+
+    if (el$type == "summary") {
+      if (!is.numeric(sdata)) stop(run_label, ": summary data is not a numeric matrix.")
+      if (ncol(sdata) != length(cluster_ids)) {
+        stop(sprintf(
+          "%s: summary matrix has %d columns, but %d unique cluster IDs exist.",
+          run_label, ncol(sdata), length(cluster_ids)
+        ))
+      }
+      n_time[i] <- nrow(sdata)
+      next
+    }
+
+    data_names <- names(sdata)
+    if (length(sdata) > 0 && (is.null(data_names) || anyDuplicated(data_names) > 0)) {
+      stop(run_label, ": full data must be a list with unique names of the form cluster_<ID>.")
+    }
+    data_ids <- as.integer(sub("^cluster_", "", data_names))
+    unknown <- data_names[!(data_ids %in% cluster_ids)]
+    if (length(unknown) > 0) {
+      stop(sprintf(
+        "%s: full data contains clusters not present in `clusters`: %s",
+        run_label, paste(unknown, collapse = ", ")
+      ))
+    }
+    missing_ids <- setdiff(required_ids, data_ids)
+    if (length(missing_ids) > 0) {
+      stop(sprintf(
+        "%s: full data is missing cluster(s): %s",
+        run_label, paste0("cluster_", missing_ids, collapse = ", ")
+      ))
+    }
+    for (k in seq_along(sdata)) {
+      mat <- sdata[[k]]
+      if (!is.matrix(mat) || !is.numeric(mat)) {
+        stop(sprintf("%s: %s is not a numeric matrix.", run_label, data_names[k]))
+      }
+      n_vox_cluster <- cluster_sizes[match(data_ids[k], cluster_ids)]
+      if (nrow(mat) != n_vox_cluster) {
+        stop(sprintf(
+          "%s: %s has %d rows, but cluster %d has %d voxels in the mask.",
+          run_label, data_names[k], nrow(mat), data_ids[k], n_vox_cluster
+        ))
+      }
+    }
+    n_cols <- unique(vapply(sdata, ncol, integer(1)))
+    if (length(n_cols) > 1) {
+      stop(sprintf(
+        "%s: all full data matrices must have the same number of columns (time points); found %s.",
+        run_label, paste(sort(n_cols), collapse = ", ")
+      ))
+    }
+
+    meta_n_time <- el$metadata$n_time
+    has_meta_n_time <- !is.null(meta_n_time) && is.numeric(meta_n_time) &&
+      length(meta_n_time) == 1 && meta_n_time > 0
+    if (length(n_cols) == 1 && has_meta_n_time && meta_n_time != n_cols) {
+      stop(sprintf(
+        "%s: metadata n_time (%s) does not match the %d columns of the full data matrices.",
+        run_label, format(meta_n_time), n_cols
+      ))
+    }
+    if (length(n_cols) == 1 && n_cols > 0) {
+      n_time[i] <- n_cols
+    } else if (has_meta_n_time) {
+      n_time[i] <- as.integer(meta_n_time)
+    } else {
+      stop(sprintf(
+        paste(
+          "Could not determine a valid nTime for full data write in scan '%s'.",
+          "Provide in metadata or ensure sdata contains valid matrices."
+        ),
+        el$scan_name
+      ))
+    }
+  }
+  n_time
+}
+
 #' Write Parcellated Experiment Data to HDF5
 #'
 #' @description
@@ -212,7 +312,6 @@ write_parcellated_experiment_h5 <- function(filepath,
   )
   if (!is.list(runs_data)) stop("`runs_data` must be a list.")
   if (file.exists(filepath) && !overwrite) stop("File exists and overwrite is FALSE: ", filepath)
-  if (file.exists(filepath) && overwrite) file.remove(filepath)
 
   n_vox_mask <- sum(mask)
   if (length(clusters@clusters) != n_vox_mask) {
@@ -246,9 +345,15 @@ write_parcellated_experiment_h5 <- function(filepath,
     }
   }
 
+  # Validate run data against the clusters and metadata; yields nTime per run
+  run_n_time <- validate_runs_data_content(runs_data, clusters)
+
   # --- File Creation ---
   h5f <- NULL
   gzip_level <- if (compress) 4L else 0L # Set gzip level based on argument
+
+  # Only replace an existing file once all input has been validated
+  if (file.exists(filepath) && overwrite) file.remove(filepath)
 
   tryCatch({
     if (verbose) message("Creating HDF5 file: ", filepath)
@@ -380,32 +485,8 @@ write_parcellated_experiment_h5 <- function(filepath,
         # scan_clus_grp <- scan_grp$create_group("clusters") # h5_write creates parent
         tryCatch(
           {
-            # --- Determine nTime ---
-            nTime <- NA_integer_
-            # 1. Prioritize from metadata if available and valid
-            if (!is.null(smeta$n_time) && is.numeric(smeta$n_time) && length(smeta$n_time) == 1 && smeta$n_time > 0) {
-              nTime <- as.integer(smeta$n_time)
-              if (verbose) message(sprintf("    Scan '%s': Using nTime %d from metadata.", sname, nTime))
-            }
-
-            # 2. If not in metadata, infer from data matrices in sdata
-            if (is.na(nTime)) {
-              if (verbose) message(sprintf("    Scan '%s': nTime not in metadata, attempting to infer from sdata list.", sname))
-              if (length(sdata) > 0) {
-                for (data_item_name in names(sdata)) {
-                  data_item <- sdata[[data_item_name]]
-                  if (is.matrix(data_item) && ncol(data_item) > 0) {
-                    nTime <- ncol(data_item)
-                    if (verbose) message(sprintf("    Scan '%s': Inferred nTime %d from sdata item '%s'.", sname, nTime, data_item_name))
-                    break # Found nTime, exit loop
-                  }
-                }
-              }
-            }
-
-            if (is.na(nTime)) {
-              stop(sprintf("Could not determine a valid nTime for full data write in scan '%s'. Provide in metadata or ensure sdata contains valid matrices.", sname))
-            }
+            # nTime and the matrices were checked by validate_runs_data_content()
+            if (verbose) message(sprintf("    Scan '%s': nTime %d.", sname, run_n_time[i]))
 
             for (nm in names(sdata)) { # e.g. "cluster_17"
               mat <- sdata[[nm]]
