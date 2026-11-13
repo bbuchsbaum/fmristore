@@ -104,6 +104,7 @@ setMethod(
       compression = compression,
       nbit = nbit
     )
+    close_h5_safely(h5obj)
 
     invisible(NULL)
   }
@@ -124,8 +125,9 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
 
   fh <- open_h5(file_name, mode = "w")
   h5obj <- fh$h5
-  defer(if (fh$owns) h5obj$close_all(), envir = parent.frame())
 
+  # On success the open handle is returned and the caller owns it. On failure
+  # the handle is closed and the partial file removed before re-raising.
   tryCatch(
     {
       verbose <- isTRUE(getOption("fmristore.verbose"))
@@ -147,6 +149,9 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
           list(quaternion = c(0, 0, 0), qoffset = c(0, 0, 0), qfac = 1)
         }
       )
+      # matrixToQuatern() returns only the rotation and qfac; the qform offset
+      # is the translation column of the transform.
+      q$qoffset <- tmat[1:3, 4]
       sp_spacing <- spacing(sp)
       if (length(sp_spacing) < 3) sp_spacing <- c(sp_spacing, rep(1, 3 - length(sp_spacing)))
       TR <- attr(sp, "TR") %||% 0.0
@@ -201,8 +206,12 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
       return(h5obj)
     },
     error = function(e) {
-      warning(paste0("[to_h5_latentvec] ERROR during HDF5 write: ", e$message))
-      return(NULL)
+      close_h5_safely(h5obj)
+      if (file.exists(file_name)) unlink(file_name)
+      stop("[to_h5_latentvec] HDF5 write to '", file_name, "' failed: ",
+        conditionMessage(e),
+        call. = FALSE
+      )
     }
   )
 }
@@ -367,6 +376,20 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
   if (verbose) message("[to_h5_latentvec] Scans Group DONE.")
 }
 
+#' hdf5r drops singleton dimensions on read, so a 4x4x1 /mask comes back as
+#' 4x4. Restore the header's 3-D shape when only singleton dimensions differ.
+#' @keywords internal
+#' @noRd
+.restore_mask_dims <- function(mask_arr, dims_3d) {
+  d <- dim(mask_arr) %||% length(mask_arr)
+  dims_3d <- as.integer(dims_3d)
+  singletons_dropped <- length(d) != 3 && length(dims_3d) == 3 &&
+    !anyNA(dims_3d) && length(mask_arr) == prod(dims_3d) &&
+    identical(as.integer(d[d != 1L]), dims_3d[dims_3d != 1L])
+  if (singletons_dropped) mask_arr <- array(mask_arr, dim = dims_3d)
+  mask_arr
+}
+
 #' Load data from a LatentNeuroVecSource object (Spec Compliant)
 #'
 #' @description
@@ -401,7 +424,8 @@ setMethod(
   definition = function(x, scan_name = NULL) {
     fh <- open_h5(x@file_name, mode = "r")
     h5obj <- fh$h5
-    defer(if (fh$owns) h5obj$close_all(), envir = parent.frame())
+    # The result is fully in memory, so the file is closed when this returns.
+    on.exit(if (fh$owns) close_h5_safely(h5obj), add = TRUE)
 
     # Check Version Attribute
     version_attr <- NULL
@@ -485,7 +509,7 @@ setMethod(
     space_3d <- drop_dim(full_space)
 
     # Read Mask
-    mask_arr <- h5_read(h5obj, "/mask", missing_ok = FALSE)
+    mask_arr <- .restore_mask_dims(h5_read(h5obj, "/mask", missing_ok = FALSE), dims_3d)
     check_same_dims(dim(mask_arr), dims_3d,
       dims_to_compare = 1:3,
       msg = "load_data: Dimensions of /mask mismatch header dims"
@@ -544,15 +568,16 @@ setMethod(
       } else if (storage_fmt == "csr") {
         expected_indptr_len <- shape_attr[1] + 1
         if (length(indptr_data) != expected_indptr_len) stop("CSR indptr length mismatch.")
-        message("  Reconstructing CSR matrix (p x k) from triplet...")
-        reconstructed_p_k <- Matrix::sparseMatrix(
+        message("  Reconstructing CSR matrix (k x p) from triplet...")
+        # With j and p given, sparseMatrix() reads p as row pointers (CSR).
+        reconstructed_k_p <- Matrix::sparseMatrix(
           j = indices_data,
           p = indptr_data,
           x = data_data,
-          dims = rev(shape_attr),
+          dims = shape_attr,
           index1 = FALSE
         )
-        internal_loadings <- reconstructed_p_k
+        internal_loadings <- Matrix::t(reconstructed_k_p)
       } else {
         stop(paste0("Unsupported sparse storage format: ", storage_fmt))
       }
@@ -577,6 +602,7 @@ setMethod(
     if (!scans_grp_exists) stop("Mandatory group '/scans' not found.")
     scans_grp <- h5obj[["/scans"]]
     available_scans <- scans_grp$ls()$name
+    close_h5_safely(scans_grp)
     if (length(available_scans) == 0) stop("No scans found under '/scans'.")
 
     target_scan_name <- scan_name
@@ -656,11 +682,11 @@ validate_latent_file <- function(file_path) {
   error_message <- NULL
   fh <- NULL
 
+  on.exit(if (!is.null(fh) && fh$owns) close_h5_safely(fh$h5), add = TRUE)
   tryCatch(
     {
       fh <- open_h5(file_path, mode = "r")
       h5obj <- fh$h5
-      defer(if (!is.null(fh) && fh$owns) try(h5obj$close_all(), silent = TRUE), envir = parent.frame())
 
       # Check for mandatory groups/datasets
       required_groups <- c("header", "basis", "scans")
@@ -710,7 +736,9 @@ validate_latent_file <- function(file_path) {
 
       # Read dimensions for consistency checks
       header_dim <- h5_read(h5obj, "/header/dim", missing_ok = FALSE)
-      mask_data <- h5_read(h5obj, "/mask", missing_ok = FALSE)
+      mask_data <- .restore_mask_dims(
+        h5_read(h5obj, "/mask", missing_ok = FALSE), header_dim[2:4]
+      )
       mask_dim <- dim(mask_data)
 
       basis_dim <- NULL
@@ -831,6 +859,8 @@ validate_latent_file <- function(file_path) {
 #' @param offset Optional numeric vector of voxel offsets.
 #' @param label Optional character label for the dataset.
 #' @param meta Optional named list of additional metadata.
+#' @param expect_dense Logical; if `TRUE`, suppress the warning issued when a
+#'   dense base-matrix `basis` or `loadings` is stored as a dense `dgeMatrix`.
 #'
 #' @return A `LatentNeuroVec` object.
 #'
@@ -838,7 +868,7 @@ validate_latent_file <- function(file_path) {
 #' @seealso \code{LatentNeuroVec} in package \pkg{fmrilatent} for full documentation.
 #' @export
 #' @importFrom fmrilatent LatentNeuroVec
-LatentNeuroVec <- fmrilatent::LatentNeuroVec
+LatentNeuroVec
 
 #' @rdname mask-methods
 #' @export

@@ -30,7 +30,12 @@
   kinds <- rep("sibling_partial", length(targets))
   removable <- rep(TRUE, length(targets))
 
-  if (dir.exists(path)) {
+  # Temporary-looking names prove nothing in an arbitrary directory: only a
+  # directory whose root manifest validates is a store this package wrote.
+  manifest <- if (dir.exists(path)) {
+    tryCatch(.read_frame_shard_root(path), error = function(error) NULL)
+  }
+  if (!is.null(manifest)) {
     root_partials <- list.files(
       path, pattern = "^\\.manifest-", all.files = TRUE, full.names = TRUE
     )
@@ -44,27 +49,28 @@
     } else {
       character()
     }
-    shard_partials <- shard_files[startsWith(basename(shard_files), ".shard-")]
+    # Appends stage through write_frame_h5() as ".sNNNNNN.fds.h5.partial-*";
+    # earlier releases left ".shard-*" and the nested "..shard-*" partials.
+    shard_partials <- shard_files[grepl(
+      "^(\\.{1,2}shard-|\\.s[0-9]{6}\\.fds\\.h5\\.partial-)", basename(shard_files)
+    )]
     targets <- c(targets, shard_partials)
     kinds <- c(kinds, rep("shard_partial", length(shard_partials)))
     removable <- c(removable, rep(TRUE, length(shard_partials)))
 
-    manifest <- tryCatch(.read_frame_shard_root(path), error = function(error) NULL)
-    if (!is.null(manifest)) {
-      committed <- normalizePath(
-        file.path(path, manifest$shards$.file), winslash = "/", mustWork = FALSE
-      )
-      stable <- shard_files[grepl("^s[0-9]{6}\\.fds\\.h5$", basename(shard_files))]
-      orphans <- setdiff(normalizePath(stable, winslash = "/", mustWork = FALSE), committed)
-      missing <- committed[!file.exists(committed)]
-      targets <- c(targets, orphans, missing)
-      kinds <- c(
-        kinds,
-        rep("orphan_shard", length(orphans)),
-        rep("missing_committed_shard", length(missing))
-      )
-      removable <- c(removable, rep(TRUE, length(orphans)), rep(FALSE, length(missing)))
-    }
+    committed <- normalizePath(
+      file.path(path, manifest$shards$.file), winslash = "/", mustWork = FALSE
+    )
+    stable <- shard_files[grepl("^s[0-9]{6}\\.fds\\.h5$", basename(shard_files))]
+    orphans <- setdiff(normalizePath(stable, winslash = "/", mustWork = FALSE), committed)
+    missing <- committed[!file.exists(committed)]
+    targets <- c(targets, orphans, missing)
+    kinds <- c(
+      kinds,
+      rep("orphan_shard", length(orphans)),
+      rep("missing_committed_shard", length(missing))
+    )
+    removable <- c(removable, rep(TRUE, length(orphans)), rep(FALSE, length(missing)))
   }
 
   data.frame(
@@ -160,7 +166,7 @@ frame_store_info <- function(path) {
 recover_frame_store <- function(path, action = c("report", "rollback")) {
   action <- match.arg(action)
   plan <- .frame_recovery_plan(path)
-  plan$removed <- FALSE
+  plan$removed <- rep(FALSE, nrow(plan))
   if (action == "rollback" && nrow(plan)) {
     for (index in which(plan$removable)) {
       target <- plan$path[[index]]
@@ -217,6 +223,7 @@ recover_frame_store <- function(path, action = c("report", "rollback")) {
     )
   })
   names(assay_values) <- vapply(manifest$assays, `[[`, character(1), "name")
+  lineage <- .legacy_frame_provenance(manifest$provenance, manifest$metadata)
   fmridataset::fmri_frame(
     assays = assay_values,
     observations = manifest$observations,
@@ -225,9 +232,29 @@ recover_frame_store <- function(path, action = c("report", "rollback")) {
     relations = manifest$relations,
     tables = manifest$tables,
     active_assay = manifest$active_assay,
-    metadata = manifest$metadata,
-    provenance = manifest$provenance
+    metadata = lineage$metadata,
+    provenance = lineage$provenance
   )
+}
+
+# Provisional files predate fmridataset's provenance_graph contract and may
+# carry free-form provenance lists, which fmri_frame() now rejects. Keep a
+# graph (or a list of records) as lineage; preserve anything else verbatim in
+# metadata so migration never discards it.
+.legacy_frame_provenance <- function(provenance, metadata) {
+  metadata <- metadata %||% list()
+  if (is.null(provenance) || inherits(provenance, "provenance_graph")) {
+    return(list(provenance = provenance, metadata = metadata))
+  }
+  if (is.list(provenance) && length(provenance) &&
+    all(vapply(provenance, inherits, logical(1), "provenance_record"))) {
+    return(list(
+      provenance = fmridataset::provenance_graph(provenance),
+      metadata = metadata
+    ))
+  }
+  metadata$legacy_provenance <- provenance
+  list(provenance = NULL, metadata = metadata)
 }
 
 #' Migrate historical HDF5 frames to FDS v1

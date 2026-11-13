@@ -2,7 +2,7 @@
 % Please edit documentation in R/h5neurovol.R
 \name{[,H5NeuroVol,numeric,missing,ANY-method}
 \alias{[,H5NeuroVol,numeric,missing,ANY-method}
-\title{Single-vector indexing for H5NeuroVol}
+\title{Indexing with a missing j for H5NeuroVol}
 \usage{
 \S4method{[}{H5NeuroVol,numeric,missing,ANY}(x, i, j, ..., drop = TRUE)
 }
@@ -13,15 +13,16 @@
 
 \item{j}{Missing}
 
-\item{...}{Unused}
+\item{...}{An optional \code{k} index, as in \code{h5vol[i, , k]}}
 
 \item{drop}{Logical: whether to drop dimensions of size 1. Default \code{TRUE}.}
 }
 \value{
-Values from the volume (either as array slice or linear-indexed values)
+Linear-indexed values for \code{h5vol[i]}, otherwise an array slice
 }
 \description{
-Handles \code{h5vol[i]} where only \code{i} is provided.
-If all indices are within the first dimension range, treats as first-dimension slicing.
-Otherwise, treats as linear indexing into the flattened volume.
+Handles \code{h5vol[i]}, \code{h5vol[i, , ]} and \code{h5vol[i, , k]}.
+As for \code{DenseNeuroVol}, \code{h5vol[i]} is linear indexing into the
+flattened volume; the other forms take the full range of \code{j} and,
+when \code{k} is left empty, of \code{k}.
 }

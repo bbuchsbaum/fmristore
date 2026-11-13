@@ -50,7 +50,9 @@ read_vec <- function(file_name) {
 #'
 #' @param file_name The path to an existing 4D HDF5 neuroimaging file.
 #' @param dataset_name Name of the dataset within the HDF5 file containing the 4D data.
-#'   Defaults to "data".
+#'   Defaults to "data". If this names a group holding an \code{elements}
+#'   dataset (the layout written by \code{as_h5()} and \code{to_nih5_vec()}),
+#'   that dataset is used.
 #'
 #' @return A new \code{\link{H5NeuroVec-class}} instance with an open HDF5 file handle.
 #'
@@ -98,6 +100,13 @@ H5NeuroVec <- function(file_name, dataset_name = "data") {
   if (!h5obj$exists(dataset_name)) {
     stop("Dataset '", dataset_name, "' not found in HDF5 file")
   }
+  # as_h5() and to_nih5_vec() write the array to /data/elements, so a group
+  # holding an "elements" dataset stands for that dataset.
+  ds_obj <- h5obj[[dataset_name]]
+  if (inherits(ds_obj, "H5Group") && ds_obj$exists("elements")) {
+    dataset_name <- paste0(sub("/+$", "", dataset_name), "/elements")
+  }
+  ds_obj$close()
 
   # Attach a finalizer so the handle is closed if the object is garbage collected
   reg.finalizer(h5obj, function(x) close_h5_safely(x), onexit = TRUE)
@@ -143,17 +152,13 @@ setMethod(
 
     # flatten spatial dims: result is [nTime x nSpatial]
     ret2 <- t(array(ret, c(prod(dim(ret)[1:3]), dim(ret)[4])))
-    # If bounding box is exact match, return directly
-    if (ncol(ret2) != nrow(i)) {
-      # Map requested coords to local offsets within bounding box
-      i2 <- apply(i, 2, function(ind) ind - min(ind) + 1)
-      # Convert grid coordinates to linear indices (base R replacement for gridToIndex3DCpp)
-      ret_dims <- dim(ret)[1:3]
-      i3 <- i2[, 1] + (i2[, 2] - 1L) * ret_dims[1] + (i2[, 3] - 1L) * ret_dims[1] * ret_dims[2]
-      ret2[, i3, drop = FALSE]
-    } else {
-      ret2
-    }
+    # Select the requested voxels in the caller's row order. Even when nrow(i)
+    # equals the box size the rows may be permuted or repeated.
+    ret_dims <- dim(ret)[1:3]
+    i3 <- (i[, 1] - mins[1] + 1) +
+      (i[, 2] - mins[2]) * ret_dims[1] +
+      (i[, 3] - mins[3]) * ret_dims[1] * ret_dims[2]
+    ret2[, i3, drop = FALSE]
   }
 )
 
@@ -164,6 +169,15 @@ setMethod(
   f = "linear_access",
   signature = signature(x = "H5NeuroVec", i = "numeric"),
   definition = function(x, i) {
+    # arrayInd() wraps out-of-range indices, so check them first
+    n_tot <- prod(dim(x))
+    if (any(i < 1 | i > n_tot)) {
+      stop("Some linear indices are out of range 1..", n_tot)
+    }
+    if (length(i) == 0) {
+      return(numeric(0))
+    }
+
     # 1) Convert linear => (x,y,z,t)
     coords <- arrayInd(i, dim(x))
     n <- nrow(coords)
@@ -554,6 +568,15 @@ setMethod(
     cat("\n")
   }
 )
+
+#' @rdname h5file-methods
+#' @export
+setMethod("h5file", "H5NeuroVec", function(x) {
+  if (is.null(x@obj)) {
+    stop("H5File object is NULL")
+  }
+  x@obj$filename
+})
 
 #' Close the HDF5 file associated with an H5NeuroVec
 #'

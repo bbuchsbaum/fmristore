@@ -501,7 +501,7 @@ setMethod(
 
     # Close the file handle if returned
     if (is(result, "H5File")) {
-      result$close_all()
+      close_h5_safely(result)
     }
 
     invisible(NULL)

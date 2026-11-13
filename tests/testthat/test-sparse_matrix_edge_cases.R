@@ -55,14 +55,11 @@ test_that("LatentNeuroVec handles extremely sparse data correctly", {
   series_data <- series(lnv, mask_indices[1:5])
   expect_equal(dim(series_data), c(n_time, 5))
 
-  # Most values should be near zero due to sparsity
-  # Some voxels might be all zeros if they have no non-zero loadings
-  # This is expected with extreme sparsity
-  if (any(is.na(series_data))) {
-    # Replace NA with 0 - this happens when a voxel has all zero loadings
-    series_data[is.na(series_data)] <- 0
-  }
-  expect_true(mean(abs(series_data)) < 1)
+  # Each series is the exact reconstruction basis %*% t(loadings) for that
+  # voxel's row in the mask (voxels with no non-zero loadings are all zero).
+  rows <- match(mask_indices[1:5], which(mask_array))
+  expected <- basis %*% t(as.matrix(loadings[rows, , drop = FALSE]))
+  expect_equal(unname(as.matrix(series_data)), unname(expected), tolerance = 1e-10)
 
   # Test 2: Write and read back extremely sparse data
   temp_file <- tempfile(fileext = ".h5")

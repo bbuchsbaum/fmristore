@@ -134,7 +134,7 @@ test_that("neurovecseq_to_h5 validates inputs", {
     vec2 <- fmristore:::create_minimal_DenseNeuroVec(c(8, 8, 5, 20)) # Different spatial dims
 
     # NeuroVecSeq constructor already validates spatial dimensions match
-    expect_error(NeuroVecSeq(vec1, vec2), "All NeuroVec objects must have the same spatial dimensions")
+    expect_error(NeuroVecSeq(vec1, vec2), "same spatial dimensions")
 
     # Test with wrong number of scan names
     vec3 <- fmristore:::create_minimal_DenseNeuroVec(c(10, 10, 5, 20))
@@ -144,7 +144,7 @@ test_that("neurovecseq_to_h5 validates inputs", {
     vec2 <- NeuroVec(array(1, dim = c(8, 8, 5, 20)), NeuroSpace(c(8, 8, 5, 20)))
 
     # NeuroVecSeq constructor already validates spatial dimensions match
-    expect_error(NeuroVecSeq(vec1, vec2), "All NeuroVec objects must have the same spatial dimensions")
+    expect_error(NeuroVecSeq(vec1, vec2), "same spatial dimensions")
 
     # Test with wrong number of scan names
     vec3 <- NeuroVec(array(1, dim = c(10, 10, 5, 20)), NeuroSpace(c(10, 10, 5, 20)))

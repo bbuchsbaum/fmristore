@@ -339,6 +339,7 @@ H5ParcellatedMultiScan <- function(file,
 
   h5obj <- NULL
   opened_here <- FALSE
+  constructed <- FALSE
   # Track objects opened within this function scope for cleanup
   opened_groups <- list()
   opened_datasets <- list()
@@ -348,11 +349,12 @@ H5ParcellatedMultiScan <- function(file,
       lapply(opened_datasets, function(ds) if (!is.null(ds) && is(ds, "H5D") && ds$is_valid) close_h5_safely(ds))
       # Then close groups
       lapply(opened_groups, function(grp) if (!is.null(grp) && is(grp, "H5Group") && grp$is_valid) close_h5_safely(grp))
-      # Finally, close file if opened here and not keeping open
-      if (opened_here && !keep_handle_open && !is.null(h5obj) && h5obj$is_valid) {
+      # Finally, close the file if we opened it and construction failed or the
+      # caller does not want the handle kept open. A caller-supplied handle is
+      # never closed here.
+      if (opened_here && (!constructed || !keep_handle_open)) {
         close_h5_safely(h5obj)
       }
-      # Finalizer registration is handled later in the function
     },
     add = TRUE
   )
@@ -360,18 +362,7 @@ H5ParcellatedMultiScan <- function(file,
   # --- 1. Handle File Source and Read Header/Create Space ---
   fh <- open_h5(file_source, mode = "r")
   h5obj <- fh$h5
-  # Defer closing the file only if we opened it and the user doesn't want to keep it open.
-  # Note: keep_handle_open is TRUE by default, so defer usually won't close it here.
-  # The H5ParcellatedMultiScan object's finalizer handles closing if keep_handle_open=TRUE.
-  defer(
-    {
-      if (fh$owns && !keep_handle_open && h5obj$is_valid) {
-        message("[H5ParcellatedMultiScan] Closing HDF5 file handle opened by constructor.")
-        try(h5obj$close_all(), silent = TRUE)
-      }
-    },
-    envir = parent.frame()
-  ) # Defer in the context of the calling function H5ParcellatedMultiScan
+  opened_here <- fh$owns
 
   # --- Read Header Info and Create Master NeuroSpace ---
   master_space <- NULL
@@ -840,27 +831,9 @@ H5ParcellatedMultiScan <- function(file,
     cluster_metadata = cluster_metadata
   )
 
-  # --- Add Finalizer if needed (Checklist Item 4.3) ---
-  if (opened_here && keep_handle_open) {
-    if (isTRUE(getOption("fmristore.verbose"))) {
-      message("[H5ParcellatedMultiScan] Registering finalizer to close HDF5 handle when experiment object is garbage collected.")
-    }
-    reg.finalizer(exp_obj, function(e) {
-      # Access the handle from the object's structure
-      h5_handle_to_close <- NULL
-      if (length(e@runs) > 0 && inherits(e@runs[[1]], "H5ParcellatedArray")) {
-        h5_handle_to_close <- e@runs[[1]]@obj
-      }
-      if (!is.null(h5_handle_to_close) && inherits(h5_handle_to_close, "H5File") && h5_handle_to_close$is_valid) {
-        try(h5_handle_to_close$close_all(), silent = TRUE)
-      }
-    }, onexit = TRUE)
-  } else if (opened_here && !keep_handle_open) {
-    # Close handle immediately if opened here and not keeping open
-    try(h5obj$close_all(), silent = TRUE)
-  } # else: handle was passed in open, user manages its lifecycle
-  # --- End Finalizer ---
-
+  # Construction succeeded: on.exit keeps a handle opened here open unless
+  # keep_handle_open = FALSE. close(exp_obj) releases it.
+  constructed <- TRUE
   return(exp_obj)
 }
 
@@ -893,7 +866,7 @@ setMethod("$", "H5ParcellatedMultiScan", function(x, name) {
     }
     first_run <- x@runs[[1]]
     if (name == "h5file") name <- "obj" # Map generic to slot name
-    if (!hasMethod("slot", signature = class(first_run)) || !(name %in% slotNames(first_run))) {
+    if (!(name %in% slotNames(first_run))) {
       stop(sprintf("Cannot access property '%s': Slot not found in the first run object of class '%s'.", name, class(first_run)[1]))
     }
     return(slot(first_run, name))

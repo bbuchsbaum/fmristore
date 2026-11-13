@@ -17,7 +17,8 @@
 .frame_h5_dtype <- function(dtype) {
   switch(
     dtype,
-    logical = hdf5r::h5types$H5T_NATIVE_HBOOL,
+    # hdf5r's FALSE/TRUE/NA enum reads back as R logical with NA intact.
+    logical = hdf5r::h5types$H5T_LOGICAL_NA,
     uint8 = hdf5r::h5types$H5T_STD_U8LE,
     int8 = hdf5r::h5types$H5T_STD_I8LE,
     uint16 = hdf5r::h5types$H5T_STD_U16LE,
@@ -32,6 +33,44 @@
     float64 = hdf5r::h5types$H5T_IEEE_F64LE,
     stop("The HDF5 frame codec does not support dtype: ", dtype, call. = FALSE)
   )
+}
+
+# Exclusive bounds of the whole numbers each integer dtype stores exactly, and
+# whether NA survives. HDF5 conversion otherwise saturates out-of-range values
+# and turns NA into 0 or a type minimum with at most a warning. int32 and
+# int64 reserve their minimum for R's NA; uint64 passes through int64 in hdf5r.
+.frame_integer_limits <- list(
+  uint8 = list(bounds = c(-1, 2^8), na = FALSE),
+  int8 = list(bounds = c(-2^7 - 1, 2^7), na = FALSE),
+  uint16 = list(bounds = c(-1, 2^16), na = FALSE),
+  int16 = list(bounds = c(-2^15 - 1, 2^15), na = FALSE),
+  uint32 = list(bounds = c(-1, 2^32), na = FALSE),
+  int32 = list(bounds = c(-2^31, 2^31), na = TRUE),
+  uint64 = list(bounds = c(-1, 2^63), na = FALSE),
+  int64 = list(bounds = c(-2^63, 2^63), na = TRUE)
+)
+
+.assert_frame_values_storable <- function(values, dtype, key) {
+  limits <- .frame_integer_limits[[dtype]]
+  if (is.null(limits)) return(invisible(values))
+  missing <- is.na(values)
+  if (!limits$na && any(missing)) {
+    stop(
+      "Array '", key, "' contains NA, which HDF5 dtype '", dtype,
+      "' cannot represent.",
+      call. = FALSE
+    )
+  }
+  present <- as.double(values[!missing])
+  if (any(present <= limits$bounds[[1L]] | present >= limits$bounds[[2L]] |
+    present != trunc(present))) {
+    stop(
+      "Array '", key, "' contains values that HDF5 dtype '", dtype,
+      "' cannot store exactly (out of range or not whole numbers).",
+      call. = FALSE
+    )
+  }
+  invisible(values)
 }
 
 .validate_frame_budget <- function(memory_budget) {
@@ -99,7 +138,9 @@
 
 .frame_rds_write <- function(h5, path, value) {
   raw <- as.integer(serialize(value, connection = NULL, version = 3L))
-  h5$create_dataset(path, robj = raw)
+  dataset <- h5$create_dataset(path, robj = raw)
+  close_h5_safely(dataset)
+  invisible(path)
 }
 
 .frame_rds_read <- function(h5, path) {
@@ -139,9 +180,12 @@
     )
   }
   chunks <- .frame_chunk_dims(
-    shape, declaration$dtype, memory_budget, chunk_dims,
+    pmax(1L, shape), declaration$dtype, memory_budget, chunk_dims,
     layout = layout, target_chunk_bytes = target_chunk_bytes
   )
+  # HDF5 rejects zero-sized chunks and an empty array has nothing to stream,
+  # so it is stored unchunked once the chunking arguments have been checked.
+  if (any(shape == 0L)) chunks <- NULL
   dataset <- h5$create_dataset(
     dataset_path,
     dtype = .frame_h5_dtype(declaration$dtype),
@@ -150,8 +194,11 @@
   )
   on.exit(close_h5_safely(dataset), add = TRUE)
   hdf5r::h5attr(dataset, "fds_dtype") <- declaration$dtype
-  observation_starts <- seq.int(1L, shape[[1L]], by = chunks[[1L]])
-  feature_starts <- seq.int(1L, shape[[2L]], by = chunks[[2L]])
+  observation_starts <- feature_starts <- integer()
+  if (!is.null(chunks)) {
+    observation_starts <- seq.int(1L, shape[[1L]], by = chunks[[1L]])
+    feature_starts <- seq.int(1L, shape[[2L]], by = chunks[[2L]])
+  }
   for (observation_start in observation_starts) {
     observations <- observation_start:min(
       shape[[1L]], observation_start + chunks[[1L]] - 1L
@@ -161,6 +208,7 @@
         shape[[2L]], feature_start + chunks[[2L]] - 1L
       )
       values <- .frame_binding_read(binding, observations, features)
+      .assert_frame_values_storable(values, declaration$dtype, declaration$key)
       dataset[observations, features] <- values
     }
   }
@@ -271,7 +319,7 @@ write_frame_h5 <- function(
     schema_id = .frame_schema_id,
     schema_version = .frame_schema_version,
     object_type = "fmri_frame",
-    semantic_digest = fmridataset::fds_manifest_digest(semantic),
+    semantic_digest = fmridataset::fds_frame_manifest_digest(semantic),
     arrays = storage_arrays
   )
   .frame_rds_write(h5, "manifest/semantic_rds", semantic)
@@ -308,8 +356,8 @@ open_frame_h5 <- function(path) {
   }
   semantic <- .frame_rds_read(h5, "manifest/semantic_rds")
   storage <- .frame_rds_read(h5, "manifest/storage_rds")
-  fmridataset::validate_fds_manifest(semantic)
-  digest <- fmridataset::fds_manifest_digest(semantic)
+  fmridataset::validate_fds_frame_manifest(semantic)
+  digest <- fmridataset::fds_frame_manifest_digest(semantic)
   if (!identical(storage$semantic_digest, digest) ||
     !identical(attribute("fds_semantic_digest"), digest) ||
     !setequal(names(storage$arrays), names(semantic$arrays))) {

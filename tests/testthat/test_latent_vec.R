@@ -345,13 +345,13 @@ test_that("LatentNeuroVec constructor handles sparse matrix coercion with warnin
   # Dense loadings matrix (high density - warning expected)
   loadings_dense_high <- matrix(rnorm(comps$nVox * 2), nrow = comps$nVox, ncol = 2)
 
-  # Expect a message, not a warning, based on actual implementation
-  expect_message(
+  # fmrilatent signals dense storage with a classed warning
+  expect_warning(
     LatentNeuroVec(
       basis = basis_dense_low, loadings = loadings_dense_high,
       space = comps$space, mask = comps$mask
     ),
-    regexp = "Input 'loadings' is dense.*storing as dense dgeMatrix"
+    class = "fmrilatent_warning_dense_storage"
   )
 
   # Check no warning for basis (low density)

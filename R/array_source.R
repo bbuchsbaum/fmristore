@@ -56,7 +56,7 @@ h5_array_source <- function(
 
 .h5_source_metadata <- function(path, dataset) {
   h5 <- hdf5r::H5File$new(path, mode = "r")
-  on.exit(h5$close_all(), add = TRUE)
+  on.exit(close_h5_safely(h5), add = TRUE)
   if (!h5$exists(dataset)) {
     stop("HDF5 dataset does not exist: ", dataset, call. = FALSE)
   }
@@ -89,20 +89,30 @@ h5_array_source <- function(
     signed <- type$get_sign() == hdf5r::h5const$H5T_SGN_2
     return(paste0(if (signed) "int" else "uint", 8L * size))
   }
+  # hdf5r stores R logicals as a FALSE/TRUE(/NA) enum and reads it as logical.
+  if (class == hdf5r::h5const$H5T_ENUM) {
+    labels <- tryCatch(type$get_labels(), error = function(error) NULL)
+    if (all(c("FALSE", "TRUE") %in% labels) &&
+      all(labels %in% c("FALSE", "TRUE", "NA"))) {
+      return("logical")
+    }
+  }
   paste0("hdf5_", size * 8L)
 }
 
 .h5_source_chunks <- function(dset, shape) {
+  # Unchunked datasets read as one chunk; chunks stay positive for empty axes.
+  whole <- pmax(1L, shape)
   plist <- tryCatch(dset$get_create_plist(), error = function(e) NULL)
   if (is.null(plist)) {
-    return(shape)
+    return(whole)
   }
   on.exit(close_h5_safely(plist), add = TRUE)
   chunks <- tryCatch(
     plist$get_chunk(max_ndims = length(shape)),
     error = function(e) NULL
   )
-  if (is.null(chunks) || length(chunks) != 2L) shape else as.integer(chunks)
+  if (is.null(chunks) || length(chunks) != 2L) whole else as.integer(chunks)
 }
 
 .h5_source_fingerprint <- function(path, dataset, metadata) {
@@ -174,7 +184,8 @@ h5_read_plan <- function(x, observations = NULL, features = NULL) {
   observations <- unique(.h5_source_index(observations, x$shape[[1L]], "Observation"))
   features <- unique(.h5_source_index(features, x$shape[[2L]], "Feature"))
   bytes_per_value <- .h5_dtype_bytes(x$dtype)
-  requested_values <- length(observations) * length(features)
+  # Doubles: the product of two axis lengths overflows integer arithmetic.
+  requested_values <- as.double(length(observations)) * length(features)
 
   touched_extent <- function(index, shape, chunk) {
     if (!length(index)) return(0)
@@ -241,11 +252,18 @@ source_fingerprint.h5_array_source <- function(x, ...) x$fingerprint
 #' @export
 source_open.h5_array_source <- function(x, ...) {
   h5 <- hdf5r::H5File$new(x$uri, mode = "r")
-  if (!h5$exists(x$dataset)) {
-    h5$close_all()
-    stop("HDF5 dataset does not exist: ", x$dataset, call. = FALSE)
-  }
-  dset <- h5[[x$dataset]]
+  dset <- tryCatch(
+    {
+      if (!h5$exists(x$dataset)) {
+        stop("HDF5 dataset does not exist: ", x$dataset, call. = FALSE)
+      }
+      h5[[x$dataset]]
+    },
+    error = function(e) {
+      close_h5_safely(h5)
+      stop(e)
+    }
+  )
   structure(
     list(source = x, file = h5, dataset = dset),
     class = c("h5_array_source_handle", "array_source_handle")

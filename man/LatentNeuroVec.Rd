@@ -11,7 +11,8 @@ LatentNeuroVec(
   mask,
   offset = NULL,
   label = "",
-  meta = list()
+  meta = list(),
+  expect_dense = FALSE
 )
 }
 \arguments{
@@ -28,6 +29,9 @@ LatentNeuroVec(
 \item{label}{Optional character label for the dataset.}
 
 \item{meta}{Optional named list of additional metadata.}
+
+\item{expect_dense}{Logical; if \code{TRUE}, suppress the warning issued when a
+dense base-matrix \code{basis} or \code{loadings} is stored as a dense \code{dgeMatrix}.}
 }
 \value{
 A `LatentNeuroVec` object.

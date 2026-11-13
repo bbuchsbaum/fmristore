@@ -74,7 +74,32 @@ write_parcellated_scan_h5 <- function(filepath,
     stop(sprintf("Number of clusters in data (%d) doesn't match clusters in ClusteredNeuroVol (%d)",
                  n_clusters, length(unique_clusters)))
   }
-  
+
+  # Full data is matched to clusters by name, never by position
+  if (data_type == "full") {
+    cluster_names <- paste0("cluster_", unique_clusters)
+    data_names <- names(scan_data)
+    if (is.null(data_names) || anyDuplicated(data_names) > 0) {
+      stop("For full data, scan_data must be a list with unique names of the form 'cluster_<id>'")
+    }
+    missing_names <- setdiff(cluster_names, data_names)
+    if (length(missing_names) > 0) {
+      stop(sprintf("scan_data has no entry for cluster(s): %s. Names must be of the form 'cluster_<id>'",
+                   paste(missing_names, collapse = ", ")))
+    }
+    if (length(unique(vapply(scan_data, ncol, integer(1)))) != 1) {
+      stop("All matrices in scan_data must have the same number of columns (time points)")
+    }
+    for (idx in seq_along(unique_clusters)) {
+      n_rows <- nrow(scan_data[[cluster_names[idx]]])
+      n_vox_cluster <- sum(clusters@clusters == unique_clusters[idx])
+      if (n_rows != n_vox_cluster) {
+        stop(sprintf("scan_data$%s has %d rows but cluster %d has %d voxels",
+                     cluster_names[idx], n_rows, unique_clusters[idx], n_vox_cluster))
+      }
+    }
+  }
+
   # Generate cluster metadata if not provided
   if (is.null(cluster_metadata)) {
     cluster_metadata <- data.frame(
@@ -123,15 +148,19 @@ write_parcellated_scan_h5 <- function(filepath,
     hdr_pixdim <- c(0.0, neuroim2::spacing(sp)[1], neuroim2::spacing(sp)[2], 
                     neuroim2::spacing(sp)[3], 0.0, 0.0, 0.0, 0.0)
     
+    # matrixToQuatern() returns list(quaternion, qfac); the quaternion offsets
+    # are the translation column of the transform.
     q_info <- tryCatch(neuroim2::matrixToQuatern(sp@trans), error = function(e) NULL)
+    quat <- q_info$quaternion %||% c(0.0, 0.0, 0.0)
+    qoffset <- sp@trans[1:3, 4]
     h5_write(h5f, "/header/dim", hdr_dim, overwrite = TRUE)
     h5_write(h5f, "/header/pixdim", hdr_pixdim, overwrite = TRUE)
-    h5_write(h5f, "/header/quatern_b", q_info$qb %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/quatern_c", q_info$qc %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/quatern_d", q_info$qd %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/qoffset_x", q_info$qx %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/qoffset_y", q_info$qy %||% 0.0, overwrite = TRUE)
-    h5_write(h5f, "/header/qoffset_z", q_info$qz %||% 0.0, overwrite = TRUE)
+    h5_write(h5f, "/header/quatern_b", quat[1], overwrite = TRUE)
+    h5_write(h5f, "/header/quatern_c", quat[2], overwrite = TRUE)
+    h5_write(h5f, "/header/quatern_d", quat[3], overwrite = TRUE)
+    h5_write(h5f, "/header/qoffset_x", qoffset[1], overwrite = TRUE)
+    h5_write(h5f, "/header/qoffset_y", qoffset[2], overwrite = TRUE)
+    h5_write(h5f, "/header/qoffset_z", qoffset[3], overwrite = TRUE)
     h5_write(h5f, "/header/qfac", q_info$qfac %||% 1.0, overwrite = TRUE)
     
     # Write cluster metadata
@@ -169,13 +198,13 @@ write_parcellated_scan_h5 <- function(filepath,
       
     } else {
       # Write full voxel data per cluster under scan group
-      for (i in seq_along(scan_data)) {
-        cluster_id <- unique_clusters[i]
+      for (cluster_id in unique_clusters) {
+        cluster_mat <- scan_data[[paste0("cluster_", cluster_id)]]
         dset_path <- paste0("/scans/", scan_name, "/clusters/cluster_", cluster_id)
-        
-        h5_write(h5f, dset_path, scan_data[[i]],
+
+        h5_write(h5f, dset_path, cluster_mat,
                  dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE,
-                 chunk_dims = c(nrow(scan_data[[i]]), min(n_time, 100L)),
+                 chunk_dims = c(nrow(cluster_mat), min(n_time, 100L)),
                  compression = gzip_level,
                  overwrite = TRUE)
       }

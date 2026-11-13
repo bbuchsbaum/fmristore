@@ -72,9 +72,12 @@ test_that("writer + reader round-trip", {
   # --- Test Reading ---
   # Can we open it?
   exp <- H5ParcellatedMultiScan(tf, keep_handle_open = TRUE)
-  on.exit(try(exp$h5file$close_all(), silent = TRUE), add = TRUE) # Ensure cleanup
+  on.exit(close(exp), add = TRUE, after = FALSE) # Close before unlinking
 
   expect_s4_class(exp, "H5ParcellatedMultiScan")
+  expect_true(inherits(exp$h5file, "H5File"))
+  expect_true(exp$h5file$is_valid)
+  expect_identical(exp$h5file, exp@runs[[1]]@obj)
   expect_equal(n_scans(exp), 2)
   expect_equal(scan_names(exp), c("run1", "run2"))
 
@@ -256,7 +259,7 @@ test_that("summary_preference defaults based on /scans attribute", {
   exp_sum <- H5ParcellatedMultiScan(tf1)
   expect_s4_class(exp_sum@runs[[1]], "H5ParcellatedScanSummary")
 
-  runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:4, 2, 2))))
+  runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:2, 1, 2), cluster_2 = matrix(3:4, 1, 2))))
   write_parcellated_experiment_h5(tf2, mask, clus, runs_full, overwrite = TRUE, verbose = FALSE)
 
   exp_full <- H5ParcellatedMultiScan(tf2)
@@ -270,7 +273,7 @@ test_that("warning for mismatched summary_only attribute", {
   mask <- fmristore:::create_minimal_LogicalNeuroVol(dims = c(2, 2, 2))
   clus <- fmristore:::create_minimal_ClusteredNeuroVol(mask_vol = mask, num_clusters = 2)
 
-  runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:4, 2, 2))))
+  runs_full <- list(list(scan_name = "f1", type = "full", data = list(cluster_1 = matrix(1:2, 1, 2), cluster_2 = matrix(3:4, 1, 2))))
   write_parcellated_experiment_h5(tf, mask, clus, runs_full, overwrite = TRUE, verbose = FALSE)
 
   h5f <- hdf5r::H5File$new(tf, mode = "r+")

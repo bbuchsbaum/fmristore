@@ -23,11 +23,13 @@
     ),
     active_assay = "beta",
     metadata = list(label = "legacy-fixture"),
-    provenance = list(step = "fixture")
+    provenance = fmridataset::provenance_graph(
+      fmridataset::provenance_record("fixture")
+    )
   )
 }
 
-.write_provisional_frame <- function(x, path) {
+.write_provisional_frame <- function(x, path, provenance = x$provenance) {
   assays <- lapply(fmridataset::assays(x), function(value) {
     list(
       name = value$name,
@@ -47,7 +49,7 @@
     tables = x$tables,
     active_assay = fmridataset::active_assay(x),
     metadata = x$metadata,
-    provenance = x$provenance,
+    provenance = provenance,
     assays = assays
   )
   h5 <- hdf5r::H5File$new(path, mode = "w")
@@ -116,9 +118,9 @@ test_that("provisional frames migrate lazily and atomically to FDS v1", {
   expect_equal(fmridataset::collect_assay(reopened, "beta"), fmridataset::collect_assay(frame, "beta"))
   expect_equal(
     fmridataset::source_read(
-      fmridataset::axis_block_data(fmridataset::obs_blocks(reopened)$motion)
+      fmridataset::axis_block_data(fmridataset::observation_blocks(reopened)$motion)
     ),
-    fmridataset::axis_block_data(fmridataset::obs_blocks(frame)$motion)
+    fmridataset::axis_block_data(fmridataset::observation_blocks(frame)$motion)
   )
 
   in_place <- tempfile(fileext = ".h5")
@@ -132,6 +134,24 @@ test_that("provisional frames migrate lazily and atomically to FDS v1", {
   )
   expect_identical(unname(tools::md5sum(in_place)), before)
   expect_identical(frame_store_info(in_place)$status, "legacy")
+})
+
+test_that("migration keeps free-form provenance written by older fmridataset", {
+  frame <- .recovery_frame()
+  legacy <- tempfile(fileext = ".h5")
+  migrated <- tempfile(fileext = ".h5")
+  on.exit(unlink(c(legacy, migrated)), add = TRUE)
+  # Provisional files predate the provenance_graph contract.
+  .write_provisional_frame(frame, legacy, provenance = list(step = "fixture"))
+
+  migrate_frame_h5(legacy, migrated, memory_budget = 8L)
+  reopened <- open_frame_h5(migrated)
+  expect_identical(reopened$metadata$legacy_provenance$step, "fixture")
+  expect_identical(reopened$metadata$label, "legacy-fixture")
+  expect_equal(
+    fmridataset::collect_assay(reopened, "beta"),
+    fmridataset::collect_assay(frame, "beta")
+  )
 })
 
 test_that("recovery removes only proven uncommitted shard artifacts", {

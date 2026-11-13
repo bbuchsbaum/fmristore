@@ -24,13 +24,15 @@ test_that("h5_array_source implements the reconstructible source contract", {
     function(x) typeof(x) == "externalptr",
     logical(1)
   )))
+  # Selectors are deliberately unsorted so the read must restore caller order.
+  # fmridataset rejects repeated selectors before dispatch.
   expect_equal(
     fmridataset::source_read(
       source,
-      observations = c(5L, 2L, 2L),
+      observations = c(5L, 2L, 1L),
       features = c(6L, 1L, 3L)
     ),
-    matrix[c(5L, 2L, 2L), c(6L, 1L, 3L), drop = FALSE]
+    matrix[c(5L, 2L, 1L), c(6L, 1L, 3L), drop = FALSE]
   )
 
   rds <- tempfile(fileext = ".rds")

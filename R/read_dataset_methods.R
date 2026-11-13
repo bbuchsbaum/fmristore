@@ -101,7 +101,7 @@ detect_h5_type <- function(h5obj) {
       stop("File does not exist: ", h5obj)
     }
     h5 <- H5File$new(h5obj, "r")
-    on.exit(h5$close_all())
+    on.exit(close_h5_safely(h5), add = TRUE)
   } else if (!is(h5obj, "H5File")) {
     stop("h5obj must be a file path or H5File object")
   } else {
@@ -267,7 +267,7 @@ read_dataset_typed <- function(file, type, ...) {
     "LatentNeuroVec" = {
       # LatentNeuroVec is not H5-backed, need to read and construct
       h5 <- H5File$new(file, "r")
-      on.exit(h5$close_all())
+      on.exit(close_h5_safely(h5), add = TRUE)
 
       # Read mask
       mask <- if (exists_in_h5(h5, "/mask")) {

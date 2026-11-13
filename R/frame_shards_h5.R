@@ -106,7 +106,7 @@
     .shard_id = shard_id,
     .file = file,
     .n_observation = as.integer(nrow(x)),
-    .semantic_digest = fmridataset::fds_manifest_digest(semantic),
+    .semantic_digest = fmridataset::fds_frame_manifest_digest(semantic),
     stringsAsFactors = FALSE,
     check.names = FALSE
   )
@@ -141,6 +141,10 @@ write_sharded_frame_h5 <- function(
     target_chunk_bytes = getOption("fmristore.target_chunk_bytes", 1024^2),
     memory_budget = getOption("fmridataset.block_budget", 512 * 1024^2)) {
   if (!inherits(x, "fmri_frame")) stop("`x` must be an fmri_frame.", call. = FALSE)
+  # The root manifest requires every shard to hold at least one observation.
+  if (nrow(x) < 1L) {
+    stop("Frame shards must contain at least one observation.", call. = FALSE)
+  }
   shard_id <- .validate_frame_shard_id(shard_id)
   layout <- match.arg(layout)
   path <- normalizePath(path, winslash = "/", mustWork = FALSE)
@@ -185,6 +189,10 @@ append_frame_shard_h5 <- function(
     target_chunk_bytes = getOption("fmristore.target_chunk_bytes", 1024^2),
     memory_budget = getOption("fmridataset.block_budget", 512 * 1024^2)) {
   if (!inherits(x, "fmri_frame")) stop("`x` must be an fmri_frame.", call. = FALSE)
+  # The root manifest requires every shard to hold at least one observation.
+  if (nrow(x) < 1L) {
+    stop("Frame shards must contain at least one observation.", call. = FALSE)
+  }
   shard_id <- .validate_frame_shard_id(shard_id)
   layout <- match.arg(layout)
   path <- normalizePath(path, winslash = "/", mustWork = TRUE)
@@ -204,17 +212,16 @@ append_frame_shard_h5 <- function(
   relative <- file.path("shards", paste0("s", sprintf("%06d", index), ".fds.h5"))
   final <- file.path(path, relative)
   if (file.exists(final)) stop("Target shard file already exists.", call. = FALSE)
-  temporary <- tempfile(pattern = ".shard-", tmpdir = file.path(path, "shards"), fileext = ".h5")
   committed <- FALSE
-  on.exit({
-    if (!committed && file.exists(temporary)) unlink(temporary)
-    if (!committed && file.exists(final)) unlink(final)
-  }, add = TRUE)
+  written <- FALSE
+  on.exit(if (!committed && written && file.exists(final)) unlink(final), add = TRUE)
+  # write_frame_h5() is already atomic: it stages beside `final` under the
+  # `.sNNNNNN.fds.h5.partial-*` name that frame recovery recognises.
   write_frame_h5(
-    x, temporary, chunk_dims = chunk_dims, layout = layout,
+    x, final, chunk_dims = chunk_dims, layout = layout,
     target_chunk_bytes = target_chunk_bytes, memory_budget = memory_budget
   )
-  if (!file.rename(temporary, final)) stop("Could not commit new frame shard.", call. = FALSE)
+  written <- TRUE
   if (isTRUE(getOption("fmristore.shard_writer_fault_after_file", FALSE))) {
     stop("Injected sharded frame append failure.", call. = FALSE)
   }
@@ -244,7 +251,7 @@ open_sharded_frame_h5 <- function(path) {
     if (!file.exists(shard_path)) stop("Committed frame shard is missing: ", entry$.file, call. = FALSE)
     frame <- open_frame_h5(shard_path)
     semantic <- fmridataset::fds_frame_manifest(frame)
-    if (!identical(fmridataset::fds_manifest_digest(semantic), entry$.semantic_digest) ||
+    if (!identical(fmridataset::fds_frame_manifest_digest(semantic), entry$.semantic_digest) ||
       !identical(.frame_shard_contract(frame), manifest$contract) ||
       nrow(frame) != entry$.n_observation) {
       stop("Committed frame shard does not match the root manifest: ", entry$.shard_id, call. = FALSE)
@@ -259,10 +266,10 @@ open_sharded_frame_h5 <- function(path) {
       shard_ids = shard_ids
     )
   }
-  for (name in names(fmridataset::obs_blocks(combined))) {
+  for (name in names(fmridataset::observation_blocks(combined))) {
     combined$observations$blocks[[name]]$data <- fmridataset::row_sharded_source(
       lapply(frames, function(frame) {
-        fmridataset::axis_block_data(fmridataset::obs_blocks(frame)[[name]])
+        fmridataset::axis_block_data(fmridataset::observation_blocks(frame)[[name]])
       }),
       shard_ids = shard_ids
     )

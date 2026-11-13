@@ -418,9 +418,10 @@ mask
 #' }
 #' }
 #'
-#' @export
 #' @rdname map-methods
-setGeneric("map", function(x, ...) standardGeneric("map"))
+#' @importFrom fmrilatent map
+#' @export
+map
 
 #' Get the cluster map object
 #' @param x An object with cluster assignments (e.g., H5ParcellatedMultiScan)

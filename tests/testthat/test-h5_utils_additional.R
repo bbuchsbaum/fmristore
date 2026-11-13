@@ -67,3 +67,22 @@ test_that("guess_h5_type and map_dtype cover common types", {
   expect_equal(fmristore:::map_dtype(hdf5r::h5types$H5T_NATIVE_UINT16), c(512L, 16L))
   expect_equal(fmristore:::map_dtype(hdf5r::h5types$H5T_IEEE_F32LE), c(16L, 32L))
 })
+
+test_that("h5_read_subset reads n-D subsets and sizes them without double counting", {
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  h5 <- hdf5r::H5File$new(path, mode = "w")
+  on.exit(h5$close_all(), add = TRUE, after = FALSE)
+  arr <- array(seq_len(5 * 4 * 40), c(5, 4, 40))
+  h5[["x"]] <- arr
+
+  # 8 values are requested; the estimate must not multiply in dims[3] again.
+  withr::local_options(fmristore.memory_threshold_mb = 0.001)
+  expect_no_warning(out <- h5_read_subset(h5, "/x", index = list(1:2, 3:4, 39:40)))
+  expect_equal(out, arr[1:2, 3:4, 39:40, drop = FALSE])
+
+  expect_warning(
+    h5_read_subset(h5, "/x", index = list(1:5, 1:4)),
+    "Large subset operation"
+  )
+})
