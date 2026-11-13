@@ -17,7 +17,8 @@
 .frame_h5_dtype <- function(dtype) {
   switch(
     dtype,
-    logical = hdf5r::h5types$H5T_NATIVE_HBOOL,
+    # hdf5r's FALSE/TRUE/NA enum reads back as R logical with NA intact.
+    logical = hdf5r::h5types$H5T_LOGICAL_NA,
     uint8 = hdf5r::h5types$H5T_STD_U8LE,
     int8 = hdf5r::h5types$H5T_STD_I8LE,
     uint16 = hdf5r::h5types$H5T_STD_U16LE,
@@ -32,6 +33,44 @@
     float64 = hdf5r::h5types$H5T_IEEE_F64LE,
     stop("The HDF5 frame codec does not support dtype: ", dtype, call. = FALSE)
   )
+}
+
+# Exclusive bounds of the whole numbers each integer dtype stores exactly, and
+# whether NA survives. HDF5 conversion otherwise saturates out-of-range values
+# and turns NA into 0 or a type minimum with at most a warning. int32 and
+# int64 reserve their minimum for R's NA; uint64 passes through int64 in hdf5r.
+.frame_integer_limits <- list(
+  uint8 = list(bounds = c(-1, 2^8), na = FALSE),
+  int8 = list(bounds = c(-2^7 - 1, 2^7), na = FALSE),
+  uint16 = list(bounds = c(-1, 2^16), na = FALSE),
+  int16 = list(bounds = c(-2^15 - 1, 2^15), na = FALSE),
+  uint32 = list(bounds = c(-1, 2^32), na = FALSE),
+  int32 = list(bounds = c(-2^31, 2^31), na = TRUE),
+  uint64 = list(bounds = c(-1, 2^63), na = FALSE),
+  int64 = list(bounds = c(-2^63, 2^63), na = TRUE)
+)
+
+.assert_frame_values_storable <- function(values, dtype, key) {
+  limits <- .frame_integer_limits[[dtype]]
+  if (is.null(limits)) return(invisible(values))
+  missing <- is.na(values)
+  if (!limits$na && any(missing)) {
+    stop(
+      "Array '", key, "' contains NA, which HDF5 dtype '", dtype,
+      "' cannot represent.",
+      call. = FALSE
+    )
+  }
+  present <- as.double(values[!missing])
+  if (any(present <= limits$bounds[[1L]] | present >= limits$bounds[[2L]] |
+    present != trunc(present))) {
+    stop(
+      "Array '", key, "' contains values that HDF5 dtype '", dtype,
+      "' cannot store exactly (out of range or not whole numbers).",
+      call. = FALSE
+    )
+  }
+  invisible(values)
 }
 
 .validate_frame_budget <- function(memory_budget) {
@@ -163,6 +202,7 @@
         shape[[2L]], feature_start + chunks[[2L]] - 1L
       )
       values <- .frame_binding_read(binding, observations, features)
+      .assert_frame_values_storable(values, declaration$dtype, declaration$key)
       dataset[observations, features] <- values
     }
   }

@@ -163,3 +163,100 @@ test_that("a crash while appending a shard leaves only artifacts recovery remove
     fmridataset::collect_assay(frame)
   )
 })
+
+test_that("logical arrays round trip as logical with NA preserved", {
+  n <- 4L
+  mask <- matrix(rep(c(TRUE, FALSE, NA, TRUE), length.out = 4L * n), nrow = n)
+  frame <- .regression_frame(n, assays = list(mask = mask))
+  path <- tempfile(fileext = ".fds.h5")
+  on.exit(unlink(path), add = TRUE)
+  write_frame_h5(frame, path, chunk_dims = c(3L, 3L))
+
+  reopened <- open_frame_h5(path)
+  source <- fmridataset::assay(reopened, "mask")$source
+  expect_identical(fmridataset::source_dtype(source), "logical")
+  values <- fmridataset::collect_assay(reopened, "mask")
+  expect_type(values, "logical")
+  expect_identical(unname(values), unname(mask))
+  expect_identical(sum(is.na(values)), sum(is.na(mask)))
+})
+
+test_that("h5_array_source reports logical for hdf5r logical enums", {
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  mask <- matrix(c(TRUE, FALSE, NA, TRUE), 2L, 2L)
+  h5 <- hdf5r::H5File$new(path, mode = "w")
+  h5[["mask"]] <- mask
+  dataset <- h5$create_dataset(
+    "mask_na", dtype = hdf5r::h5types$H5T_LOGICAL_NA, dims = c(2L, 2L)
+  )
+  dataset[, ] <- mask
+  dataset$close()
+  h5$close_all()
+
+  for (name in c("mask", "mask_na")) {
+    source <- h5_array_source(path, name)
+    expect_identical(fmridataset::source_dtype(source), "logical")
+    expect_identical(fmridataset::source_read(source), mask)
+    expect_identical(h5_read_plan(source)$requested_bytes, 4)
+  }
+})
+
+test_that("narrow integer dtypes reject values they cannot store", {
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  h5 <- hdf5r::H5File$new(path, mode = "w")
+  on.exit(if (h5$is_valid) h5$close_all(), add = TRUE, after = FALSE)
+  write_case <- function(name, dtype, values) {
+    fmristore:::.write_frame_array(
+      h5, values, list(key = name, shape = dim(values), dtype = dtype),
+      name, memory_budget = 1e6
+    )
+  }
+
+  expect_error(write_case("u8_na", "uint8", matrix(c(1, NA, 3, 4), 2L)), "NA")
+  expect_error(write_case("u8_high", "uint8", matrix(c(1, 2, 300, 4), 2L)), "uint8")
+  expect_error(write_case("u8_low", "uint8", matrix(c(1, 2, -1, 4), 2L)), "uint8")
+  expect_error(write_case("u8_frac", "uint8", matrix(c(1, 2.5, 3, 4), 2L)), "uint8")
+  expect_error(write_case("i8_low", "int8", matrix(c(1L, -129L, 3L, 4L), 2L)), "int8")
+  expect_error(write_case("u16_na", "uint16", matrix(c(1L, NA, 3L, 4L), 2L)), "NA")
+  expect_error(write_case("i16_high", "int16", matrix(c(1L, NA, 40000L, -5L), 2L)), "int16")
+  expect_error(write_case("u32_low", "uint32", matrix(c(1, -1, 3, 4), 2L)), "uint32")
+  expect_error(write_case("u32_na", "uint32", matrix(c(1, NA, 3, 4), 2L)), "NA")
+
+  valid <- list(
+    uint8 = c(0, 255, 1, 2), int8 = c(-128, 127, 1, 2),
+    uint16 = c(0, 65535, 1, 2), int16 = c(-32768, 32767, 1, 2),
+    uint32 = c(0, 2^32 - 1, 1, 2), int32 = c(1L, NA, -5L, .Machine$integer.max)
+  )
+  for (dtype in names(valid)) {
+    write_case(paste0("ok_", dtype), dtype, matrix(valid[[dtype]], 2L))
+  }
+  h5$close_all()
+  for (dtype in names(valid)) {
+    expect_equal(
+      fmridataset::source_read(h5_array_source(path, paste0("ok_", dtype))),
+      matrix(valid[[dtype]], 2L)
+    )
+  }
+})
+
+test_that("frame writes reject unrepresentable integer data before commit", {
+  values <- matrix(c(1, 2, NA, 4), 4L, 4L)
+  source <- fmridataset::memory_source(values, dtype = "uint8")
+  frame <- .regression_frame(4L, assays = list(counts = source))
+  parent <- tempfile("narrow-write-")
+  dir.create(parent)
+  on.exit(unlink(parent, recursive = TRUE), add = TRUE)
+  path <- file.path(parent, "counts.fds.h5")
+
+  expect_error(write_frame_h5(frame, path), "uint8")
+  expect_false(file.exists(path))
+  expect_length(list.files(parent, all.files = TRUE, no.. = TRUE), 0L)
+
+  write_frame_h5(.regression_frame(), path)
+  before <- unname(tools::md5sum(path))
+  expect_error(write_frame_h5(frame, path, overwrite = TRUE), "uint8")
+  expect_identical(unname(tools::md5sum(path)), before)
+  expect_identical(list.files(parent, all.files = TRUE, no.. = TRUE), basename(path))
+})

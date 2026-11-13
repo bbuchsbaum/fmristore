@@ -89,6 +89,14 @@ h5_array_source <- function(
     signed <- type$get_sign() == hdf5r::h5const$H5T_SGN_2
     return(paste0(if (signed) "int" else "uint", 8L * size))
   }
+  # hdf5r stores R logicals as a FALSE/TRUE(/NA) enum and reads it as logical.
+  if (class == hdf5r::h5const$H5T_ENUM) {
+    labels <- tryCatch(type$get_labels(), error = function(error) NULL)
+    if (all(c("FALSE", "TRUE") %in% labels) &&
+      all(labels %in% c("FALSE", "TRUE", "NA"))) {
+      return("logical")
+    }
+  }
   paste0("hdf5_", size * 8L)
 }
 
