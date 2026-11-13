@@ -174,7 +174,8 @@ h5_read_plan <- function(x, observations = NULL, features = NULL) {
   observations <- unique(.h5_source_index(observations, x$shape[[1L]], "Observation"))
   features <- unique(.h5_source_index(features, x$shape[[2L]], "Feature"))
   bytes_per_value <- .h5_dtype_bytes(x$dtype)
-  requested_values <- length(observations) * length(features)
+  # Doubles: the product of two axis lengths overflows integer arithmetic.
+  requested_values <- as.double(length(observations)) * length(features)
 
   touched_extent <- function(index, shape, chunk) {
     if (!length(index)) return(0)

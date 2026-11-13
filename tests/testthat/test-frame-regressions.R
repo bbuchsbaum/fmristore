@@ -84,3 +84,32 @@ test_that("rollback never deletes look-alike files outside a valid store", {
   expect_true(file.exists(notes))
   expect_true(file.exists(config))
 })
+
+test_that("h5_read_plan sizes very large sources without integer overflow", {
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  h5 <- hdf5r::H5File$new(path, mode = "w")
+  # Chunked and never written, so the file stays tiny.
+  dataset <- h5$create_dataset(
+    "beta",
+    dtype = hdf5r::h5types$H5T_IEEE_F32LE,
+    dims = c(200000L, 50000L),
+    chunk_dims = c(128L, 8192L)
+  )
+  dataset$close()
+  h5$close_all()
+  source <- h5_array_source(path, "beta")
+  expect_identical(source$shape, c(200000L, 50000L))
+
+  full <- h5_read_plan(source)
+  expect_identical(full$requested_values, 1e10)
+  expect_identical(full$physical_values, 1e10)
+  expect_identical(full$requested_bytes, 4e10)
+  expect_identical(full$amplification, 1)
+
+  block <- h5_read_plan(source, observations = 1:50000, features = 1:50000)
+  expect_identical(block$requested_values, 2.5e9)
+  # 391 observation chunks of 128; the feature axis is covered exactly.
+  expect_identical(block$physical_values, 50048 * 50000)
+  expect_lt(block$amplification, 1.2)
+})
