@@ -376,6 +376,20 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
   if (verbose) message("[to_h5_latentvec] Scans Group DONE.")
 }
 
+#' hdf5r drops singleton dimensions on read, so a 4x4x1 /mask comes back as
+#' 4x4. Restore the header's 3-D shape when only singleton dimensions differ.
+#' @keywords internal
+#' @noRd
+.restore_mask_dims <- function(mask_arr, dims_3d) {
+  d <- dim(mask_arr) %||% length(mask_arr)
+  dims_3d <- as.integer(dims_3d)
+  singletons_dropped <- length(d) != 3 && length(dims_3d) == 3 &&
+    !anyNA(dims_3d) && length(mask_arr) == prod(dims_3d) &&
+    identical(as.integer(d[d != 1L]), dims_3d[dims_3d != 1L])
+  if (singletons_dropped) mask_arr <- array(mask_arr, dim = dims_3d)
+  mask_arr
+}
+
 #' Load data from a LatentNeuroVecSource object (Spec Compliant)
 #'
 #' @description
@@ -495,7 +509,7 @@ setMethod(
     space_3d <- drop_dim(full_space)
 
     # Read Mask
-    mask_arr <- h5_read(h5obj, "/mask", missing_ok = FALSE)
+    mask_arr <- .restore_mask_dims(h5_read(h5obj, "/mask", missing_ok = FALSE), dims_3d)
     check_same_dims(dim(mask_arr), dims_3d,
       dims_to_compare = 1:3,
       msg = "load_data: Dimensions of /mask mismatch header dims"
@@ -720,7 +734,9 @@ validate_latent_file <- function(file_path) {
 
       # Read dimensions for consistency checks
       header_dim <- h5_read(h5obj, "/header/dim", missing_ok = FALSE)
-      mask_data <- h5_read(h5obj, "/mask", missing_ok = FALSE)
+      mask_data <- .restore_mask_dims(
+        h5_read(h5obj, "/mask", missing_ok = FALSE), header_dim[2:4]
+      )
       mask_dim <- dim(mask_data)
 
       basis_dim <- NULL

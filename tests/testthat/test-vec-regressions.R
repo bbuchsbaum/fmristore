@@ -66,3 +66,40 @@ test_that("write_vec/load_data round-trip keeps the LatentNeuroVec origin", {
   expect_equal(trans(sp_obl2), tm)
   expect_equal(origin(sp_obl2), c(90, -126, -72))
 })
+
+test_that("load_data and validate_latent_file accept a single-slice (Z = 1) mask", {
+  mask_arr <- array(TRUE, c(4, 4, 1))
+  sp4 <- NeuroSpace(c(4, 4, 1, 5))
+  mask <- LogicalNeuroVol(mask_arr, drop_dim(sp4))
+  set.seed(3)
+  lv <- suppressWarnings(LatentNeuroVec(
+    matrix(rnorm(10), 5, 2), matrix(rnorm(32), 16, 2), sp4, mask
+  ))
+  f <- write_regression_lv(lv)
+  on.exit(unlink(f), add = TRUE)
+
+  expect_true(validate_latent_file(f))
+  lv2 <- load_regression_lv(f)
+  expect_equal(dim(lv2), c(4, 4, 1, 5))
+  expect_equal(as.array(lv2), as.array(lv),
+    tolerance = 1e-5, ignore_attr = TRUE
+  )
+})
+
+test_that("load_data accepts a mask with an interior singleton dimension", {
+  mask_arr <- array(c(TRUE, FALSE, TRUE, TRUE), c(4, 1, 3))
+  sp4 <- NeuroSpace(c(4, 1, 3, 5))
+  mask <- LogicalNeuroVol(mask_arr, drop_dim(sp4))
+  nv <- sum(mask_arr)
+  set.seed(4)
+  lv <- suppressWarnings(LatentNeuroVec(
+    matrix(rnorm(10), 5, 2), matrix(rnorm(nv * 2), nv, 2), sp4, mask
+  ))
+  f <- write_regression_lv(lv)
+  on.exit(unlink(f), add = TRUE)
+
+  expect_true(validate_latent_file(f))
+  lv2 <- load_regression_lv(f)
+  expect_equal(dim(lv2), c(4, 1, 3, 5))
+  expect_equal(as.array(lv2@mask), mask_arr, ignore_attr = TRUE)
+})
