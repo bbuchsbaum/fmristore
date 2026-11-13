@@ -41,6 +41,12 @@ three ways:
 
 Goal: CI tells the truth, and users know what changed.
 
+- [ ] **Get `main` green again.** [Run 43520115994](https://github.com/bbuchsbaum/fmristore/actions/runs/43520115994) failed on every platform after PR #67 enabled the suite. These were latent failures, not regressions. `fmristore-bfi` (P0)
+  - [ ] Ubuntu: fix the malformed fixture at `test-h5_corruption_handling.R:122`. `matrix(rnorm(8 * 5), nrow = 5, ncol = 10)` and the `7 * 5` line under-fill the matrix, which R 4.6 makes an error. The test runs only with `NOT_CRAN=true`.
+  - [ ] Windows (11 failures): triage from the check artifact. The visible one is `test-vec-regressions.R:278` (`H5NeuroVec(out)`), likely an open handle blocking a copy or reopen. Related: `fmristore-57h`, `fmristore-71g`.
+  - [ ] macOS: triage from the check artifact.
+  - [ ] Ubuntu and Windows: the upstream `concat` failure, `fmristore-qsh` (below).
+  - [ ] Run local and agent checks with `NOT_CRAN=true`, so that `skip_on_cran()` tests run as they do in CI.
 - [ ] **Changelog.** Record the behaviour changes already merged in NEWS.md. `fmristore-2v0` (P1)
 - [ ] **Pin dependencies and test the installed package in CI.** Pin `Remotes:` to commits or tags. Add a test convention for comparing neuroim2 objects via `@.Data`. `fmristore-5jx` (P2)
 - [ ] **Lint gate.** Add `any::cyclocomp` to `lint.yaml` and apply D2. Exit: the lint job reports and passes. `fmristore-ky0` (P2)
@@ -119,6 +125,7 @@ Ongoing; do opportunistically in the files each change touches.
 
 | Order | Work | Size |
 |-------|------|------|
+| 0 | Green `main` (`fmristore-bfi`): fixture fix now, Windows and macOS triage | S-M |
 | 1 | M0 (NEWS, CI pinning, lint/style gates, upstream report) | S-M |
 | 2 | Decisions D1-D4 | - |
 | 3 | M1 data-safety block (`cmi`, `qt9`, `71g`, `o4x`) | M |
