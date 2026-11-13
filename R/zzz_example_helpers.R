@@ -392,6 +392,8 @@ create_minimal_h5_for_LabeledVolumeSet <- function(vol_dims = c(4L, 4L, 3L),
     if (is.null(q_info)) { # Default q_info if matrixToQuatern fails (e.g. singular matrix)
       q_info <- list(quaternion = c(0, 0, 0), qoffset = neuroim2::origin(sp), qfac = 1)
     }
+    # matrixToQuatern() returns no offsets; they are the transform's translation.
+    q_info$qoffset <- neuroim2::trans(sp)[1:3, 4]
 
     header_grp$create_dataset("quatern_b", robj = q_info$quaternion[1], dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
     header_grp$create_dataset("quatern_c", robj = q_info$quaternion[2], dtype = hdf5r::h5types$H5T_NATIVE_DOUBLE)
