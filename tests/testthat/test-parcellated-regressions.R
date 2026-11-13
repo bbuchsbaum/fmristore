@@ -288,3 +288,64 @@ test_that("$ on H5ParcellatedMultiScan returns shared run properties", {
   expect_identical(exp$runs, exp@runs)
   expect_null(exp$not_a_property)
 })
+
+# --- Constructor handle lifecycle --------------------------------------------
+
+can_truncate <- function(path) {
+  tryCatch(
+    {
+      h <- hdf5r::H5File$new(path, "w")
+      h$close_all()
+      TRUE
+    },
+    error = function(e) FALSE
+  )
+}
+
+test_that("H5ParcellatedMultiScan closes a file it opened when construction fails", {
+  fx <- make_parcel_fixture()
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+  write_parcel_fixture(fx, tf)
+  h <- hdf5r::H5File$new(tf, "r+")
+  h$link_delete("cluster_map")
+  h$close_all()
+
+  expect_error(open_parcel_exp(tf), "cluster_map")
+  # A leaked read handle makes HDF5 refuse to truncate the file.
+  expect_true(can_truncate(tf))
+})
+
+test_that("H5ParcellatedMultiScan leaves a caller-supplied handle open on error", {
+  fx <- make_parcel_fixture()
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+  write_parcel_fixture(fx, tf)
+  h <- hdf5r::H5File$new(tf, "r+")
+  h$link_delete("cluster_map")
+  on.exit(h$close_all(), add = TRUE, after = FALSE)
+
+  expect_error(open_parcel_exp(h), "cluster_map")
+  expect_true(h$is_valid)
+})
+
+test_that("H5ParcellatedMultiScan handle follows keep_handle_open", {
+  fx <- make_parcel_fixture()
+  tf <- tempfile(fileext = ".h5")
+  on.exit(unlink(tf), add = TRUE)
+  write_parcel_fixture(fx, tf)
+
+  exp_open <- suppressMessages(
+    H5ParcellatedMultiScan(tf, keep_handle_open = TRUE)
+  )
+  expect_true(exp_open@runs[[1]]@obj$is_valid)
+  close(exp_open)
+  expect_true(can_truncate(tf))
+
+  write_parcel_fixture(fx, tf)
+  exp_closed <- suppressMessages(
+    H5ParcellatedMultiScan(tf, keep_handle_open = FALSE)
+  )
+  expect_false(exp_closed@runs[[1]]@obj$is_valid)
+  expect_true(can_truncate(tf))
+})
