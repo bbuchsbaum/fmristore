@@ -122,12 +122,21 @@ detect_h5_type <- function(h5obj) {
       "DenseNeuroVol" = "H5NeuroVol",
       "DenseNeuroVec" = "H5NeuroVec",
       "SparseNeuroVol" = "H5NeuroVol",
-      "SparseNeuroVec" = "H5NeuroVec"
+      "SparseNeuroVec" = "H5NeuroVec",
+      "LatentNeuroVec" = "LatentNeuroVec"
     )
 
     if (rtype %in% names(type_map)) {
       return(type_map[[rtype]])
     }
+  }
+
+  # LatentNeuroVec files also have /header and /scans, so identify them
+  # before the H5NeuroVecSeq heuristic below.
+  if (h5_attr_exists(h5, "latent_spec_version") ||
+    exists_in_h5(h5, "/basis/basis_matrix") ||
+    exists_in_h5(h5, "/basis/basis_matrix_sparse")) {
+    return("LatentNeuroVec")
   }
 
   # Heuristic detection based on HDF5 structure
@@ -142,12 +151,6 @@ detect_h5_type <- function(h5obj) {
     exists_in_h5(h5, "/header") &&
     !exists_in_h5(h5, "/cluster_map")) {
     return("H5NeuroVecSeq")
-  }
-
-  # Check for LatentNeuroVec structure
-  if (exists_in_h5(h5, "/basis/basis_matrix") ||
-    exists_in_h5(h5, "/basis/basis_data")) {
-    return("LatentNeuroVec")
   }
 
   # Check for LabeledVolumeSet structure
@@ -265,71 +268,9 @@ read_dataset_typed <- function(file, type, ...) {
 
     # Latent representations
     "LatentNeuroVec" = {
-      # LatentNeuroVec is not H5-backed, need to read and construct
-      h5 <- H5File$new(file, "r")
-      on.exit(close_h5_safely(h5), add = TRUE)
-
-      # Read mask
-      mask <- if (exists_in_h5(h5, "/mask")) {
-        mask_data <- h5_read(h5, "/mask")
-        # Need space information to create LogicalNeuroVol
-        space_dims <- h5_read(h5, "/header/dim")[2:4]
-        mask_array <- array(as.logical(mask_data), dim = space_dims)
-        # Create LogicalNeuroVol (assuming neuroim2 is available)
-        neuroim2::LogicalNeuroVol(
-          mask_array,
-          neuroim2::NeuroSpace(dim = space_dims)
-        )
-      } else {
-        stop("LatentNeuroVec file missing mask")
-      }
-
-      # Read basis
-      basis <- if (exists_in_h5(h5, "/basis/basis_matrix")) {
-        t(h5_read(h5, "/basis/basis_matrix")) # Transpose to get time x components
-      } else if (exists_in_h5(h5, "/basis/basis_data")) {
-        t(h5_read(h5, "/basis/basis_data"))
-      } else {
-        stop("LatentNeuroVec file missing basis data")
-      }
-
-      # Read loadings from first scan
-      loadings <- if (exists_in_h5(h5, "/scans")) {
-        scan_names <- h5[["scans"]]$ls()$name
-        if (length(scan_names) > 0) {
-          first_scan <- scan_names[1]
-          embedding_path <- paste0("/scans/", first_scan, "/embedding")
-          if (exists_in_h5(h5, embedding_path)) {
-            t(h5_read(h5, embedding_path)) # Transpose to get voxels x components
-          } else {
-            stop("LatentNeuroVec file missing embedding data")
-          }
-        } else {
-          stop("LatentNeuroVec file has no scans")
-        }
-      } else {
-        stop("LatentNeuroVec file missing scans")
-      }
-
-      # Read offset if present
-      offset <- if (exists_in_h5(h5, "/offset")) {
-        h5_read(h5, "/offset")
-      } else {
-        NULL
-      }
-
-      # Create space
-      space_dims <- h5_read(h5, "/header/dim")[2:5]
-      space <- neuroim2::NeuroSpace(dim = space_dims)
-
-      # Construct LatentNeuroVec
-      LatentNeuroVec(
-        basis = basis,
-        loadings = loadings,
-        space = space,
-        mask = mask,
-        offset = offset
-      )
+      # Latent files are read fully into memory by the spec-compliant reader,
+      # which handles dense and sparse bases, the transform and the offset.
+      load_data(LatentNeuroVecSource(file), ...)
     },
 
     # Labeled volume sets

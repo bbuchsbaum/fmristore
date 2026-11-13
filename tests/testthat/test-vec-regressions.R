@@ -279,3 +279,19 @@ test_that("h5file() and write_dataset() work for H5NeuroVec", {
   on.exit(close(copy), add = TRUE, after = FALSE)
   expect_equal(copy[, , , ], arr)
 })
+
+test_that("read_dataset() detects and reads LatentNeuroVec files", {
+  fx <- make_regression_lv()
+  f <- write_regression_lv(fx$lv)
+  on.exit(unlink(f), add = TRUE)
+
+  expect_identical(detect_h5_type(f), "LatentNeuroVec")
+  auto <- suppressMessages(read_dataset(f))
+  typed <- suppressMessages(read_dataset(f, type = "LatentNeuroVec"))
+  for (lv in list(auto, typed)) {
+    expect_s4_class(lv, "LatentNeuroVec")
+    expect_equal(dim(lv), dim(fx$lv))
+    expect_equal(origin(space(lv)), origin(fx$sp4))
+    expect_equal(as.array(lv), as.array(fx$lv), tolerance = 1e-5, ignore_attr = TRUE)
+  }
+})
