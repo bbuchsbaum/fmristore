@@ -68,3 +68,19 @@ test_that("recovery on a healthy sharded store finds and removes nothing", {
   expect_identical(.store_hashes(path), before)
   expect_identical(frame_store_info(path)$status, "complete")
 })
+
+test_that("rollback never deletes look-alike files outside a valid store", {
+  path <- tempfile("not-a-store-")
+  dir.create(file.path(path, "shards"), recursive = TRUE)
+  on.exit(unlink(path, recursive = TRUE), add = TRUE)
+  notes <- file.path(path, ".manifest-user-notes.txt")
+  config <- file.path(path, "shards", ".shard-keep.cfg")
+  writeLines("keep me", notes)
+  writeLines("keep me too", config)
+
+  expect_identical(frame_store_info(path)$status, "invalid")
+  plan <- recover_frame_store(path, "rollback")
+  expect_identical(nrow(plan), 0L)
+  expect_true(file.exists(notes))
+  expect_true(file.exists(config))
+})

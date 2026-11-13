@@ -30,7 +30,12 @@
   kinds <- rep("sibling_partial", length(targets))
   removable <- rep(TRUE, length(targets))
 
-  if (dir.exists(path)) {
+  # Temporary-looking names prove nothing in an arbitrary directory: only a
+  # directory whose root manifest validates is a store this package wrote.
+  manifest <- if (dir.exists(path)) {
+    tryCatch(.read_frame_shard_root(path), error = function(error) NULL)
+  }
+  if (!is.null(manifest)) {
     root_partials <- list.files(
       path, pattern = "^\\.manifest-", all.files = TRUE, full.names = TRUE
     )
@@ -49,22 +54,19 @@
     kinds <- c(kinds, rep("shard_partial", length(shard_partials)))
     removable <- c(removable, rep(TRUE, length(shard_partials)))
 
-    manifest <- tryCatch(.read_frame_shard_root(path), error = function(error) NULL)
-    if (!is.null(manifest)) {
-      committed <- normalizePath(
-        file.path(path, manifest$shards$.file), winslash = "/", mustWork = FALSE
-      )
-      stable <- shard_files[grepl("^s[0-9]{6}\\.fds\\.h5$", basename(shard_files))]
-      orphans <- setdiff(normalizePath(stable, winslash = "/", mustWork = FALSE), committed)
-      missing <- committed[!file.exists(committed)]
-      targets <- c(targets, orphans, missing)
-      kinds <- c(
-        kinds,
-        rep("orphan_shard", length(orphans)),
-        rep("missing_committed_shard", length(missing))
-      )
-      removable <- c(removable, rep(TRUE, length(orphans)), rep(FALSE, length(missing)))
-    }
+    committed <- normalizePath(
+      file.path(path, manifest$shards$.file), winslash = "/", mustWork = FALSE
+    )
+    stable <- shard_files[grepl("^s[0-9]{6}\\.fds\\.h5$", basename(shard_files))]
+    orphans <- setdiff(normalizePath(stable, winslash = "/", mustWork = FALSE), committed)
+    missing <- committed[!file.exists(committed)]
+    targets <- c(targets, orphans, missing)
+    kinds <- c(
+      kinds,
+      rep("orphan_shard", length(orphans)),
+      rep("missing_committed_shard", length(missing))
+    )
+    removable <- c(removable, rep(TRUE, length(orphans)), rep(FALSE, length(missing)))
   }
 
   data.frame(
