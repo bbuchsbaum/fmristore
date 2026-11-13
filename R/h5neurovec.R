@@ -143,17 +143,13 @@ setMethod(
 
     # flatten spatial dims: result is [nTime x nSpatial]
     ret2 <- t(array(ret, c(prod(dim(ret)[1:3]), dim(ret)[4])))
-    # If bounding box is exact match, return directly
-    if (ncol(ret2) != nrow(i)) {
-      # Map requested coords to local offsets within bounding box
-      i2 <- apply(i, 2, function(ind) ind - min(ind) + 1)
-      # Convert grid coordinates to linear indices (base R replacement for gridToIndex3DCpp)
-      ret_dims <- dim(ret)[1:3]
-      i3 <- i2[, 1] + (i2[, 2] - 1L) * ret_dims[1] + (i2[, 3] - 1L) * ret_dims[1] * ret_dims[2]
-      ret2[, i3, drop = FALSE]
-    } else {
-      ret2
-    }
+    # Select the requested voxels in the caller's row order. Even when nrow(i)
+    # equals the box size the rows may be permuted or repeated.
+    ret_dims <- dim(ret)[1:3]
+    i3 <- (i[, 1] - mins[1] + 1) +
+      (i[, 2] - mins[2]) * ret_dims[1] +
+      (i[, 3] - mins[3]) * ret_dims[1] * ret_dims[2]
+    ret2[, i3, drop = FALSE]
   }
 )
 
@@ -164,6 +160,15 @@ setMethod(
   f = "linear_access",
   signature = signature(x = "H5NeuroVec", i = "numeric"),
   definition = function(x, i) {
+    # arrayInd() wraps out-of-range indices, so check them first
+    n_tot <- prod(dim(x))
+    if (any(i < 1 | i > n_tot)) {
+      stop("Some linear indices are out of range 1..", n_tot)
+    }
+    if (length(i) == 0) {
+      return(numeric(0))
+    }
+
     # 1) Convert linear => (x,y,z,t)
     coords <- arrayInd(i, dim(x))
     n <- nrow(coords)

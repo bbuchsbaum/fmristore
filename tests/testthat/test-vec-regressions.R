@@ -159,3 +159,45 @@ test_that("H5NeuroVol [i, , k] honours k and [i] indexes linearly", {
   expect_error(h[2, , 7], "out of range")
   expect_error(h[length(arr) + 1], "out of range")
 })
+
+# --- H5NeuroVec ---
+
+make_regression_h5vec <- function(dims = c(4, 4, 3, 5)) {
+  set.seed(1)
+  arr <- array(rnorm(prod(dims)), dims)
+  dvec <- DenseNeuroVec(arr, NeuroSpace(dims))
+  h <- to_nih5_vec(dvec, tempfile(fileext = ".h5"), data_type = "DOUBLE")
+  list(h = h, dvec = dvec, arr = arr)
+}
+
+test_that("series(H5NeuroVec, matrix) follows the caller's row order", {
+  fx <- make_regression_h5vec()
+  on.exit(close(fx$h), add = TRUE)
+
+  # nrow equals the bounding-box voxel count, which used to skip reordering
+  reversed <- rbind(c(2, 1, 1), c(1, 1, 1))
+  expect_equal(series(fx$h, reversed), series(fx$dvec, reversed))
+
+  dupes <- rbind(c(1, 1, 1), c(1, 1, 1), c(2, 2, 1), c(1, 2, 1))
+  expect_equal(series(fx$h, dupes), series(fx$dvec, dupes))
+
+  shuffled <- rbind(c(3, 2, 2), c(1, 4, 1), c(2, 3, 3), c(4, 1, 2))
+  expect_equal(series(fx$h, shuffled), series(fx$dvec, shuffled))
+
+  one <- rbind(c(3, 2, 2))
+  expect_equal(series(fx$h, one), series(fx$dvec, one))
+})
+
+test_that("linear_access(H5NeuroVec) rejects out-of-range indices", {
+  fx <- make_regression_h5vec()
+  on.exit(close(fx$h), add = TRUE)
+  tot <- length(fx$arr)
+
+  expect_error(linear_access(fx$h, 0), "out of range")
+  expect_error(linear_access(fx$h, tot + 1), "out of range")
+  expect_error(linear_access(fx$h, -1), "out of range")
+  expect_error(linear_access(fx$h, c(1, tot + 5)), "out of range")
+  expect_identical(linear_access(fx$h, integer(0)), numeric(0))
+  expect_identical(linear_access(fx$h, numeric(0)), numeric(0))
+  expect_equal(linear_access(fx$h, c(tot, 1, 7)), fx$arr[c(tot, 1, 7)])
+})
