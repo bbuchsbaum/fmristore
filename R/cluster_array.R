@@ -1184,7 +1184,8 @@ make_run_summary <- function(file_source, scan_name,
     if (has_provided_ids) {
       actual_cluster_ids <- cluster_ids
     } else if (has_clusters_object) {
-      actual_cluster_ids <- unique(clusters@clusters)
+      # Summary columns are stored in sorted cluster-ID order.
+      actual_cluster_ids <- sort(unique(clusters@clusters))
     } else {
       # No IDs provided and no clusters object: cannot determine IDs reliably
       actual_cluster_ids <- integer()

@@ -320,22 +320,31 @@ H5ParcellatedScanSummary <- function(file, scan_name,
   final_n_time <- dataset_dims[1]
   final_n_clusters <- dataset_dims[2]
 
-  if (length(final_cluster_names) == 0 && length(final_cluster_ids) == 0) {
+  # Names and IDs are resolved independently: supplying one must not stop the
+  # other from being read from the file.
+  if (length(final_cluster_names) == 0) {
     final_cluster_names <- info_res$names
-    final_cluster_ids <- info_res$ids
-
     if (length(final_cluster_names) > 0 && length(final_cluster_names) != final_n_clusters) {
+      if (fh$owns) close_h5_safely(h5obj)
       stop(sprintf("Read cluster_names length (%d) mismatch with dataset columns (%d).", length(final_cluster_names), final_n_clusters))
     }
-    if (length(final_cluster_ids) > 0 && length(final_cluster_ids) != final_n_clusters) {
-      stop(sprintf("Read cluster_ids length (%d) mismatch with dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
-    }
-
     if (length(final_cluster_names) == 0 && final_n_clusters > 0) {
       final_cluster_names <- paste0("Cluster", seq_len(final_n_clusters))
     }
+  }
+  if (length(final_cluster_ids) == 0) {
+    final_cluster_ids <- info_res$ids
+    if (length(final_cluster_ids) > 0 && length(final_cluster_ids) != final_n_clusters) {
+      if (fh$owns) close_h5_safely(h5obj)
+      stop(sprintf("Read cluster_ids length (%d) mismatch with dataset columns (%d).", length(final_cluster_ids), final_n_clusters))
+    }
     if (length(final_cluster_ids) == 0 && final_n_clusters > 0) {
-      if (!is.null(clusters) && length(unique(clusters@clusters)) == final_n_clusters) {
+      # Summary columns are stored in sorted cluster-ID order, which the
+      # experiment writer records in /clusters/cluster_ids.
+      file_ids <- h5_read(h5obj, "/clusters/cluster_ids", missing_ok = TRUE)
+      if (length(file_ids) == final_n_clusters) {
+        final_cluster_ids <- file_ids
+      } else if (!is.null(clusters) && length(unique(clusters@clusters)) == final_n_clusters) {
         final_cluster_ids <- sort(unique(clusters@clusters))
       } else {
         final_cluster_ids <- seq_len(final_n_clusters)

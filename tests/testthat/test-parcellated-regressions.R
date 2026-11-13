@@ -349,3 +349,34 @@ test_that("H5ParcellatedMultiScan handle follows keep_handle_open", {
   expect_false(exp_closed@runs[[1]]@obj$is_valid)
   expect_true(can_truncate(tf))
 })
+
+test_that("summary scans label columns with the sorted cluster IDs they hold", {
+  dims <- c(4L, 3L, 2L)
+  arr <- array(FALSE, dims)
+  arr[c(1, 2, 4, 6, 7, 9, 13, 18, 24)] <- TRUE
+  mask <- neuroim2::LogicalNeuroVol(arr, neuroim2::NeuroSpace(dims))
+  # First appearance order is 7, 3, 10; columns are stored in sorted order.
+  cl <- c(7L, 3L, 7L, 3L, 3L, 7L, 7L, 3L, 10L)
+  cvol <- neuroim2::ClusteredNeuroVol(mask, cl)
+  ids <- sort(unique(cl))
+  summ <- vapply(ids, function(id) rep(id * 100, 4), numeric(4))
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  write_parcellated_experiment_h5(
+    path, mask, cvol, list(list(scan_name = "s", type = "summary", data = summ)),
+    overwrite = TRUE, verbose = FALSE
+  )
+
+  no_clusters <- H5ParcellatedScanSummary(path, "s", mask)
+  expect_identical(no_clusters@cluster_ids, ids)
+  close(no_clusters)
+
+  names_only <- H5ParcellatedScanSummary(path, "s", mask, cvol, cluster_names = c("a", "b", "c"))
+  expect_identical(names_only@cluster_ids, ids)
+  expect_identical(names_only@cluster_names, c("a", "b", "c"))
+  close(names_only)
+
+  legacy <- suppressWarnings(make_run_summary(path, "s", mask, cvol))
+  expect_identical(legacy@cluster_ids, ids)
+  expect_equal(unname(as.matrix(legacy)[1, ]), ids * 100)
+})
