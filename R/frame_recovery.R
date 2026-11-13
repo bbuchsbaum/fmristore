@@ -160,7 +160,7 @@ frame_store_info <- function(path) {
 recover_frame_store <- function(path, action = c("report", "rollback")) {
   action <- match.arg(action)
   plan <- .frame_recovery_plan(path)
-  plan$removed <- FALSE
+  plan$removed <- rep(FALSE, nrow(plan))
   if (action == "rollback" && nrow(plan)) {
     for (index in which(plan$removable)) {
       target <- plan$path[[index]]
