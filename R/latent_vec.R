@@ -568,15 +568,16 @@ setMethod(
       } else if (storage_fmt == "csr") {
         expected_indptr_len <- shape_attr[1] + 1
         if (length(indptr_data) != expected_indptr_len) stop("CSR indptr length mismatch.")
-        message("  Reconstructing CSR matrix (p x k) from triplet...")
-        reconstructed_p_k <- Matrix::sparseMatrix(
+        message("  Reconstructing CSR matrix (k x p) from triplet...")
+        # With j and p given, sparseMatrix() reads p as row pointers (CSR).
+        reconstructed_k_p <- Matrix::sparseMatrix(
           j = indices_data,
           p = indptr_data,
           x = data_data,
-          dims = rev(shape_attr),
+          dims = shape_attr,
           index1 = FALSE
         )
-        internal_loadings <- reconstructed_p_k
+        internal_loadings <- Matrix::t(reconstructed_k_p)
       } else {
         stop(paste0("Unsupported sparse storage format: ", storage_fmt))
       }

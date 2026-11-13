@@ -103,3 +103,33 @@ test_that("load_data accepts a mask with an interior singleton dimension", {
   expect_equal(dim(lv2), c(4, 1, 3, 5))
   expect_equal(as.array(lv2@mask), mask_arr, ignore_attr = TRUE)
 })
+
+test_that("load_data reads a CSR-stored sparse basis", {
+  fx <- make_regression_lv()
+  f <- write_regression_lv(fx$lv)
+  on.exit(unlink(f), add = TRUE)
+
+  # Replace the dense basis with a sparsified CSR (k x nVox) copy.
+  loadings <- fx$loadings
+  loadings[abs(loadings) < 0.5] <- 0
+  h <- H5File$new(f, mode = "r+")
+  h$link_delete("basis/basis_matrix")
+  csr <- methods::as(Matrix::Matrix(t(loadings), sparse = TRUE), "RsparseMatrix")
+  g <- h$create_group("basis/basis_matrix_sparse")
+  h5attr(g, "storage") <- "csr"
+  h5attr(g, "shape") <- dim(csr)
+  g[["data"]] <- csr@x
+  g[["indices"]] <- as.integer(csr@j)
+  g[["indptr"]] <- as.integer(csr@p)
+  g$close()
+  h$close_all()
+
+  lv2 <- load_regression_lv(f)
+  expect_equal(dim(lv2@loadings), dim(loadings))
+  expect_equal(as.matrix(lv2@loadings), loadings,
+    tolerance = 1e-5, ignore_attr = TRUE
+  )
+  expect_equal(as.matrix(lv2@basis), as.matrix(fx$lv@basis),
+    tolerance = 1e-5, ignore_attr = TRUE
+  )
+})
