@@ -410,3 +410,34 @@ test_that("experiments return scans in the order they were written", {
   expect_identical(names(exp@runs), c("run-2", "run-10", "run-1"))
   expect_identical(unname(vapply(exp@runs, function(r) r@n_time, integer(1))), c(3L, 4L, 5L))
 })
+
+test_that("[[ and names() give access to the runs of an experiment", {
+  dims <- c(4L, 4L, 2L)
+  arr <- array(FALSE, dims)
+  arr[2:3, 2:3, ] <- TRUE
+  mask <- neuroim2::LogicalNeuroVol(arr, neuroim2::NeuroSpace(dims))
+  cvol <- neuroim2::ClusteredNeuroVol(mask, rep(1:2, length.out = sum(arr)))
+  run <- function(name, n_time) {
+    full <- matrix(seq_len(sum(arr) * n_time), nrow = sum(arr))
+    list(
+      scan_name = name, type = "full",
+      data = list(
+        cluster_1 = full[cvol@clusters == 1L, , drop = FALSE],
+        cluster_2 = full[cvol@clusters == 2L, , drop = FALSE]
+      )
+    )
+  }
+  path <- tempfile(fileext = ".h5")
+  on.exit(unlink(path), add = TRUE)
+  write_parcellated_experiment_h5(
+    path, mask, cvol, list(run("rest", 3L), run("task", 4L)),
+    overwrite = TRUE, verbose = FALSE
+  )
+  exp <- suppressMessages(H5ParcellatedMultiScan(path))
+  on.exit(close(exp), add = TRUE, after = FALSE)
+  expect_identical(names(exp), c("rest", "task"))
+  expect_identical(exp[["task"]]@n_time, 4L)
+  expect_identical(exp[[1]]@scan_name, "rest")
+  expect_error(exp[["missing"]], "No scan named 'missing'")
+  expect_error(exp[[3]], "out of range")
+})

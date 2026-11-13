@@ -849,6 +849,43 @@ H5ParcellatedMultiScan <- function(file,
 
 #' Accessor Methods for H5ParcellatedMultiScan
 
+#' Access the runs of an H5ParcellatedMultiScan
+#'
+#' @description
+#' \code{x[[i]]} returns one run (an \code{H5ParcellatedScan} or
+#' \code{H5ParcellatedScanSummary}) by position or scan name, and
+#' \code{names(x)} returns the scan names in the order the runs were written.
+#'
+#' @param x An \code{H5ParcellatedMultiScan}.
+#' @param i A single scan name or position.
+#' @param j Unused.
+#' @param ... Unused.
+#' @return A run object, or a character vector of scan names.
+#' @rdname H5ParcellatedMultiScan-runs
+#' @export
+setMethod("[[", signature(x = "H5ParcellatedMultiScan", i = "character"), function(x, i, j, ...) {
+  if (length(i) != 1L || is.na(i)) stop("Select one scan by name.", call. = FALSE)
+  if (!i %in% names(x@runs)) {
+    stop(sprintf("No scan named '%s'. Available scans: %s", i, paste(names(x@runs), collapse = ", ")),
+      call. = FALSE
+    )
+  }
+  x@runs[[i]]
+})
+
+#' @rdname H5ParcellatedMultiScan-runs
+#' @export
+setMethod("[[", signature(x = "H5ParcellatedMultiScan", i = "numeric"), function(x, i, j, ...) {
+  if (length(i) != 1L || is.na(i) || i < 1 || i > length(x@runs) || i != trunc(i)) {
+    stop(sprintf("Scan index %s is out of range 1..%d.", format(i), length(x@runs)), call. = FALSE)
+  }
+  x@runs[[i]]
+})
+
+#' @rdname H5ParcellatedMultiScan-runs
+#' @export
+setMethod("names", signature(x = "H5ParcellatedMultiScan"), function(x) names(x@runs))
+
 #' Access Slots/Properties using `$`
 #'
 #' Provides convenient access to shared properties like `mask`, `clusters`,
