@@ -25,84 +25,73 @@ if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown"
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
-  message = FALSE,
-  warning = FALSE
+  message = FALSE
 )
 library(fmristore)
 library(neuroim2)
-```
-
-```{r fmristore-memory-options, include=FALSE}
-# For this vignette, suppress fmristore's large-dataset memory warnings
-# to keep the focus on the API rather than performance diagnostics.
-old_fmristore_warn <- getOption("fmristore.warn_memory", TRUE)
-options(fmristore.warn_memory = FALSE)
+set.seed(7)
 ```
 
 ## What is a LabeledVolumeSet?
 
-Imagine you have multiple brain maps from different conditions, contrasts, or subjects that you want to store together efficiently. `LabeledVolumeSet` is designed exactly for this scenario. It's like having a filing cabinet where each drawer (label) contains a complete 3D brain map.
+A `LabeledVolumeSet` stores several 3D brain maps (contrasts, conditions,
+subjects) in one HDF5 file, each under a label:
 
-Key benefits:
-- **Organized**: Each brain volume has a meaningful label
-- **Efficient**: All volumes stored in a single HDF5 file
-- **Consistent**: All volumes share the same brain mask
-- **Easy Access**: Retrieve volumes by name or index
+- **Organized**: each map has a meaningful label.
+- **Compact**: only voxels inside a shared mask are stored.
+- **Lazy**: a map is read from disk when you ask for it.
+- **Easy access**: get a map by label (`lvs[["label"]]`) or index several at
+  once (`lvs[, , , 1:3]`).
+
+Voxels outside the mask are not stored and read back as `0`.
 
 ## Quick Example: Storing Statistical Maps
 
-Let's say you have t-statistic maps from different contrasts in your fMRI study:
-
-### Step 1: Create Example Data
+### Step 1: Create example data
 
 ```{r create-data}
-# Define brain dimensions
 brain_dims <- c(10, 10, 5)
 n_contrasts <- 3
-
-# Simulate t-statistic maps for different contrasts
-contrast_data <- array(rnorm(prod(brain_dims) * n_contrasts),
-  dim = c(brain_dims, n_contrasts)
-)
+contrast_data <- array(rnorm(prod(brain_dims) * n_contrasts), dim = c(brain_dims, n_contrasts))
 ```
 
-### Step 2: Create Brain Mask
+### Step 2: Create a brain mask
 
 ```{r create-mask}
-# Create a brain mask (only analyze certain voxels)
 brain_mask <- array(TRUE, dim = brain_dims)
-brain_mask[1:3, 1:3, ] <- FALSE # Exclude corners
+brain_mask[1:3, 1:3, ] <- FALSE # exclude a corner
 
-# Convert to neuroim2 objects
 stat_maps <- NeuroVec(contrast_data, NeuroSpace(c(brain_dims, n_contrasts)))
 mask <- LogicalNeuroVol(brain_mask, NeuroSpace(brain_dims))
 ```
 
-### Step 3: Save with Labels
+### Step 3: Save with labels
+
+`write_labeled_vec()` writes the file and returns its open hdf5r handle,
+which you close with `$close_all()`.
 
 ```{r save-labeled}
-# Define meaningful labels
 contrast_names <- c("Faces_vs_Houses", "Words_vs_Nonwords", "Motion_vs_Static")
 
-# Save as LabeledVolumeSet
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(stat_maps, mask, contrast_names, file = h5_file)
 h5_handle$close_all()
 ```
 
-### Step 4: Load and Access
+### Step 4: Load and access
 
 ```{r load-access}
-# Load the labeled set
 labeled_maps <- read_labeled_vec(h5_file)
+labels(labeled_maps)
 
-# Access by name
 faces_map <- labeled_maps[["Faces_vs_Houses"]]
-print(paste("Faces contrast map dimensions:", paste(dim(faces_map), collapse = "x")))
+dim(faces_map)
 
-# See all available maps
-print("Available contrasts:")
-print(labels(labeled_maps))
+# Inside the mask the stored values come back; outside they are 0
+c(
+  original = stat_maps[5, 5, 3, 1], read_back = faces_map[5, 5, 3],
+  outside_mask = faces_map[1, 1, 1]
+)
 
 close(labeled_maps)
 unlink(h5_file)
@@ -110,150 +99,107 @@ unlink(h5_file)
 
 ## Real-World Use Case: Group Analysis Results
 
-Here's how you might organize results from a group analysis:
-
 ```{r group-analysis}
-# Simulate group analysis results
 n_subjects <- 20
 brain_dims <- c(20, 20, 10)
 
-# Create different statistical maps
 group_maps <- list(
   mean_activation = array(rnorm(prod(brain_dims), mean = 0.5), brain_dims),
   t_statistic = array(rt(prod(brain_dims), df = n_subjects - 1), brain_dims),
   effect_size = array(rnorm(prod(brain_dims), mean = 0, sd = 0.3), brain_dims),
   p_values = array(runif(prod(brain_dims)), brain_dims)
 )
-
-# Combine into a 4D array
 all_maps <- array(unlist(group_maps), dim = c(brain_dims, length(group_maps)))
 stat_vec <- NeuroVec(all_maps, NeuroSpace(c(brain_dims, length(group_maps))))
 
-# Create a mask (e.g., only gray matter)
+# A gray-matter-like mask covering about 70% of voxels
 mask_array <- array(runif(prod(brain_dims)) > 0.3, brain_dims)
 mask <- LogicalNeuroVol(mask_array, NeuroSpace(brain_dims))
 
-# Save with descriptive labels
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(stat_vec, mask, names(group_maps), file = h5_file)
 h5_handle$close_all()
 
-# Load and analyze
 results <- read_labeled_vec(h5_file)
-
-# Find significant voxels
 p_map <- results[["p_values"]]
-t_map <- results[["t_statistic"]]
 
-# Threshold at p < 0.05
-significant_voxels <- p_map < 0.05
-n_sig <- sum(significant_voxels)
-print(paste("Found", n_sig, "significant voxels"))
+# Out-of-mask voxels read back as 0, so threshold inside the mask only:
+# p < 0.05 on the whole volume would count every out-of-mask voxel.
+significant <- mask_array & (p_map[, , ] < 0.05)
+c(significant = sum(significant), in_mask = sum(mask_array))
 
-# Get effect sizes for significant voxels
-if (n_sig > 0) {
-  effect_map <- results[["effect_size"]]
-  sig_effects <- effect_map[which(significant_voxels)]
-  hist(sig_effects,
-    main = "Effect Sizes in Significant Voxels",
-    xlab = "Effect Size"
-  )
-}
+effect_map <- results[["effect_size"]]
+sig_effects <- effect_map[which(significant)]
+hist(sig_effects, main = "Effect Sizes in Significant Voxels", xlab = "Effect Size")
 
 close(results)
 unlink(h5_file)
 ```
 
+About 5% of in-mask voxels pass, as expected for uniform p-values.
+
 ## Working with Subject-Specific Maps
 
-Store individual subject maps for later analysis:
+### Create subject data
 
-### Create Subject Data
-
-```{r subject-setup}
-# Simulate beta maps from 5 subjects
+```{r subject-data}
 n_subjects <- 5
 brain_dims <- c(15, 15, 8)
-
-# Create subject-specific activation maps
-subject_data <- array(rnorm(prod(brain_dims) * n_subjects),
-  dim = c(brain_dims, n_subjects)
-)
+subject_data <- array(rnorm(prod(brain_dims) * n_subjects), dim = c(brain_dims, n_subjects))
 ```
 
-### Add Activation Patterns
+### Add activation patterns
 
-```{r add-activations}
-# Add subject-specific patterns
+Each subject has a blob of activation, centred a little further along x and y.
+
+```{r add-activation}
 for (subj in 1:n_subjects) {
-  # Each subject has slightly different activation center
-  x_center <- 7 + subj
-  y_center <- 7 + subj
-  z_center <- 4
-
-  # Add activation blob
-  for (x in (x_center - 2):(x_center + 2)) {
-    for (y in (y_center - 2):(y_center + 2)) {
-      if (x > 0 && x <= brain_dims[1] && y > 0 && y <= brain_dims[2]) {
-        subject_data[x, y, z_center, subj] <-
-          subject_data[x, y, z_center, subj] + rnorm(1, mean = 3, sd = 0.5)
-      }
-    }
-  }
+  centre <- 7 + subj
+  xs <- intersect((centre - 2):(centre + 2), seq_len(brain_dims[1]))
+  ys <- intersect((centre - 2):(centre + 2), seq_len(brain_dims[2]))
+  subject_data[xs, ys, 4, subj] <- subject_data[xs, ys, 4, subj] + 3
 }
 ```
 
-### Save Subject Maps
+### Save subject maps
 
 ```{r save-subjects}
-# Create objects
 subject_vec <- NeuroVec(subject_data, NeuroSpace(c(brain_dims, n_subjects)))
 mask <- LogicalNeuroVol(array(TRUE, brain_dims), NeuroSpace(brain_dims))
 subject_labels <- paste0("Subject_", sprintf("%02d", 1:n_subjects))
 
-# Save
 h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(subject_vec, mask, subject_labels, file = h5_file)
 h5_handle$close_all()
 ```
 
-### Compute Group Statistics
+### Compute group statistics
 
-```{r group-stats, fig.width=8, fig.height=6}
-# Load and compute group average
+```{r group-stats}
 subjects <- read_labeled_vec(h5_file)
 
-# Extract all subjects' data efficiently
-all_subjects_data <- subjects[, , , ] # Get all volumes at once
+all_subjects_data <- subjects[, , , ] # every map at once
+dim(all_subjects_data)
 
-# Compute mean across subjects (4th dimension)
 group_mean <- apply(all_subjects_data, c(1, 2, 3), mean)
-print(paste("Group mean map dimensions:", paste(dim(group_mean), collapse = "x")))
-
-# Find peak activation
-peak_loc <- which(group_mean == max(group_mean), arr.ind = TRUE)
-print(paste(
-  "Peak activation at voxel:",
-  paste(peak_loc, collapse = ", ")
-))
+which(group_mean == max(group_mean), arr.ind = TRUE) # peak voxel
 
 close(subjects)
 unlink(h5_file)
 ```
 
-## Advanced: Efficient Access Patterns
+The peak lies in slice 4, inside the region where the subjects' blobs
+overlap.
 
-When working with many volumes, access them efficiently:
+## Efficient Access Patterns
 
-```{r efficient-access, fig.width=8, fig.height=6}
-# Create a dataset with many conditions
+```{r efficient-access}
 n_conditions <- 10
 brain_dims <- c(20, 20, 10)
-
-condition_data <- array(rnorm(prod(brain_dims) * n_conditions),
-  dim = c(brain_dims, n_conditions)
+condition_vec <- NeuroVec(
+  array(rnorm(prod(brain_dims) * n_conditions), dim = c(brain_dims, n_conditions)),
+  NeuroSpace(c(brain_dims, n_conditions))
 )
-condition_vec <- NeuroVec(condition_data, NeuroSpace(c(brain_dims, n_conditions)))
 mask <- LogicalNeuroVol(array(TRUE, brain_dims), NeuroSpace(brain_dims))
 condition_names <- paste0("Condition_", LETTERS[1:n_conditions])
 
@@ -261,29 +207,18 @@ h5_file <- tempfile(fileext = ".h5")
 h5_handle <- write_labeled_vec(condition_vec, mask, condition_names, file = h5_file)
 h5_handle$close_all()
 
-# Load the dataset
 conditions <- read_labeled_vec(h5_file)
 
-# Method 1: Access specific conditions by name
-print("Method 1: Individual access")
+# 1. One map by label
 cond_A <- conditions[["Condition_A"]]
-cond_B <- conditions[["Condition_B"]]
 
-# Method 2: Access multiple conditions at once
-print("Method 2: Multiple conditions via indices")
-first_three <- conditions[, , , 1:3] # Get first 3 conditions
-print(paste(
-  "Dimensions of first 3 conditions:",
-  paste(dim(first_three), collapse = "x")
-))
+# 2. Several maps by index
+first_three <- conditions[, , , 1:3]
+dim(first_three)
 
-# Method 3: Extract values at specific voxel across all conditions
-print("Method 3: Voxel time series across conditions")
+# 3. One voxel across all maps
 voxel_10_10_5 <- conditions[10, 10, 5, ]
-barplot(voxel_10_10_5,
-  names.arg = condition_names,
-  las = 2, main = "Values at Voxel [10,10,5]"
-)
+barplot(voxel_10_10_5, names.arg = condition_names, las = 2, main = "Values at Voxel [10,10,5]")
 
 close(conditions)
 unlink(h5_file)
@@ -291,61 +226,38 @@ unlink(h5_file)
 
 ## Best Practices
 
-### 1. Use Meaningful Labels
-```{r meaningful-labels, eval=FALSE}
-# Good labels
-good_labels <- c(
-  "PreTreatment_T1", "PostTreatment_T1",
-  "PreTreatment_T2", "PostTreatment_T2"
-)
+### 1. Use meaningful labels
 
-# Avoid generic labels
+```{r meaningful-labels, eval=FALSE}
+good_labels <- c("PreTreatment_T1", "PostTreatment_T1", "PreTreatment_T2", "PostTreatment_T2")
 bad_labels <- c("map1", "map2", "map3", "map4")
 ```
 
-### 2. Organize Your Analysis
+### 2. One file per analysis stage
+
 ```{r organize-analysis, eval=FALSE}
-# Save different analysis stages
-write_labeled_vec(raw_maps, mask,
-  paste0("Raw_", condition_names),
-  file = "raw_maps.h5"
-)
-
-write_labeled_vec(smoothed_maps, mask,
-  paste0("Smoothed_", condition_names),
-  file = "smoothed_maps.h5"
-)
-
-write_labeled_vec(stats_maps, mask,
-  paste0("Stats_", condition_names),
-  file = "statistical_maps.h5"
-)
+for (stage in c("raw", "smoothed", "stats")) {
+  h5 <- write_labeled_vec(stage_maps[[stage]], mask,
+    paste0(stage, "_", condition_names),
+    file = paste0(stage, "_maps.h5")
+  )
+  h5$close_all()
+}
 ```
 
-### 3. Remember to Close
+`write_labeled_vec()` replaces an existing file of the same name without
+asking.
+
+### 3. Close what you read
+
 ```{r close-reminder, eval=FALSE}
 lvs <- read_labeled_vec("my_maps.h5")
 # ... analysis code ...
-close(lvs) # Always close when done!
+close(lvs)
 ```
 
 ## Summary
 
-`LabeledVolumeSet` makes it easy to:
-- Store multiple related brain maps together
-- Access them by meaningful names
-- Work efficiently with large collections
-- Keep your neuroimaging data organized
-
-Perfect for storing statistical maps, contrast images, subject data, or any collection of related 3D brain volumes!
-
-```{r fmristore-memory-options-reset, include=FALSE}
-# Restore original fmristore memory warning behaviour
-options(fmristore.warn_memory = old_fmristore_warn)
-```
-
-```{r cleanup, include=FALSE}
-# Clean up temp files
-temp_files <- list.files(tempdir(), pattern = "\\.h5$", full.names = TRUE)
-file.remove(temp_files)
-```
+`LabeledVolumeSet` stores related brain maps in one file, under a shared mask,
+and reads each map on demand by label or index. Remember that out-of-mask
+voxels read back as `0`.

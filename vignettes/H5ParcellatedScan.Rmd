@@ -25,7 +25,6 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>",
   message = FALSE,
-  warning = FALSE,
   fig.width = 7,
   fig.height = 5
 )
@@ -35,306 +34,210 @@ if (requireNamespace("ggplot2", quietly = TRUE) && requireNamespace("albersdown"
 ```{r load-packages}
 library(fmristore)
 library(neuroim2)
+set.seed(123)
 ```
 
 ## How are individual scans organized?
 
-In the fmristore parcellated data system, **H5ParcellatedMultiScan** serves as a container that holds multiple individual scan objects. Each scan within the container is either:
+An **H5ParcellatedMultiScan** is a container of scans that share one brain
+mask and one clustering. Each scan is either:
 
-1. **H5ParcellatedScan**: Full voxel-level time series data
-2. **H5ParcellatedScanSummary**: Cluster-averaged time series data
+1. **H5ParcellatedScan**: full voxel-level time series, stored cluster by
+   cluster.
+2. **H5ParcellatedScanSummary**: one averaged time series per cluster.
 
-This vignette focuses on working with these **individual scan objects** - how to create them (including from neuroim2's ClusteredNeuroVec objects), access them from the parent H5ParcellatedMultiScan container, and what operations you can perform on each scan type.
+This vignette covers creating these scans (including from neuroim2's
+`ClusteredNeuroVec`), getting them out of their container, and what each
+scan type can do.
 
-### The Data Hierarchy
+### The data hierarchy
 
 ```
-H5ParcellatedMultiScan (Container)
-├── Run1 → H5ParcellatedScan (Full voxel data)
-├── Run2 → H5ParcellatedScan (Full voxel data) 
-├── Run3 → H5ParcellatedScanSummary (Cluster averages)
-└── Run4 → H5ParcellatedScanSummary (Cluster averages)
+H5ParcellatedMultiScan (container)
+|-- task_full    -> H5ParcellatedScan        (full voxel data)
+|-- rest_full    -> H5ParcellatedScan        (full voxel data)
+`-- task_summary -> H5ParcellatedScanSummary (cluster averages)
 ```
 
-## Step 1: Create Sample Data Using the New Interface
+A container can mix both kinds of scan. `write_dataset()` writes one kind per
+call; `write_parcellated_experiment_h5()` writes any mix, which is what we do
+below.
 
-First, let's create a sample dataset using the modern `write_dataset()` and `read_dataset()` functions:
+## Step 1: Create a Brain and its Clusters
 
-```{r create-sample-data}
-# Create a small brain with realistic structure
+```{r setup-data}
 brain_dims <- c(10, 10, 5)
 brain_space <- NeuroSpace(brain_dims, spacing = c(2, 2, 2))
 
-# Define brain mask (central region)
 mask_data <- array(FALSE, brain_dims)
-mask_data[4:7, 4:7, 2:4] <- TRUE # Small brain region
+mask_data[4:7, 4:7, 2:4] <- TRUE # a small central region
 mask <- LogicalNeuroVol(mask_data, brain_space)
 
-# Divide brain into 3 clusters (regions)
+# Assign the mask voxels to 3 clusters
 n_voxels <- sum(mask)
 cluster_assignments <- rep(1:3, length.out = n_voxels)
 clusters <- ClusteredNeuroVol(mask, cluster_assignments)
 
-cat("Created brain with", n_voxels, "voxels in", max(cluster_assignments), "clusters\n")
-print(table(clusters@clusters))
+n_voxels
+table(clusters@clusters)
 ```
 
-```
-Brain voxels grouped into spatial clusters:
+### Create fMRI runs
 
-  +-----------+  +-----------+  +-----------+
-  | Cluster 1 |  | Cluster 2 |  | Cluster 3 |
-  | (Visual)  |  | (Motor)   |  | (Default) |
-  | 16 voxels |  | 16 voxels |  | 16 voxels |
-  +-----------+  +-----------+  +-----------+
-```
+A task run with an oscillation in cluster 2, and a rest run in which each
+cluster shares its own slow signal.
 
-### Create Multiple fMRI Runs with Different Characteristics
+```{r create-runs}
+mask_voxels <- which(mask_data) # linear indices of the mask voxels, in mask order
 
-```{r create-multiple-runs}
-# Create 3 different fMRI runs
-run_names <- c("task_full", "rest_full", "task_summary")
-runs_data <- list()
-
-# Run 1: Task run (full data) - 60 timepoints
-n_time1 <- 60
-fmri_dims1 <- c(brain_dims, n_time1)
-fmri_data1 <- array(rnorm(prod(fmri_dims1)), dim = fmri_dims1)
-
-# Add task activation to cluster 2 (motor region)
-cluster_2_voxels <- which(clusters@clusters == 2)
-mask_indices <- which(mask, arr.ind = TRUE)
-for (v in cluster_2_voxels) {
-  x <- mask_indices[v, 1]
-  y <- mask_indices[v, 2]
-  z <- mask_indices[v, 3]
-  # Add sinusoidal activation
-  fmri_data1[x, y, z, ] <- fmri_data1[x, y, z, ] + 0.8 * sin(seq(0, 4 * pi, length.out = n_time1))
+# Add `signal` to the time series of the given mask voxels
+add_signal <- function(arr, voxels, signal) {
+  d <- dim(arr)
+  flat <- matrix(arr, nrow = prod(d[1:3]))
+  rows <- mask_voxels[voxels]
+  flat[rows, ] <- flat[rows, ] + matrix(signal, length(rows), d[4], byrow = TRUE)
+  array(flat, d)
 }
 
-runs_data[[1]] <- NeuroVec(fmri_data1, NeuroSpace(fmri_dims1))
-
-# Run 2: Rest run (full data) - 50 timepoints
-n_time2 <- 50
-fmri_dims2 <- c(brain_dims, n_time2)
-fmri_data2 <- array(rnorm(prod(fmri_dims2)), dim = fmri_dims2)
-
-# Add resting state connectivity pattern
-for (i in 1:3) {
-  cluster_voxels <- which(clusters@clusters == i)
-  shared_signal <- rnorm(n_time2, sd = 0.3)
-  for (v in cluster_voxels) {
-    x <- mask_indices[v, 1]
-    y <- mask_indices[v, 2]
-    z <- mask_indices[v, 3]
-    fmri_data2[x, y, z, ] <- fmri_data2[x, y, z, ] + shared_signal
-  }
-}
-
-runs_data[[2]] <- NeuroVec(fmri_data2, NeuroSpace(fmri_dims2))
-
-# Run 3: Will be saved as summary data (we'll use run 1's data)
-runs_data[[3]] <- runs_data[[1]]
-
-cat(
-  "Created", length(runs_data), "runs with timepoints:",
-  paste(sapply(runs_data, function(x) dim(x)[4]), collapse = ", "), "\n"
+n_time_task <- 60
+task_data <- array(rnorm(prod(brain_dims) * n_time_task), c(brain_dims, n_time_task))
+task_data <- add_signal(
+  task_data, which(cluster_assignments == 2),
+  sin(seq(0, 4 * pi, length.out = n_time_task))
 )
+task_run <- NeuroVec(task_data, NeuroSpace(c(brain_dims, n_time_task)))
+
+n_time_rest <- 50
+rest_data <- array(rnorm(prod(brain_dims) * n_time_rest), c(brain_dims, n_time_rest))
+for (k in 1:3) {
+  rest_data <- add_signal(rest_data, which(cluster_assignments == k), rnorm(n_time_rest, sd = 0.3))
+}
+rest_run <- NeuroVec(rest_data, NeuroSpace(c(brain_dims, n_time_rest)))
 ```
 
-### Save Mixed Full and Summary Data
+## Step 2: Save Full and Summary Scans in One File
 
-```{r save-mixed-data}
-# Save to HDF5 file - mix of full and summary scans
+`write_parcellated_experiment_h5()` takes one entry per scan. A full scan
+supplies a voxel x time matrix for each cluster, named `cluster_<id>`, with
+rows in mask order; a summary scan supplies a time x cluster matrix with
+columns in sorted cluster-ID order.
+
+```{r save-runs}
+# voxel x time matrix for each cluster, in mask order
+cluster_matrices <- function(nvec) {
+  voxel_ts <- t(series(nvec, mask_voxels))
+  ids <- sort(unique(cluster_assignments))
+  setNames(
+    lapply(ids, function(id) voxel_ts[cluster_assignments == id, , drop = FALSE]),
+    paste0("cluster_", ids)
+  )
+}
+cluster_means <- function(nvec) sapply(cluster_matrices(nvec), colMeans) # time x cluster
+
+runs_data <- list(
+  list(scan_name = "task_full", type = "full", data = cluster_matrices(task_run)),
+  list(scan_name = "rest_full", type = "full", data = cluster_matrices(rest_run)),
+  list(scan_name = "task_summary", type = "summary", data = cluster_means(task_run))
+)
+
 h5_file <- tempfile(fileext = ".h5")
-
-# First, save the two full runs
-write_dataset(list(runs_data[[1]], runs_data[[2]]),
-  file = h5_file,
-  clusters = clusters,
-  scan_names = c("task_full", "rest_full"),
-  summary = FALSE
-) # Full voxel data
-
-# Then add a summary run (saved here to a separate file for clarity)
-# Note: Appending additional scans to an existing file currently requires
-# lower-level helpers such as write_parcellated_experiment_h5().
-
-summary_file <- tempfile(fileext = ".h5")
-write_dataset(runs_data[[3]],
-  file = summary_file,
-  clusters = clusters,
-  summary = TRUE,
-  scan_name = "task_summary"
-) # Cluster averages only
-
-cat("Created files:\n")
-cat("  Full data file:", round(file.size(h5_file) / 1024, 1), "KB\n")
-cat("  Summary data file:", round(file.size(summary_file) / 1024, 1), "KB\n")
+write_parcellated_experiment_h5(h5_file, mask, clusters, runs_data, verbose = FALSE)
+round(file.size(h5_file) / 1024, 1) # KB
 ```
+
+For the common cases, `write_dataset()` is shorter: pass a list of
+`NeuroVec` runs with `clusters` (add `summary = TRUE` to store cluster means
+only), or a list of `ClusteredNeuroVec` runs.
 
 ## Converting neuroim2 ClusteredNeuroVec Objects
 
-The neuroim2 package provides `ClusteredNeuroVec`, a class that stores time series data organized by clusters. This is a perfect match for fmristore's parcellated storage format. Here's how to convert ClusteredNeuroVec objects to HDF5 format:
+A `ClusteredNeuroVec` holds cluster-averaged time series, so it becomes a
+summary scan.
 
-### Creating a ClusteredNeuroVec
-
-```{r create-clustered-neurovec}
-# ClusteredNeuroVec stores cluster-averaged time series
-# First, create a ClusteredNeuroVol (spatial clustering)
-cvol <- neuroim2::ClusteredNeuroVol(mask = mask, clusters = cluster_assignments)
-
-# Create time series data (time x clusters matrix)
+```{r create-clusteredneurovec}
 n_time_cnv <- 40
-n_clusters_cnv <- max(cluster_assignments)
-ts_data <- matrix(rnorm(n_time_cnv * n_clusters_cnv), 
-                  nrow = n_time_cnv, 
-                  ncol = n_clusters_cnv)
-
-# Add some structure to make clusters distinguishable
-for (i in 1:n_clusters_cnv) {
-  ts_data[, i] <- ts_data[, i] + sin(seq(0, 2*pi, length.out = n_time_cnv) * i)
+ts_data <- matrix(rnorm(n_time_cnv * 3), nrow = n_time_cnv, ncol = 3)
+for (i in 1:3) {
+  ts_data[, i] <- ts_data[, i] + sin(seq(0, 2 * pi, length.out = n_time_cnv) * i)
 }
-
-# Create ClusteredNeuroVec
-cnvec <- neuroim2::ClusteredNeuroVec(x = ts_data, cvol = cvol)
-
-cat("Created ClusteredNeuroVec:\n")
-cat("  Time points:", nrow(cnvec@ts), "\n")
-cat("  Clusters:", ncol(cnvec@ts), "\n")
-cat("  Data stored as:", class(cnvec@ts), "\n")
+cnvec <- ClusteredNeuroVec(x = ts_data, cvol = clusters)
+dim(cnvec@ts) # time x cluster
 ```
 
-### Converting to HDF5: Single Scan (Default)
+### A single scan (default)
 
-By default, `ClusteredNeuroVec` is treated as a single scan since it doesn't contain run information:
-
-```{r convert-cnvec-single}
-# Method 1: Using as_h5() - creates a single scan by default
-h5_single <- as_h5(cnvec, file = tempfile(fileext = ".h5"), scan_name = "my_scan")
-cat("Created:", class(h5_single), "\n")
-
-# Method 2: Using write_dataset() - explicit single scan
-cnvec_file <- tempfile(fileext = ".h5")
-h5_single2 <- write_dataset(cnvec, 
-                            file = cnvec_file, 
-                            scan_name = "task_scan",
-                            as_multiscan = FALSE)  # Default is FALSE
-cat("Created:", class(h5_single2), "\n")
-
-# The result is an H5ParcellatedScanSummary
-summary_mat <- as.matrix(h5_single)
-cat("Summary data dimensions:", dim(summary_mat), "\n")
-
-# Clean up
+```{r convert-single-scan}
+single_file <- tempfile(fileext = ".h5")
+h5_single <- as_h5(cnvec, file = single_file, scan_name = "my_scan")
+class(h5_single)
+dim(as.matrix(h5_single))
 close(h5_single)
-close(h5_single2)
 ```
 
-### Converting to HDF5: Multi-Scan Container
+`write_dataset(cnvec, file = ..., scan_name = ...)` does the same.
 
-If you want to prepare for adding more scans later, you can create a multi-scan container:
+### A multi-scan container
 
-```{r convert-cnvec-multi}
-# Create as multi-scan container with one scan
-h5_multi <- as_h5(cnvec, 
-                  file = tempfile(fileext = ".h5"),
-                  scan_name = "scan_001",
-                  as_multiscan = TRUE)  # Explicitly request multi-scan
-
-cat("Created:", class(h5_multi), "\n")
-cat("Number of scans:", length(h5_multi@runs), "\n")
-cat("First scan type:", class(h5_multi@runs[[1]]), "\n")
-
-# You can add more scans to this container later
-# (See H5ParcellatedMultiScan vignette for details)
-
+```{r convert-multiscan}
+multi_file <- tempfile(fileext = ".h5")
+h5_multi <- as_h5(cnvec, file = multi_file, scan_name = "scan_001", as_multiscan = TRUE)
+names(h5_multi)
+class(h5_multi[["scan_001"]])
 close(h5_multi)
+unlink(c(single_file, multi_file))
 ```
 
-For combining multiple `ClusteredNeuroVec` objects into a multi-scan container, see `vignette("H5ParcellatedMultiScan")`.
+To store several `ClusteredNeuroVec` runs in one container, pass them as a
+list: `write_dataset(list(run1, run2), file = ..., scan_names = ...)`.
 
-## Step 2: Load the Data with read_dataset()
+## Step 3: Load the Container and Get its Scans
 
 ```{r load-data}
-# Load the datasets using the new read_dataset() function
-full_experiment <- read_dataset(h5_file)
-summary_experiment <- read_dataset(summary_file)
+experiment <- read_dataset(h5_file)
+experiment
 
-cat("Full data experiment:\n")
-print(full_experiment)
-cat("\nSummary data experiment:\n")
-print(summary_experiment)
+names(experiment) # in the order they were written
 ```
 
-## Step 3: Accessing Individual Scans from the Container
-
-This is the key concept: **H5ParcellatedScan** and **H5ParcellatedScanSummary** objects are accessed from their parent **H5ParcellatedMultiScan** container.
+Index the container with `[[` by name or position:
 
 ```{r access-individual-scans}
-# Method 1: Access by position in @runs slot
-task_scan <- full_experiment@runs[[1]] # First scan
-rest_scan <- full_experiment@runs[[2]] # Second scan
+task_scan <- experiment[["task_full"]]
+rest_scan <- experiment[["rest_full"]]
+summary_scan <- experiment[["task_summary"]]
 
-# Method 2: Access by name if names are available
-scan_names_full <- scan_names(full_experiment)
-cat("Available scan names in full experiment:", paste(scan_names_full, collapse = ", "), "\n")
-
-if (length(scan_names_full) > 0) {
-  task_scan_by_name <- full_experiment@runs[[scan_names_full[1]]]
-  cat("Accessed scan by name:", scan_names_full[1], "\n")
-}
-
-# Show what type of scan objects we got
-cat("Task scan class:", class(task_scan), "\n")
-cat("Rest scan class:", class(rest_scan), "\n")
-
-# Access the summary scan
-summary_scan <- summary_experiment@runs[[1]]
-cat("Summary scan class:", class(summary_scan), "\n")
+class(task_scan)
+class(summary_scan)
 ```
 
-### Understanding Individual Scan Properties
+### Scan properties
+
+A full scan behaves like a 4D image: `dim()` gives x, y, z and time. Its
+voxels are the mask voxels.
 
 ```{r scan-properties}
-# Each individual scan has its own properties
-cat("=== Task Scan (H5ParcellatedScan) ===\n")
-cat("Dimensions:", paste(dim(task_scan), collapse = " × "), "\n")
-cat("Class:", class(task_scan), "\n")
-cat("Number of voxels:", dim(task_scan)[1], "\n")
-cat("Number of timepoints:", dim(task_scan)[2], "\n\n")
+dim(task_scan) # x, y, z, time
+dim(task_scan)[4] # time points
+sum(mask(task_scan)) # voxels
 
-cat("=== Summary Scan (H5ParcellatedScanSummary) ===\n")
-summary_matrix <- as.matrix(summary_scan)
-cat("Summary dimensions:", paste(dim(summary_matrix), collapse = " × "), "\n")
-cat("Class:", class(summary_scan), "\n")
-cat("Number of clusters:", ncol(summary_matrix), "\n")
-cat("Number of timepoints:", nrow(summary_matrix), "\n\n")
-
-cat("=== Storage Efficiency ===\n")
-n_voxels_full <- dim(task_scan)[1] * dim(task_scan)[2]
-n_elements_summary <- prod(dim(summary_matrix))
-cat("Full scan elements:", n_voxels_full, "\n")
-cat("Summary scan elements:", n_elements_summary, "\n")
-cat("Compression ratio:", round(n_voxels_full / n_elements_summary, 1), ":1\n")
+summary_matrix <- as.matrix(summary_scan) # time x cluster
+dim(summary_matrix)
 ```
 
-## H5ParcellatedScan: Operations on Individual Full Scans
+## H5ParcellatedScan: Voxel-Level Operations
 
-When working with **H5ParcellatedScan** objects (full voxel data), you can extract time series for specific voxels and perform voxel-level analyses.
+### Time series of individual voxels
 
-### Extract Time Series from Individual Voxels  
+`series(scan, i)` takes **mask indices**: `i = 1` is the first voxel of the
+mask (in column-major order), and `i` runs up to `sum(mask)`. This differs
+from `H5NeuroVec`, where `series(x, i)` takes linear indices into the whole
+volume.
 
 ```{r extract-voxel-series}
-# Extract time series for specific voxel indices
 voxel_indices <- c(1, 5, 10, 15)
-task_voxel_ts <- series(task_scan, i = voxel_indices)
+task_voxel_ts <- series(task_scan, voxel_indices)
+dim(task_voxel_ts) # time x voxel
 
-# Show what we extracted
-cat("Extracted time series dimensions:", paste(dim(task_voxel_ts), collapse = " × "), "\n")
-cat("(rows = timepoints, columns = voxels)\n\n")
-
-# Plot individual voxel time series
 matplot(task_voxel_ts[, 1:3],
   type = "l", lty = 1, lwd = 2,
   main = "Task Scan: Individual Voxel Time Series",
@@ -347,89 +250,42 @@ legend("topright",
 )
 ```
 
-### Extract Time Series for All Voxels in a Cluster
+### All voxels of a cluster
+
+`clusters@clusters` gives the cluster of each mask voxel, so `which()` on it
+yields mask indices directly.
 
 ```{r extract-cluster-voxels}
-# Find all voxels in cluster 2 (the motor region with task activation)
 cluster_2_voxels <- which(clusters@clusters == 2)
-cat("Cluster 2 contains", length(cluster_2_voxels), "voxels\n")
+cluster_2_ts <- series(task_scan, cluster_2_voxels)
+dim(cluster_2_ts)
 
-# Extract time series for all voxels in cluster 2
-cluster_2_ts <- series(task_scan, i = cluster_2_voxels)
-cat("Cluster 2 time series dimensions:", paste(dim(cluster_2_ts), collapse = " × "), "\n")
-
-# Plot the first few voxels from cluster 2 to see the task activation
-matplot(cluster_2_ts[, 1:min(4, ncol(cluster_2_ts))],
+matplot(cluster_2_ts[, 1:4],
   type = "l", lty = 1,
-  main = "Task Activation in Cluster 2 (Motor) Voxels",
+  main = "Task Activation in Cluster 2 Voxels",
   xlab = "Time Point", ylab = "Signal",
-  col = rainbow(min(4, ncol(cluster_2_ts)))
+  col = hcl.colors(4)
 )
-legend("topright",
-  legend = paste("Voxel", cluster_2_voxels[1:min(4, ncol(cluster_2_ts))]),
-  col = rainbow(min(4, ncol(cluster_2_ts))), lty = 1
-)
+lines(rowMeans(cluster_2_ts), lwd = 3)
 ```
 
-### Compare Task vs Rest Scans (Individual Scan Analysis)
+The thick line, the cluster mean, recovers the oscillation added to cluster 2.
+
+### Task vs rest
 
 ```{r compare-scans}
-# Extract the same voxel indices from both scans
-task_sample <- series(task_scan, i = 1:6)
-rest_sample <- series(rest_scan, i = 1:6)
-
-# Calculate variance for each voxel in each scan
-task_vars <- apply(task_sample, 2, var)
-rest_vars <- apply(rest_sample, 2, var)
-
-# Compare
-comparison_df <- data.frame(
-  Voxel = 1:6,
-  Task_Variance = task_vars,
-  Rest_Variance = rest_vars,
-  Ratio = task_vars / rest_vars
-)
-
-print("Variance comparison between task and rest scans:")
-print(round(comparison_df, 3))
-
-# Plot comparison
-par(mfrow = c(1, 2))
-plot(task_vars, rest_vars,
-  xlab = "Task Variance", ylab = "Rest Variance",
-  main = "Variance Comparison", pch = 19, col = "blue"
-)
-abline(0, 1, col = "red", lty = 2)
-
-plot(1:6, comparison_df$Ratio,
-  type = "b", pch = 19, col = "darkgreen",
-  xlab = "Voxel Index", ylab = "Task/Rest Variance Ratio",
-  main = "Variance Ratio (Task/Rest)"
-)
-abline(h = 1, col = "red", lty = 2)
-par(mfrow = c(1, 1))
+task_cor <- cor(rowMeans(series(task_scan, cluster_2_voxels)), sin(seq(0, 4 * pi, length.out = n_time_task)))
+rest_cor <- cor(rowMeans(series(rest_scan, cluster_2_voxels)), sin(seq(0, 4 * pi, length.out = n_time_rest)))
+round(c(task = task_cor, rest = rest_cor), 2)
 ```
 
-## H5ParcellatedScanSummary: Operations on Individual Summary Scans
+Cluster 2 follows the task regressor in the task run only.
 
-When working with **H5ParcellatedScanSummary** objects, you work with cluster-averaged data that's much more compact.
-
-### Extract and Analyze Summary Data
+## H5ParcellatedScanSummary: Cluster-Level Operations
 
 ```{r extract-summary-data}
-# Get the summary matrix (time × clusters)
-summary_matrix <- as.matrix(summary_scan)
-cat("Summary matrix dimensions:", paste(dim(summary_matrix), collapse = " × "), "\n")
-cat("Timepoints:", nrow(summary_matrix), ", Clusters:", ncol(summary_matrix), "\n\n")
+colnames(summary_matrix)
 
-# Show column names if available
-if (!is.null(colnames(summary_matrix))) {
-  cat("Cluster names:", paste(colnames(summary_matrix), collapse = ", "), "\n")
-} else {
-  cat("Using default cluster numbering: 1 to", ncol(summary_matrix), "\n")
-}
-
-# Plot cluster averages over time
 matplot(summary_matrix,
   type = "l", lty = 1, lwd = 2,
   main = "Summary Scan: Cluster Average Time Series",
@@ -437,20 +293,24 @@ matplot(summary_matrix,
   col = c("red", "blue", "darkgreen")
 )
 legend("topright",
-  legend = paste("Cluster", 1:ncol(summary_matrix)),
+  legend = colnames(summary_matrix),
   col = c("red", "blue", "darkgreen"), lty = 1, lwd = 2
 )
 ```
 
-### Compute Cluster-to-Cluster Correlations
+The summary scan was computed from the task run, so it matches the mean of
+the full scan's cluster 2 voxels:
+
+```{r summary-matches-full}
+all.equal(summary_matrix[, 2], rowMeans(cluster_2_ts), tolerance = 1e-6, check.attributes = FALSE)
+```
+
+### Cluster-to-cluster correlations
 
 ```{r cluster-correlations}
-# Calculate correlation matrix between clusters
 cluster_correlations <- cor(summary_matrix)
-cat("Cluster correlation matrix:\n")
-print(round(cluster_correlations, 3))
+round(cluster_correlations, 3)
 
-# Visualize correlation matrix
 if (requireNamespace("corrplot", quietly = TRUE)) {
   corrplot::corrplot(cluster_correlations,
     method = "color",
@@ -458,9 +318,8 @@ if (requireNamespace("corrplot", quietly = TRUE)) {
     mar = c(0, 0, 2, 0)
   )
 } else {
-  # Simple heatmap alternative
-  image(1:ncol(cluster_correlations), 1:nrow(cluster_correlations),
-    as.matrix(cluster_correlations),
+  image(seq_len(ncol(cluster_correlations)), seq_len(nrow(cluster_correlations)),
+    cluster_correlations,
     main = "Inter-Cluster Correlations",
     xlab = "Cluster", ylab = "Cluster",
     col = heat.colors(20)
@@ -468,131 +327,83 @@ if (requireNamespace("corrplot", quietly = TRUE)) {
 }
 ```
 
+## Working Across Runs
+
+The container joins runs for you. `series_concat()` stacks the time series of
+the chosen mask voxels across full scans; `matrix_concat()` stacks summary
+matrices.
+
+```{r across-runs}
+both_runs <- series_concat(experiment, mask_idx = cluster_2_voxels[1:2],
+  run_indices = c("task_full", "rest_full"))
+dim(both_runs) # (60 + 50) time points x 2 voxels
+```
+
 ## Practical Usage Guidelines
 
-### Choose H5ParcellatedScan when you need:
+### Choose H5ParcellatedScan when you need voxels
 
-**Individual voxel analysis within clusters:**
 ```{r practical-full-example, eval=FALSE}
-# Example: Find the most variable voxel in each cluster
+# The most variable voxel in each cluster
 most_variable_voxels <- sapply(1:3, function(cluster_id) {
   cluster_voxels <- which(clusters@clusters == cluster_id)
-  cluster_ts <- series(task_scan, i = cluster_voxels)
-  variances <- apply(cluster_ts, 2, var)
+  variances <- apply(series(task_scan, cluster_voxels), 2, var)
   cluster_voxels[which.max(variances)]
 })
+
+# Correlate every voxel with a task regressor
+task_regressor <- sin(seq(0, 4 * pi, length.out = dim(task_scan)[4]))
+voxel_correlations <- cor(series(task_scan, seq_len(sum(mask))), task_regressor)
 ```
 
-**Voxel-wise statistical analyses:**
-```{r practical-stats, eval=FALSE}
-# Example: Correlate each voxel with a task regressor
-task_regressor <- sin(seq(0, 4 * pi, length.out = dim(task_scan)[2]))
-all_voxel_ts <- series(task_scan, i = 1:dim(task_scan)[1])
-voxel_correlations <- cor(all_voxel_ts, task_regressor)
+### Choose H5ParcellatedScanSummary when clusters are enough
+
+```{r practical-summary, eval=FALSE}
+# Network connectivity
+connectivity <- cor(as.matrix(summary_scan))
+
+# Peak time point of each cluster
+peak_times <- apply(as.matrix(summary_scan), 2, which.max)
 ```
 
-**Spatial pattern analysis within regions:**
-```{r practical-spatial, eval=FALSE}
-# Example: Identify activation hotspots within a cluster
-cluster_1_voxels <- which(clusters@clusters == 1)
-cluster_1_ts <- series(task_scan, i = cluster_1_voxels)
-cluster_1_activation <- rowMeans(abs(cluster_1_ts)) # Activation magnitude
-```
-
-### Choose H5ParcellatedScanSummary when you need:
-
-**Network connectivity analysis:**
-```{r practical-connectivity}
-# Already computed above - cluster correlation matrix
-print("Inter-cluster connectivity strengths:")
-diag(cluster_correlations) <- NA # Remove self-correlations
-print(round(cluster_correlations, 3))
-```
-
-**Efficient group comparisons:**
-```{r practical-group-compare}
-# Example: Compare average activation levels between conditions
-# If you had multiple summary scans, you could do:
-cluster_means <- colMeans(summary_matrix)
-names(cluster_means) <- paste("Cluster", 1:length(cluster_means))
-print("Average activation per cluster:")
-print(round(cluster_means, 3))
-```
-
-**Memory-efficient temporal analysis:**
-```{r practical-temporal}
-# Example: Analyze temporal dynamics at cluster level
-cluster_peak_times <- apply(summary_matrix, 2, which.max)
-names(cluster_peak_times) <- paste("Cluster", 1:length(cluster_peak_times))
-print("Peak activation timepoints per cluster:")
-print(cluster_peak_times)
-```
-
-## Key Individual Scan Operations Summary
+## Operations at a Glance
 
 | Operation | H5ParcellatedScan | H5ParcellatedScanSummary |
 |-----------|-------------------|--------------------------|
-| `series(scan, i = indices)` | ✅ Extract voxel time series | ❌ Not available |
-| `as.matrix(scan)` | ❌ Not available | ✅ Get cluster × time matrix |
-| `dim(scan)` | ✅ [voxels, timepoints] | ❌ Use `dim(as.matrix(scan))` |
-| `scan[i, j, k, t]` | ✅ 4D indexing | ❌ Not available |
-| Memory efficiency | Lower (full voxel data) | Higher (cluster averages only) |
+| `series(scan, i)` | time x voxel, `i` = mask indices | not available |
+| `scan[i, j, k, t]` | 4D indexing | not available |
+| `as.matrix(scan)` | not available | time x cluster |
+| `dim(scan)` | x, y, z, time | `NULL`; use `dim(as.matrix(scan))` |
+| `mask(scan)`, `clusters(scan)` | yes | yes |
 
-## Memory and Performance Considerations
+## File Sizes
 
-```{r final-memory-comparison}
-# Compare memory footprint of different scan types
-cat("Memory usage comparison:\n")
-cat("  Task scan object size:", format(object.size(task_scan), units = "KB"), "\n")
-cat("  Summary scan object size:", format(object.size(summary_scan), units = "KB"), "\n")
-cat("  Summary matrix size:", format(object.size(summary_matrix), units = "KB"), "\n\n")
+```{r memory-comparison}
+summary_only_file <- tempfile(fileext = ".h5")
+write_dataset(list(task_run), file = summary_only_file, clusters = clusters,
+  summary = TRUE, scan_names = "task", verbose = FALSE)
 
-# File size comparison
-cat("File size comparison:\n")
-cat("  Full data file:", round(file.size(h5_file) / 1024, 1), "KB\n")
-cat("  Summary data file:", round(file.size(summary_file) / 1024, 1), "KB\n")
+round(c(
+  all_three_scans = file.size(h5_file),
+  one_summary_scan = file.size(summary_only_file)
+) / 1024, 1) # KB
 ```
+
+The H5 objects themselves are small: they hold file handles and metadata, and
+read voxel data only when you ask for it.
 
 ## Clean Up
 
 ```{r cleanup}
-# Always close HDF5 connections when done
-close(full_experiment)
-close(summary_experiment)
-
-# Clean up temporary files
-unlink(c(h5_file, summary_file))
+close(experiment)
+unlink(c(h5_file, summary_only_file))
 ```
 
-## Key Takeaways
+## Summary
 
-1. **Individual scan objects** (`H5ParcellatedScan` and `H5ParcellatedScanSummary`) are accessed from **H5ParcellatedMultiScan** containers via `@runs[[index]]` or `@runs[["name"]]`
-
-2. **ClusteredNeuroVec conversion** is now seamlessly supported:
-   - Use `as_h5()` for quick conversion (defaults to single scan)
-   - Use `write_dataset()` with `as_multiscan` parameter for more control
-   - ClusteredNeuroVec naturally maps to H5ParcellatedScanSummary format
-
-3. **H5ParcellatedScan** provides voxel-level access within clusters:
-   - Use `series(scan, i = indices)` for individual voxel time series
-   - Supports 4D indexing: `scan[i, j, k, t]`
-   - Essential for spatial pattern analysis and voxel-wise statistics
-
-4. **H5ParcellatedScanSummary** provides efficient cluster-level analysis:
-   - Use `as.matrix(scan)` to get time × cluster matrix
-   - Perfect for connectivity analysis and group comparisons
-   - Much smaller memory footprint
-   - Natural output format for ClusteredNeuroVec conversion
-
-5. **Modern workflow** uses `read_dataset()` and `write_dataset()` functions for simplified data I/O with automatic type detection
-
-6. **Choose the right scan type** based on your analysis needs:
-   - Full scans for detailed within-cluster analysis
-   - Summary scans for between-cluster connectivity and efficiency
-   - ClusteredNeuroVec for when you already have cluster-averaged data
-
-## Next Steps
-
-- **For container management**: See `vignette("H5ParcellatedMultiScan")` for working with multiple runs
-- **For data creation**: Learn about the new `write_dataset()` interface for saving parcellated data
-- **For advanced analysis**: Explore mixed designs with both full and summary scans in the same container
+- **H5ParcellatedMultiScan** is a container; get its scans with `[[`.
+- **H5ParcellatedScan** holds voxel data: `series(scan, mask_indices)` and
+  4D indexing.
+- **H5ParcellatedScanSummary** holds cluster averages: `as.matrix(scan)`.
+- `write_dataset()` writes one kind of scan per call;
+  `write_parcellated_experiment_h5()` writes any mix.
