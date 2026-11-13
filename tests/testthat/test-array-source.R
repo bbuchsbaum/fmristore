@@ -27,10 +27,15 @@ test_that("h5_array_source implements the reconstructible source contract", {
   expect_equal(
     fmridataset::source_read(
       source,
-      observations = c(5L, 2L, 2L),
+      observations = c(5L, 2L, 4L),
       features = c(6L, 1L, 3L)
     ),
-    matrix[c(5L, 2L, 2L), c(6L, 1L, 3L), drop = FALSE]
+    matrix[c(5L, 2L, 4L), c(6L, 1L, 3L), drop = FALSE]
+  )
+  # fmridataset rejects a selector that repeats an element as ambiguous.
+  expect_error(
+    fmridataset::source_read(source, observations = c(5L, 2L, 2L)),
+    class = "fmridataset_error_alignment"
   )
 
   rds <- tempfile(fileext = ".rds")

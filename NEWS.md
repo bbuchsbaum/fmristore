@@ -1,4 +1,8 @@
-# fmristore 0.1.0.9000 (Development)
+# fmristore 0.1.0.9001 (Development)
+
+* Calls fmridataset's renamed functions (`observation_blocks()`,
+  `validate_fds_frame_manifest()`, `fds_frame_manifest_digest()`) instead of
+  their deprecated aliases, and requires fmridataset 0.12.0.
 
 * Added metadata-only frame-store inspection, conservative rollback of proven
   uncommitted write artifacts, and an atomic streaming migration from the real

@@ -1,7 +1,7 @@
 Package: fmristore
 Type: Package
 Title: Efficient Storage of fMRI Data
-Version: 0.1.0.9000
+Version: 0.1.0.9001
 Authors@R: 
     person(given = "Bradley",
            family = "Buchsbaum",
@@ -24,7 +24,7 @@ RoxygenNote: 7.3.3
 Imports:
     assertthat,
     cli,
-    fmridataset,
+    fmridataset (>= 0.12.0),
     fmrilatent,
     hdf5r,
     lifecycle,

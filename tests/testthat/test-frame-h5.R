@@ -32,12 +32,19 @@
     assays = list(beta = beta, variance = beta / 10 + 0.1),
     observations = observations,
     features = features,
-    entities = list(subject = data.frame(subject_id = c("s01", "s02", "s03"))),
-    relations = list(observation_subject = observations$data$subject_id),
-    tables = list(contrasts = data.frame(name = c("A", "B"))),
+    entities = list(subject = fmridataset::entity_frame(
+      data.frame(subject_id = c("s01", "s02", "s03")),
+      key = "subject_id", entity_type = "subject"
+    )),
+    relations = list(
+      observation_subject = fmridataset::key_relation("subject_id", target = "subject")
+    ),
+    tables = list(contrasts = fmridataset::auxiliary_table(
+      data.frame(name = c("A", "B")), key = "name"
+    )),
     active_assay = "beta",
     metadata = list(label = "roundtrip"),
-    provenance = list(step = "fixture")
+    provenance = fmridataset::provenance_graph(fmridataset::provenance_record("fixture"))
   )
 }
 
@@ -58,19 +65,19 @@ test_that("FDS v1 HDF5 frames round trip without realizing arrays on open", {
   )
   expect_identical(fmridataset::observations(reopened), fmridataset::observations(frame))
   expect_identical(
-    fmridataset::block_components(fmridataset::obs_blocks(reopened)$embedding),
-    fmridataset::block_components(fmridataset::obs_blocks(frame)$embedding)
+    fmridataset::block_components(fmridataset::observation_blocks(reopened)$embedding),
+    fmridataset::block_components(fmridataset::observation_blocks(frame)$embedding)
   )
   expect_s3_class(fmridataset::assay(reopened, "beta")$source, "h5_array_source")
   expect_s3_class(
-    fmridataset::axis_block_data(fmridataset::obs_blocks(reopened)$embedding),
+    fmridataset::axis_block_data(fmridataset::observation_blocks(reopened)$embedding),
     "h5_array_source"
   )
   expect_equal(
     fmridataset::source_read(
-      fmridataset::axis_block_data(fmridataset::obs_blocks(reopened)$embedding)
+      fmridataset::axis_block_data(fmridataset::observation_blocks(reopened)$embedding)
     ),
-    fmridataset::axis_block_data(fmridataset::obs_blocks(frame)$embedding)
+    fmridataset::axis_block_data(fmridataset::observation_blocks(frame)$embedding)
   )
   expect_equal(fmridataset::collect_assay(reopened, "beta"), fmridataset::collect_assay(frame, "beta"))
   expect_equal(

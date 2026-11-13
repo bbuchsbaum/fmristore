@@ -67,9 +67,9 @@ test_that("frame shards append without rewriting prior HDF5 data", {
   )
   expect_equal(
     fmridataset::source_read(
-      fmridataset::axis_block_data(fmridataset::obs_blocks(reopened)$motion)
+      fmridataset::axis_block_data(fmridataset::observation_blocks(reopened)$motion)
     ),
-    fmridataset::axis_block_data(fmridataset::obs_blocks(expected)$motion)
+    fmridataset::axis_block_data(fmridataset::observation_blocks(expected)$motion)
   )
 })
 

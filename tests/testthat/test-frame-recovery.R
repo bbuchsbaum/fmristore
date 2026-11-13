@@ -23,7 +23,7 @@
     ),
     active_assay = "beta",
     metadata = list(label = "legacy-fixture"),
-    provenance = list(step = "fixture")
+    provenance = fmridataset::provenance_graph(fmridataset::provenance_record("fixture"))
   )
 }
 
@@ -116,9 +116,9 @@ test_that("provisional frames migrate lazily and atomically to FDS v1", {
   expect_equal(fmridataset::collect_assay(reopened, "beta"), fmridataset::collect_assay(frame, "beta"))
   expect_equal(
     fmridataset::source_read(
-      fmridataset::axis_block_data(fmridataset::obs_blocks(reopened)$motion)
+      fmridataset::axis_block_data(fmridataset::observation_blocks(reopened)$motion)
     ),
-    fmridataset::axis_block_data(fmridataset::obs_blocks(frame)$motion)
+    fmridataset::axis_block_data(fmridataset::observation_blocks(frame)$motion)
   )
 
   in_place <- tempfile(fileext = ".h5")

@@ -106,7 +106,7 @@
     .shard_id = shard_id,
     .file = file,
     .n_observation = as.integer(nrow(x)),
-    .semantic_digest = fmridataset::fds_manifest_digest(semantic),
+    .semantic_digest = fmridataset::fds_frame_manifest_digest(semantic),
     stringsAsFactors = FALSE,
     check.names = FALSE
   )
@@ -244,7 +244,7 @@ open_sharded_frame_h5 <- function(path) {
     if (!file.exists(shard_path)) stop("Committed frame shard is missing: ", entry$.file, call. = FALSE)
     frame <- open_frame_h5(shard_path)
     semantic <- fmridataset::fds_frame_manifest(frame)
-    if (!identical(fmridataset::fds_manifest_digest(semantic), entry$.semantic_digest) ||
+    if (!identical(fmridataset::fds_frame_manifest_digest(semantic), entry$.semantic_digest) ||
       !identical(.frame_shard_contract(frame), manifest$contract) ||
       nrow(frame) != entry$.n_observation) {
       stop("Committed frame shard does not match the root manifest: ", entry$.shard_id, call. = FALSE)
@@ -259,10 +259,10 @@ open_sharded_frame_h5 <- function(path) {
       shard_ids = shard_ids
     )
   }
-  for (name in names(fmridataset::obs_blocks(combined))) {
+  for (name in names(fmridataset::observation_blocks(combined))) {
     combined$observations$blocks[[name]]$data <- fmridataset::row_sharded_source(
       lapply(frames, function(frame) {
-        fmridataset::axis_block_data(fmridataset::obs_blocks(frame)[[name]])
+        fmridataset::axis_block_data(fmridataset::observation_blocks(frame)[[name]])
       }),
       shard_ids = shard_ids
     )

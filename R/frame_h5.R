@@ -271,7 +271,7 @@ write_frame_h5 <- function(
     schema_id = .frame_schema_id,
     schema_version = .frame_schema_version,
     object_type = "fmri_frame",
-    semantic_digest = fmridataset::fds_manifest_digest(semantic),
+    semantic_digest = fmridataset::fds_frame_manifest_digest(semantic),
     arrays = storage_arrays
   )
   .frame_rds_write(h5, "manifest/semantic_rds", semantic)
@@ -308,8 +308,8 @@ open_frame_h5 <- function(path) {
   }
   semantic <- .frame_rds_read(h5, "manifest/semantic_rds")
   storage <- .frame_rds_read(h5, "manifest/storage_rds")
-  fmridataset::validate_fds_manifest(semantic)
-  digest <- fmridataset::fds_manifest_digest(semantic)
+  fmridataset::validate_fds_frame_manifest(semantic)
+  digest <- fmridataset::fds_frame_manifest_digest(semantic)
   if (!identical(storage$semantic_digest, digest) ||
     !identical(attribute("fds_semantic_digest"), digest) ||
     !setequal(names(storage$arrays), names(semantic$arrays))) {
