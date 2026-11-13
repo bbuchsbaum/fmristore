@@ -201,3 +201,40 @@ test_that("linear_access(H5NeuroVec) rejects out-of-range indices", {
   expect_identical(linear_access(fx$h, numeric(0)), numeric(0))
   expect_equal(linear_access(fx$h, c(tot, 1, 7)), fx$arr[c(tot, 1, 7)])
 })
+
+test_that("H5NeuroVec() opens files written by to_nih5_vec() by default", {
+  dims <- c(3, 3, 2, 4)
+  set.seed(5)
+  arr <- array(rnorm(prod(dims)), dims)
+  dvec <- DenseNeuroVec(arr, NeuroSpace(dims))
+  f <- tempfile(fileext = ".h5")
+  on.exit(unlink(f), add = TRUE)
+  close(to_nih5_vec(dvec, f, data_type = "DOUBLE"))
+
+  h <- H5NeuroVec(f)
+  on.exit(close(h), add = TRUE, after = FALSE)
+  expect_equal(h@dataset_name, "data/elements")
+  expect_equal(h[1, 1, 1, 1], arr[1, 1, 1, 1])
+  expect_equal(h[, , , 3], arr[, , , 3])
+})
+
+test_that("H5NeuroVec() still reads a 4-D dataset stored directly at /data", {
+  dims <- c(3L, 2L, 2L, 3L)
+  arr <- array(as.numeric(seq_len(prod(dims))), dims)
+  f <- tempfile(fileext = ".h5")
+  on.exit(unlink(f), add = TRUE)
+
+  h5 <- H5File$new(f, mode = "w")
+  h5attr(h5, "rtype") <- "DenseNeuroVec"
+  h5$create_group("space")
+  h5[["space/dim"]] <- dims
+  h5[["space/origin"]] <- c(0, 0, 0)
+  h5[["space/trans"]] <- diag(4)
+  h5[["data"]] <- arr
+  h5$close_all()
+
+  h <- H5NeuroVec(f)
+  on.exit(close(h), add = TRUE, after = FALSE)
+  expect_equal(h@dataset_name, "data")
+  expect_equal(h[2, 1, 2, 3], arr[2, 1, 2, 3])
+})
