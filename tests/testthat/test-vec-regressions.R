@@ -58,7 +58,7 @@ test_that("write_vec/load_data round-trip keeps the LatentNeuroVec origin", {
   sp_obl <- NeuroSpace(c(4, 4, 3, 6), trans = tm)
   lv_obl <- suppressWarnings(LatentNeuroVec(
     as.matrix(fx$lv@basis), fx$loadings, sp_obl,
-    LogicalNeuroVol(as.array(fx$lv@mask), drop_dim(sp_obl))
+    LogicalNeuroVol(fx$lv@mask@.Data, drop_dim(sp_obl))
   ))
   f_obl <- write_regression_lv(lv_obl)
   on.exit(unlink(f_obl), add = TRUE)
@@ -101,7 +101,7 @@ test_that("load_data accepts a mask with an interior singleton dimension", {
   expect_true(validate_latent_file(f))
   lv2 <- load_regression_lv(f)
   expect_equal(dim(lv2), c(4, 1, 3, 5))
-  expect_equal(as.array(lv2@mask), mask_arr, ignore_attr = TRUE)
+  expect_equal(lv2@mask@.Data, mask_arr, ignore_attr = TRUE)
 })
 
 test_that("load_data reads a CSR-stored sparse basis", {
