@@ -449,6 +449,12 @@ write_parcellated_experiment_h5 <- function(filepath,
       summary_only <- FALSE
     }
     hdf5r::h5attr(scans_grp, "summary_only") <- as.logical(summary_only)
+    # HDF5 lists groups alphabetically (run-1, run-10, run-2), so record the
+    # order the caller gave; readers use it to return scans in that order.
+    if (length(runs_data) > 0) {
+      hdf5r::h5attr(scans_grp, "scan_order") <-
+        vapply(runs_data, function(run) run$scan_name, character(1))
+    }
 
     for (i in seq_along(runs_data)) {
       run <- runs_data[[i]]

@@ -541,6 +541,15 @@ H5ParcellatedMultiScan <- function(file,
 
   # Use names() to list only direct members of /scans
   available_scans <- tryCatch(names(scans_group), error = function(e) character(0))
+  # names() is alphabetical; restore the write order recorded by the writer.
+  # Files without /scans@scan_order keep the HDF5 listing order.
+  if (scans_group$attr_exists("scan_order")) {
+    written <- as.character(hdf5r::h5attr(scans_group, "scan_order"))
+    available_scans <- c(
+      written[written %in% available_scans],
+      setdiff(available_scans, written)
+    )
+  }
 
   if (is.null(scan_names)) {
     if (length(available_scans) == 0) {

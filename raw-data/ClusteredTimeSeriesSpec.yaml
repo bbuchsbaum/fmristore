@@ -148,6 +148,10 @@ root:
     path: "/scans"
     attributes:
       summary_only: bool
+      scan_order: str[]
+      # Optional. Scan group names in the order they were written. HDF5 lists
+      # groups alphabetically, so readers return scans in this order when it
+      # is present and fall back to the HDF5 listing order otherwise.
       # If summary_only=true, we do not store /clusters sub-groups for each scan
       # or the user may still store them but typically we skip them.
       # If summary_only=false, the file may contain the full voxel-level data, optionally plus summary data.
