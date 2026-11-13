@@ -220,6 +220,13 @@ test_that("concat falls back to NeuroVecSeq when masks are incompatible", {
   # fmrilatent densifies each input in the fallback sequence; the values
   # (not the latent representation) are what must be preserved.
   expect_equal(length(result@vecs), 2)
-  expect_equal(as.array(result@vecs[[1]]), as.array(lvec1), tolerance = 1e-12)
-  expect_equal(as.array(result@vecs[[2]]), as.array(lvec2), tolerance = 1e-12)
+  for (idx in 1:2) {
+    original <- list(lvec1, lvec2)[[idx]]
+    expect_identical(dim(result@vecs[[idx]]), dim(original))
+    expect_equal(
+      as.numeric(result@vecs[[idx]]@.Data),
+      as.numeric(as.array(original)),
+      tolerance = 1e-12
+    )
+  }
 })
