@@ -59,3 +59,11 @@ test_that("linear_access returns correct values and errors out-of-range", {
   expect_error(linear_access(lvec, 0))
   expect_error(linear_access(lvec, nels + 1))
 })
+
+test_that("map() exported by fmristore dispatches to fmrilatent's LatentNeuroVec method", {
+  lvec <- suppressWarnings(fmristore:::create_minimal_LatentNeuroVec(
+    space_dims = c(3L, 3L, 2L), n_time = 4L, n_comp = 2L
+  ))
+  expect_identical(fmristore::map, fmrilatent::map)
+  expect_s4_class(fmristore::map(lvec), "IndexLookupVol")
+})
