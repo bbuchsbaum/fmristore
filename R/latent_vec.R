@@ -149,6 +149,9 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
           list(quaternion = c(0, 0, 0), qoffset = c(0, 0, 0), qfac = 1)
         }
       )
+      # matrixToQuatern() returns only the rotation and qfac; the qform offset
+      # is the translation column of the transform.
+      q$qoffset <- tmat[1:3, 4]
       sp_spacing <- spacing(sp)
       if (length(sp_spacing) < 3) sp_spacing <- c(sp_spacing, rep(1, 3 - length(sp_spacing)))
       TR <- attr(sp, "TR") %||% 0.0
