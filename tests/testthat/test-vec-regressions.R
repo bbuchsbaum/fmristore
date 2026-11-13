@@ -160,6 +160,25 @@ test_that("H5NeuroVol [i, , k] honours k and [i] indexes linearly", {
   expect_error(h[length(arr) + 1], "out of range")
 })
 
+test_that("h5file() and write_dataset() work for H5NeuroVol", {
+  arr <- array(as.numeric(1:24), c(2, 3, 4))
+  vol <- NeuroVol(arr, NeuroSpace(c(2, 3, 4)))
+  src <- tempfile(fileext = ".h5")
+  out <- tempfile(fileext = ".h5")
+  on.exit(unlink(c(src, out)), add = TRUE)
+
+  hv <- as_h5(vol, src, data_type = "DOUBLE")
+  on.exit(close(hv), add = TRUE, after = FALSE)
+
+  expect_equal(normalizePath(fmristore::h5file(hv)), normalizePath(src))
+  expect_message(write_dataset(hv, out), "Copying H5NeuroVol")
+  expect_true(file.exists(out))
+
+  copy <- H5NeuroVol(out)
+  on.exit(close(copy), add = TRUE, after = FALSE)
+  expect_equal(copy[1:2, 1:3, 1:4], arr)
+})
+
 # --- H5NeuroVec ---
 
 make_regression_h5vec <- function(dims = c(4, 4, 3, 5)) {
@@ -237,4 +256,26 @@ test_that("H5NeuroVec() still reads a 4-D dataset stored directly at /data", {
   on.exit(close(h), add = TRUE, after = FALSE)
   expect_equal(h@dataset_name, "data")
   expect_equal(h[2, 1, 2, 3], arr[2, 1, 2, 3])
+})
+
+test_that("h5file() and write_dataset() work for H5NeuroVec", {
+  dims <- c(3, 3, 2, 4)
+  set.seed(6)
+  arr <- array(rnorm(prod(dims)), dims)
+  dvec <- DenseNeuroVec(arr, NeuroSpace(dims))
+  src <- tempfile(fileext = ".h5")
+  out <- tempfile(fileext = ".h5")
+  on.exit(unlink(c(src, out)), add = TRUE)
+  close(to_nih5_vec(dvec, src, data_type = "DOUBLE"))
+
+  h <- H5NeuroVec(src)
+  on.exit(close(h), add = TRUE, after = FALSE)
+
+  expect_equal(normalizePath(fmristore::h5file(h)), normalizePath(src))
+  expect_message(write_dataset(h, out), "Copying H5NeuroVec")
+  expect_true(file.exists(out))
+
+  copy <- H5NeuroVec(out)
+  on.exit(close(copy), add = TRUE, after = FALSE)
+  expect_equal(copy[, , , ], arr)
 })

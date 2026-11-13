@@ -494,6 +494,15 @@ setMethod(
   }
 )
 
+#' @rdname h5file-methods
+#' @export
+setMethod("h5file", "H5NeuroVol", function(x) {
+  if (is.null(x@h5obj)) {
+    stop("H5File object is NULL")
+  }
+  x@h5obj$filename
+})
+
 #' Close the HDF5 file associated with an H5NeuroVol
 #'
 #' This method manually closes the HDF5 file handle stored within the
