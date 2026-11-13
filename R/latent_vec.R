@@ -602,6 +602,7 @@ setMethod(
     if (!scans_grp_exists) stop("Mandatory group '/scans' not found.")
     scans_grp <- h5obj[["/scans"]]
     available_scans <- scans_grp$ls()$name
+    close_h5_safely(scans_grp)
     if (length(available_scans) == 0) stop("No scans found under '/scans'.")
 
     target_scan_name <- scan_name

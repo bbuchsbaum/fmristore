@@ -114,3 +114,19 @@ test_that("as_h5() on a LatentNeuroVec returns an open handle the caller owns", 
   expect_true(reopened$is_valid)
   reopened$close_all()
 })
+
+test_that("load_data() on a LatentNeuroVec file leaves the file closed", {
+  lvec <- suppressWarnings(fmristore:::create_minimal_LatentNeuroVec(
+    space_dims = c(3L, 3L, 2L), n_time = 4L, n_comp = 2L
+  ))
+  base <- tempfile()
+  write_vec(lvec, base)
+  path <- paste0(base, ".lv.h5")
+  on.exit(unlink(path), add = TRUE)
+  loaded <- suppressMessages(load_data(fmristore:::LatentNeuroVecSource(path)))
+  expect_s4_class(loaded, "LatentNeuroVec")
+  # Truncation fails while any handle on the file is still open.
+  reopened <- hdf5r::H5File$new(path, mode = "w")
+  expect_true(reopened$is_valid)
+  reopened$close_all()
+})
