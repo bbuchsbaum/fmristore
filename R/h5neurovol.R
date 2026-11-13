@@ -494,6 +494,59 @@ setMethod(
   }
 )
 
+#' Whole-volume indexing for H5NeuroVol
+#'
+#' @description
+#' Handles \code{h5vol[]}, \code{h5vol[, , ]} and \code{h5vol[, , k]}. As for
+#' \code{DenseNeuroVol}, the result is an array spanning the full first two
+#' axes and, unless \code{k} is given, the full third axis.
+#'
+#' @param x An \code{H5NeuroVol} instance
+#' @param i Missing
+#' @param j Missing
+#' @param drop Logical: whether to drop dimensions of size 1. Default \code{TRUE}.
+#' @param ... An optional \code{k} index, as in \code{h5vol[, , k]}
+#'
+#' @return An array read from the volume
+#'
+#' @export
+setMethod(
+  f = "[",
+  signature = signature(x = "H5NeuroVol", i = "missing", j = "missing"),
+  definition = function(x, i, j, ..., drop = TRUE) {
+    dimx <- dim(x)
+    k <- if (...length() >= 1L && !missing(..1)) ..1 else seq_len(dimx[3])
+    x[seq_len(dimx[1]), seq_len(dimx[2]), k, drop = drop]
+  }
+)
+
+#' Read an H5-backed image into memory
+#'
+#' @description
+#' \code{as.array()} reads the whole HDF5 dataset into an R array.
+#' \code{as(x, "DenseNeuroVol")} and \code{as(x, "DenseNeuroVec")} return the
+#' in-memory neuroim2 object with the same \code{NeuroSpace}; the HDF5 file is
+#' left open and can be closed independently.
+#'
+#' @param x An \code{H5NeuroVol} or \code{H5NeuroVec}.
+#' @param ... Unused.
+#' @return An array, or a \code{DenseNeuroVol}/\code{DenseNeuroVec}.
+#' @name materialize-H5
+#' @rdname materialize-H5
+#' @export
+as.array.H5NeuroVol <- function(x, ...) {
+  d <- dim(x)
+  x[seq_len(d[1]), seq_len(d[2]), seq_len(d[3]), drop = FALSE]
+}
+
+#' @rdname materialize-H5
+#' @name coerce,H5NeuroVol,DenseNeuroVol-method
+setAs(
+  from = "H5NeuroVol",
+  to = "DenseNeuroVol",
+  def = function(from) neuroim2::DenseNeuroVol(as.array(from), space(from))
+)
+
 #' @rdname h5file-methods
 #' @export
 setMethod("h5file", "H5NeuroVol", function(x) {

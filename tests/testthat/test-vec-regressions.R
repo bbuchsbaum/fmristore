@@ -295,3 +295,25 @@ test_that("read_dataset() detects and reads LatentNeuroVec files", {
     expect_equal(as.array(lv), as.array(fx$lv), tolerance = 1e-5, ignore_attr = TRUE)
   }
 })
+
+test_that("H5NeuroVol and H5NeuroVec materialize like in-memory arrays", {
+  vol <- DenseNeuroVol(array(as.double(1:24), c(2, 3, 4)), NeuroSpace(c(2, 3, 4), origin = c(1, 2, 3)))
+  h5vol <- as_h5(vol, file = tempfile(fileext = ".h5"))
+  on.exit(close(h5vol), add = TRUE)
+  expect_equal(h5vol[, , ], as.array(vol), ignore_attr = TRUE)
+  expect_identical(dim(h5vol[, , ]), c(2L, 3L, 4L))
+  expect_identical(dim(h5vol[, , 2]), c(2L, 3L))
+  expect_equal(as.array(h5vol), as.array(vol), ignore_attr = TRUE)
+  dense_vol <- as(h5vol, "DenseNeuroVol")
+  expect_s4_class(dense_vol, "DenseNeuroVol")
+  expect_equal(as.array(dense_vol), as.array(vol), ignore_attr = TRUE)
+  expect_equal(origin(space(dense_vol)), origin(space(vol)))
+
+  vec <- DenseNeuroVec(array(as.double(1:48), c(2, 3, 4, 2)), NeuroSpace(c(2, 3, 4, 2)))
+  h5vec <- as_h5(vec, file = tempfile(fileext = ".h5"))
+  on.exit(close(h5vec), add = TRUE)
+  expect_equal(as.array(h5vec), as.array(vec), ignore_attr = TRUE)
+  dense_vec <- as(h5vec, "DenseNeuroVec")
+  expect_s4_class(dense_vec, "DenseNeuroVec")
+  expect_equal(as.array(dense_vec), as.array(vec), ignore_attr = TRUE)
+})

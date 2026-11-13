@@ -569,6 +569,21 @@ setMethod(
   }
 )
 
+#' @rdname materialize-H5
+#' @export
+as.array.H5NeuroVec <- function(x, ...) {
+  d <- dim(x)
+  x[seq_len(d[1]), seq_len(d[2]), seq_len(d[3]), seq_len(d[4]), drop = FALSE]
+}
+
+#' @rdname materialize-H5
+#' @name coerce,H5NeuroVec,DenseNeuroVec-method
+setAs(
+  from = "H5NeuroVec",
+  to = "DenseNeuroVec",
+  def = function(from) neuroim2::DenseNeuroVec(as.array(from), space(from))
+)
+
 #' @rdname h5file-methods
 #' @export
 setMethod("h5file", "H5NeuroVec", function(x) {
