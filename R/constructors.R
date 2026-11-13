@@ -147,7 +147,7 @@ H5ParcellatedScan <- function(file, scan_name,
 
     if (is.null(determined_n_time)) {
       # Close the file handle we opened if we couldn't determine n_time
-      if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+      if (fh$owns) close_h5_safely(h5obj)
       stop(sprintf("[H5ParcellatedScan] Could not determine 'n_time' for scan '%s'. Provide it explicitly or ensure it exists in HDF5 attributes/metadata.", scan_name))
     }
   }
@@ -155,7 +155,7 @@ H5ParcellatedScan <- function(file, scan_name,
   # --- 4. Final n_time validation ---
   if (!is.numeric(determined_n_time) || length(determined_n_time) != 1 || determined_n_time <= 0 || floor(determined_n_time) != determined_n_time) {
     # Close the file handle before stopping
-    if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+    if (fh$owns) close_h5_safely(h5obj)
     stop(sprintf("[H5ParcellatedScan] Determined 'n_time' (%s) must be a single positive integer.", as.character(determined_n_time)))
   }
   final_n_time <- as.integer(determined_n_time)
@@ -178,7 +178,7 @@ H5ParcellatedScan <- function(file, scan_name,
     },
     error = function(e) {
       # If new() fails, close the handle we opened.
-      if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+      if (fh$owns) close_h5_safely(h5obj)
       stop(sprintf("[H5ParcellatedScan] Failed to create object: %s", e$message))
     }
   )
@@ -283,7 +283,7 @@ H5ParcellatedScanSummary <- function(file, scan_name,
       assert_h5_path(h5obj, dset_path, "summary dataset")
     },
     error = function(e) {
-      if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+      if (fh$owns) close_h5_safely(h5obj)
       stop(paste0("[H5ParcellatedScanSummary] ", e$message))
     }
   )
@@ -307,14 +307,14 @@ H5ParcellatedScanSummary <- function(file, scan_name,
       })
     },
     error = function(e) {
-      if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+      if (fh$owns) close_h5_safely(h5obj)
       stop(sprintf("[H5ParcellatedScanSummary] Error processing summary dataset '%s': %s", dset_path, e$message))
     }
   )
 
   dataset_dims <- info_res$dims
   if (length(dataset_dims) != 2) {
-    if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+    if (fh$owns) close_h5_safely(h5obj)
     stop(sprintf("Summary dataset '%s' does not have 2 dimensions (found %d).", dset_path, length(dataset_dims)))
   }
   final_n_time <- dataset_dims[1]
@@ -370,7 +370,7 @@ H5ParcellatedScanSummary <- function(file, scan_name,
       )
     },
     error = function(e) {
-      if (fh$owns) try(h5obj$close_all(), silent = TRUE)
+      if (fh$owns) close_h5_safely(h5obj)
       stop(sprintf("[H5ParcellatedScanSummary] Failed to create H5ParcellatedScanSummary object: %s", e$message))
     }
   )

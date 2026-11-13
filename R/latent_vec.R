@@ -104,6 +104,7 @@ setMethod(
       compression = compression,
       nbit = nbit
     )
+    close_h5_safely(h5obj)
 
     invisible(NULL)
   }
@@ -124,8 +125,9 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
 
   fh <- open_h5(file_name, mode = "w")
   h5obj <- fh$h5
-  defer(if (fh$owns) h5obj$close_all(), envir = parent.frame())
 
+  # On success the open handle is returned and the caller owns it. On failure
+  # the handle is closed and the partial file removed before re-raising.
   tryCatch(
     {
       verbose <- isTRUE(getOption("fmristore.verbose"))
@@ -201,8 +203,12 @@ to_h5_latentvec <- function(vec, file_name = NULL, data_type = "FLOAT",
       return(h5obj)
     },
     error = function(e) {
-      warning(paste0("[to_h5_latentvec] ERROR during HDF5 write: ", e$message))
-      return(NULL)
+      close_h5_safely(h5obj)
+      if (file.exists(file_name)) unlink(file_name)
+      stop("[to_h5_latentvec] HDF5 write to '", file_name, "' failed: ",
+        conditionMessage(e),
+        call. = FALSE
+      )
     }
   )
 }
@@ -401,7 +407,8 @@ setMethod(
   definition = function(x, scan_name = NULL) {
     fh <- open_h5(x@file_name, mode = "r")
     h5obj <- fh$h5
-    defer(if (fh$owns) h5obj$close_all(), envir = parent.frame())
+    # The result is fully in memory, so the file is closed when this returns.
+    on.exit(if (fh$owns) close_h5_safely(h5obj), add = TRUE)
 
     # Check Version Attribute
     version_attr <- NULL
@@ -656,11 +663,11 @@ validate_latent_file <- function(file_path) {
   error_message <- NULL
   fh <- NULL
 
+  on.exit(if (!is.null(fh) && fh$owns) close_h5_safely(fh$h5), add = TRUE)
   tryCatch(
     {
       fh <- open_h5(file_path, mode = "r")
       h5obj <- fh$h5
-      defer(if (!is.null(fh) && fh$owns) try(h5obj$close_all(), silent = TRUE), envir = parent.frame())
 
       # Check for mandatory groups/datasets
       required_groups <- c("header", "basis", "scans")

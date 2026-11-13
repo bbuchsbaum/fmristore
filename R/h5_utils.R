@@ -449,6 +449,10 @@ h5_write <- function(h5, path, data,
     gzip_level = compression
   )
 
+  # Close the dataset here: no caller keeps it, and a leaked handle keeps the
+  # file open after the file handle itself is closed.
+  on.exit(close_h5_safely(dset), add = TRUE)
+
   if (length(write_args) == 0L) {
     dset$write(NULL, value = data) # full write
   } else {
@@ -457,7 +461,7 @@ h5_write <- function(h5, path, data,
   }
 
   if (verbose) message("h5_write: wrote ", path)
-  invisible(dset) # leave open; caller may close
+  invisible(path)
 }
 
 # Internal helper to guess the HDF5 type from an R vector

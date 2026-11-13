@@ -56,7 +56,7 @@ h5_array_source <- function(
 
 .h5_source_metadata <- function(path, dataset) {
   h5 <- hdf5r::H5File$new(path, mode = "r")
-  on.exit(h5$close_all(), add = TRUE)
+  on.exit(close_h5_safely(h5), add = TRUE)
   if (!h5$exists(dataset)) {
     stop("HDF5 dataset does not exist: ", dataset, call. = FALSE)
   }
@@ -241,11 +241,18 @@ source_fingerprint.h5_array_source <- function(x, ...) x$fingerprint
 #' @export
 source_open.h5_array_source <- function(x, ...) {
   h5 <- hdf5r::H5File$new(x$uri, mode = "r")
-  if (!h5$exists(x$dataset)) {
-    h5$close_all()
-    stop("HDF5 dataset does not exist: ", x$dataset, call. = FALSE)
-  }
-  dset <- h5[[x$dataset]]
+  dset <- tryCatch(
+    {
+      if (!h5$exists(x$dataset)) {
+        stop("HDF5 dataset does not exist: ", x$dataset, call. = FALSE)
+      }
+      h5[[x$dataset]]
+    },
+    error = function(e) {
+      close_h5_safely(h5)
+      stop(e)
+    }
+  )
   structure(
     list(source = x, file = h5, dataset = dset),
     class = c("h5_array_source_handle", "array_source_handle")

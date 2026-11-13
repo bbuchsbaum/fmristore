@@ -99,7 +99,9 @@
 
 .frame_rds_write <- function(h5, path, value) {
   raw <- as.integer(serialize(value, connection = NULL, version = 3L))
-  h5$create_dataset(path, robj = raw)
+  dataset <- h5$create_dataset(path, robj = raw)
+  close_h5_safely(dataset)
+  invisible(path)
 }
 
 .frame_rds_read <- function(h5, path) {

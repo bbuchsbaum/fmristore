@@ -367,7 +367,7 @@ H5ParcellatedMultiScan <- function(file,
     {
       if (fh$owns && !keep_handle_open && h5obj$is_valid) {
         message("[H5ParcellatedMultiScan] Closing HDF5 file handle opened by constructor.")
-        try(h5obj$close_all(), silent = TRUE)
+        close_h5_safely(h5obj)
       }
     },
     envir = parent.frame()
@@ -852,12 +852,12 @@ H5ParcellatedMultiScan <- function(file,
         h5_handle_to_close <- e@runs[[1]]@obj
       }
       if (!is.null(h5_handle_to_close) && inherits(h5_handle_to_close, "H5File") && h5_handle_to_close$is_valid) {
-        try(h5_handle_to_close$close_all(), silent = TRUE)
+        close_h5_safely(h5_handle_to_close)
       }
     }, onexit = TRUE)
   } else if (opened_here && !keep_handle_open) {
     # Close handle immediately if opened here and not keeping open
-    try(h5obj$close_all(), silent = TRUE)
+    close_h5_safely(h5obj)
   } # else: handle was passed in open, user manages its lifecycle
   # --- End Finalizer ---
 

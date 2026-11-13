@@ -737,7 +737,7 @@ make_run_full <- function(file_source, scan_name,
   # --- 1. Handle file source ---
   fh <- open_h5(file_source, mode = "r")
   # Ensure file is closed if this function opened it.
-  defer(if (fh$owns) fh$h5$close_all(), envir = parent.frame())
+  defer(if (fh$owns) close_h5_safely(fh$h5), envir = parent.frame())
   h5obj <- fh$h5
 
   # --- 2. Validate inputs ---
@@ -1088,7 +1088,7 @@ make_run_summary <- function(file_source, scan_name,
   # --- 1. Handle file source ---
   fh <- open_h5(file_source, mode = "r")
   # Ensure file is closed if this function opened it.
-  defer(if (fh$owns) fh$h5$close_all(), envir = parent.frame())
+  defer(if (fh$owns) close_h5_safely(fh$h5), envir = parent.frame())
   h5obj <- fh$h5
 
   # --- 2. Validate common inputs ---
