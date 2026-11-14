@@ -28,17 +28,20 @@ library(neuroim2)
 test_that("opening and closing a path does not invalidate other objects on it", {
   path <- tempfile(fileext = ".h5")
   on.exit(unlink(path), add = TRUE)
-  vec <- DenseNeuroVec(array(seq_len(4 * 4 * 3 * 2), c(4, 4, 3, 2)), NeuroSpace(c(4, 4, 3, 2)))
-  live <- as_h5(vec, file = path)
+  dims <- c(4, 4, 3)
+  vec <- DenseNeuroVec(array(seq_len(prod(dims) * 2), c(dims, 2)), NeuroSpace(c(dims, 2)))
+  mask <- LogicalNeuroVol(array(TRUE, dims), NeuroSpace(dims))
+  write_labeled_vec(vec, mask, c("a", "b"), file = path)$close_all()
+  live <- read_labeled_vec(path)
   on.exit(close(live), add = TRUE, after = FALSE)
 
   fh <- open_h5(path, mode = "r")
   close_h5_safely(fh$h5)
   expect_true(live@obj$is_valid)
 
-  expect_identical(detect_h5_type(path), "H5NeuroVec")
+  expect_identical(detect_h5_type(path), "LabeledVolumeSet")
   expect_true(live@obj$is_valid)
-  expect_equal(live[1, 1, 1, 2], vec[1, 1, 1, 2])
+  expect_equal(live[["b"]][1, 1, 1], vec[1, 1, 1, 2])
 })
 
 test_that("closing one parcellated scan leaves another on the same file usable", {
@@ -93,40 +96,3 @@ test_that("an open HDF5 frame source session survives unrelated reads of its fil
   expect_equal(fmridataset::source_read(session, 2L, 3L), beta[2, 3, drop = FALSE])
 })
 
-test_that("LatentNeuroVec write failures raise and remove the partial file", {
-  lvec <- fmristore:::create_minimal_LatentNeuroVec(space_dims = c(3L, 3L, 2L), n_time = 4L, n_comp = 2L)
-  lvec@offset <- rnorm(sum(lvec@mask) + 5) # wrong length; bypasses validity
-  base <- tempfile()
-  expect_error(write_vec(lvec, base), "to_h5_latentvec")
-  expect_false(file.exists(paste0(base, ".lv.h5")))
-})
-
-test_that("as_h5() on a LatentNeuroVec returns an open handle the caller owns", {
-  lvec <- fmristore:::create_minimal_LatentNeuroVec(space_dims = c(3L, 3L, 2L), n_time = 4L, n_comp = 2L)
-  path <- tempfile(fileext = ".lv.h5")
-  on.exit(unlink(path), add = TRUE)
-  h5 <- as_h5(lvec, file = path)
-  expect_true(h5$is_valid)
-  close_h5_safely(h5)
-  expect_true(validate_latent_file(path))
-  # validate_latent_file() must not leave the file open
-  reopened <- hdf5r::H5File$new(path, mode = "w")
-  expect_true(reopened$is_valid)
-  reopened$close_all()
-})
-
-test_that("load_data() on a LatentNeuroVec file leaves the file closed", {
-  lvec <- suppressWarnings(fmristore:::create_minimal_LatentNeuroVec(
-    space_dims = c(3L, 3L, 2L), n_time = 4L, n_comp = 2L
-  ))
-  base <- tempfile()
-  write_vec(lvec, base)
-  path <- paste0(base, ".lv.h5")
-  on.exit(unlink(path), add = TRUE)
-  loaded <- suppressMessages(load_data(fmristore:::LatentNeuroVecSource(path)))
-  expect_s4_class(loaded, "LatentNeuroVec")
-  # Truncation fails while any handle on the file is still open.
-  reopened <- hdf5r::H5File$new(path, mode = "w")
-  expect_true(reopened$is_valid)
-  reopened$close_all()
-})

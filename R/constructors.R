@@ -92,7 +92,7 @@ H5ParcellatedScan <- function(file, scan_name,
   determined_n_time <- n_time # Store original or NULL
 
   # --- 3. Determine n_time (if NULL) ---
-  # This logic is copied/adapted from make_run_full
+  # Determine n_time from the argument, HDF5 attributes, or scan metadata
   if (is.null(determined_n_time)) {
     scan_group_path <- sprintf(H5_PATHS$SCAN_GROUP_TPL, scan_name)
     scan_group <- NULL

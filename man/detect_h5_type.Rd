@@ -11,14 +11,12 @@ detect_h5_type(h5obj)
 }
 \value{
 Character string indicating the type, one of:
-  - "H5NeuroVol" - 3D brain volume
-  - "H5NeuroVec" - 4D brain time series
-  - "H5NeuroVecSeq" - Sequence of 4D scans
   - "H5ParcellatedMultiScan" - Multi-run parcellated experiment
   - "H5ParcellatedScan" - Single parcellated run (full data)
   - "H5ParcellatedScanSummary" - Single parcellated run (summary)
-  - "LatentNeuroVec" - Latent representation
   - "LabeledVolumeSet" - Labeled brain regions
+  - "H5NeuroVol", "H5NeuroVec", "H5NeuroVecSeq", "LatentNeuroVec" - legacy
+    layouts whose readers were removed in fmristore 0.2.0
   - "unknown" - Type could not be determined
 }
 \description{

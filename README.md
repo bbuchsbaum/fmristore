@@ -12,15 +12,22 @@
 
 > **Note**: The badge URLs above already use the `bbuchsbaum` GitHub username; update them only if you publish from a different account.
 
-An R package for efficient storage and retrieval of neuroimaging data using HDF5 format with specialized data structures for fMRI analysis.
+`fmristore` stores `fmridataset::fmri_frame` objects in HDF5. It writes
+single-file snapshots atomically, appends runs to sharded stores without
+rewriting earlier data, recovers from interrupted writes, and exposes HDF5
+datasets as lazy `fmridataset` array sources.
 
 ## Features
 
-- **Efficient Storage**: HDF5-based storage for large neuroimaging datasets
-- **Memory-Optimized**: Latent vector representations for reduced memory footprint
-- **High Performance**: Optimized data access patterns for fMRI analysis workflows
-- **Rich Data Structures**: Support for clustered, dense, and sparse neuroimaging vectors
-- **Comprehensive Testing**: Extensive test suite ensuring reliability and correctness
+- **Atomic writes**: a frame becomes visible under its final name only once it is complete.
+- **Lazy reads**: opening a frame reads its manifests; arrays are read when selected.
+- **Append-only stores**: each appended shard is an immutable file.
+- **Recovery and migration**: `recover_frame_store()` and `migrate_frame_h5()`.
+- **Read planning**: `h5_read_plan()` estimates how much a selection reads before reading it.
+
+The older classes (`H5ParcellatedMultiScan`, `H5ParcellatedScan`,
+`H5ParcellatedScanSummary`, `LabeledVolumeSet`) are frozen and will be removed
+once the packages that still use them move to frames.
 
 ## Installation
 
@@ -57,15 +64,19 @@ HDF5 libraries are automatically handled during R package installation.
 
 ```r
 library(fmristore)
+library(fmridataset)
 
-# Load neuroimaging data
-# Example workflow here...
+# `frame` is an fmri_frame built with fmridataset
+write_frame_h5(frame, "frame.h5")
+reopened <- open_frame_h5("frame.h5") # arrays stay on disk until read
 ```
+
+See `vignette("fmristore")` for a worked example.
 
 ## Documentation
 
 - [Package documentation](https://bbuchsbaum.github.io/fmristore/)
-- [Getting started vignette](vignettes/README.md)
+- [Getting started vignette](https://bbuchsbaum.github.io/fmristore/articles/fmristore.html)
 - [API reference](https://bbuchsbaum.github.io/fmristore/reference/)
 
 ## Development
@@ -161,10 +172,6 @@ citation("fmristore")
 
 - [Issue tracker](https://github.com/bbuchsbaum/fmristore/issues) for bug reports and feature requests
 - [Discussions](https://github.com/bbuchsbaum/fmristore/discussions) for questions and community support 
-
-## Albers theme
-This package uses the albersdown theme. Vignettes are styled with `vignettes/albers.css` and a local `vignettes/albers.js`; the palette family is provided via `params$family` (default 'red'). The pkgdown site uses `template: { package: albersdown }`.
-
 
 ## Albers theme
 This package uses the albersdown theme. Vignettes are styled with `vignettes/albers.css` and a local `vignettes/albers.js`; the palette family is provided via `params$family` (default 'red'). The pkgdown site uses `template: { package: albersdown }`.

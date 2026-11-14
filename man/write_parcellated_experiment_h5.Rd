@@ -2,21 +2,9 @@
 % Please edit documentation in R/io_write_h5.R
 \name{write_parcellated_experiment_h5}
 \alias{write_parcellated_experiment_h5}
-\alias{write_clustered_experiment_h5}
 \title{Write Parcellated Experiment Data to HDF5}
 \usage{
 write_parcellated_experiment_h5(
-  filepath,
-  mask,
-  clusters,
-  runs_data,
-  cluster_metadata = NULL,
-  overwrite = FALSE,
-  compress = TRUE,
-  verbose = TRUE
-)
-
-write_clustered_experiment_h5(
   filepath,
   mask,
   clusters,

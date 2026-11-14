@@ -29,6 +29,6 @@ Generic function for reading neuroimaging datasets from HDF5 format
 obj <- read_dataset("data.h5")
 
 # Specify type explicitly
-vec <- read_dataset("data.h5", type = "H5NeuroVec")
+exp <- read_dataset("data.h5", type = "H5ParcellatedMultiScan")
 }
 }

@@ -4,7 +4,8 @@
 \alias{[[,H5ParcellatedMultiScan,character-method}
 \alias{[[,H5ParcellatedMultiScan,numeric-method}
 \alias{names,H5ParcellatedMultiScan-method}
-\title{Access the runs of an H5ParcellatedMultiScan}
+\title{Accessor Methods for H5ParcellatedMultiScan
+Access the runs of an H5ParcellatedMultiScan}
 \usage{
 \S4method{[[}{H5ParcellatedMultiScan,character}(x, i, j, ...)
 

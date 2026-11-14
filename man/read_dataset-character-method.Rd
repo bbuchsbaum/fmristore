@@ -16,9 +16,6 @@ If NULL (default), the type is auto-detected.}
 }
 \value{
 An fmristore object of the appropriate type:
-  - \code{H5NeuroVol} for 3D volumes
-  - \code{H5NeuroVec} for 4D time series
-  - \code{H5NeuroVecSeq} for sequences of 4D data
   - \code{H5ParcellatedMultiScan} for parcellated experiments
   - \code{LatentNeuroVec} for latent representations
   - \code{LabeledVolumeSet} for labeled regions

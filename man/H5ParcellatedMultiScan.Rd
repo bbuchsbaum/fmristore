@@ -42,7 +42,7 @@ attribute to choose a default: \code{"require"} if \code{summary_only=TRUE},
 \code{"ignore"} if \code{summary_only=FALSE}, otherwise \code{"prefer"}.
 Explicit values can be "require" (only load summary runs, error if missing),
 "prefer" (load summary if available, else full), or "ignore" (load full runs only).
-This influences whether \code{make_run_summary} or \code{make_run_full} is called.
+This influences whether each scan is opened as a summary or a full scan.
 *Note: This parameter requires careful implementation based on HDF5 content checks.*}
 
 \item{keep_handle_open}{(Logical) Only relevant if \code{file_source} is a path.

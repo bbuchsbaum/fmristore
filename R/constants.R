@@ -14,7 +14,6 @@
 H5_PATHS <- list(
   # Top-level groups
   SCANS_GROUP = "/scans",
-  BASIS_GROUP = "/basis",
   CLUSTER_MAP = "/cluster_map",
   MASK = "/mask",
   HEADER_GROUP = "/header",
@@ -32,11 +31,6 @@ H5_PATHS <- list(
   CLUSTER_DSET_TPL = "/scans/%s/clusters/cluster_%d",
   SUMMARY_DSET_TPL = "/scans/%s/clusters_summary/%s",
   N_TIME_ATTR = "n_time",
-
-  # Basis and latent structure
-  BASIS_MATRIX = "/basis/basis_matrix",
-  BASIS_OFFSET = "/basis/offset",
-  BASIS_LABELS = "/basis/labels",
 
   # Metadata paths
   CLUSTER_METADATA = "/cluster_metadata",

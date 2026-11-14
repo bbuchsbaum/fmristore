@@ -493,7 +493,7 @@ safe_h5_close <- function(h5) close_h5_safely(h5)
 #' Build a NIfTI-like header field list for HDF5 storage
 #'
 #' Creates the standard set of NIfTI header fields used by multiple writers
-#' (LatentNeuroVec, LabeledVolumeSet, etc.). Callers can override individual
+#' (LabeledVolumeSet, parcellated experiments). Callers can override individual
 #' fields via the \code{overrides} argument.
 #'
 #' @param dims Integer vector \code{c(X, Y, Z, T)}.

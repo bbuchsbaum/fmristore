@@ -209,17 +209,6 @@ setGeneric("cluster_metadata", function(x) standardGeneric("cluster_metadata"))
 #' @export
 setGeneric("h5file", function(x) standardGeneric("h5file"))
 
-#' Write Dataset to HDF5
-#' 
-#' Generic function for writing neuroimaging datasets to HDF5 format
-#' 
-#' @param x The object to write (NeuroVec, list of NeuroVecs, etc.)
-#' @param ... Additional arguments passed to methods
-#' @return Invisible NULL or file path, depending on the method
-#' @export
-#' @rdname write_dataset
-setGeneric("write_dataset", function(x, ...) standardGeneric("write_dataset"))
-
 #' Read Dataset from HDF5
 #'
 #' Generic function for reading neuroimaging datasets from HDF5 format
@@ -236,138 +225,18 @@ setGeneric("write_dataset", function(x, ...) standardGeneric("write_dataset"))
 #' obj <- read_dataset("data.h5")
 #'
 #' # Specify type explicitly
-#' vec <- read_dataset("data.h5", type = "H5NeuroVec")
+#' exp <- read_dataset("data.h5", type = "H5ParcellatedMultiScan")
 #' }
 #' @rdname read_dataset
 setGeneric("read_dataset", function(x, ...) standardGeneric("read_dataset"))
 
-#' @keywords internal
-setGeneric("has_dataset", function(x, name) standardGeneric("has_dataset"))
-
-
-# --- Generics for LatentNeuroVec Accessors ---
-
-#' Get the basis matrix (temporal components)
-#' @param x An object, likely a LatentNeuroVec or similar
-#' @param ... Additional arguments
-#' @return The basis matrix (typically time x components)
-#'
-#' @examples
-#' \dontrun{
-#' # For LatentNeuroVec:
-#' if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'   lnv <- NULL
-#'   tryCatch({
-#'     lnv <- fmristore:::create_minimal_LatentNeuroVec(
-#'       space_dims = c(4L, 4L, 2L),
-#'       n_time = 10L,
-#'       n_comp = 3L
-#'     )
-#'     b_matrix <- basis(lnv)
-#'     print(dim(b_matrix)) # Should be n_time x n_comp (e.g., 10x3)
-#'   }, error = function(e) {
-#'     message("basis example for LatentNeuroVec failed: ", e$message)
-#'   })
-#' } else {
-#'   message("Skipping basis example for LatentNeuroVec: helper not available.")
-#' }
-#' }
-#'
-#' @export
-#' @rdname basis-methods
-setGeneric("basis", function(x, ...) standardGeneric("basis"))
-
-#' Get the loadings matrix (spatial components)
-#' @param x An object, likely a LatentNeuroVec or similar
-#' @param ... Additional arguments
-#' @return The loadings matrix (typically voxels x components)
-#'
-#' @examples
-#' \dontrun{
-#' # For LatentNeuroVec:
-#' if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'   lnv <- NULL
-#'   tryCatch({
-#'     # Helper creates a mask, n_mask_voxels determined internally or by arg
-#'     lnv <- fmristore:::create_minimal_LatentNeuroVec(
-#'       space_dims = c(4L, 4L, 2L),
-#'       n_time = 10L,
-#'       n_comp = 3L
-#'     )
-#'     l_matrix <- loadings(lnv)
-#'     # Dimensions should be n_voxels_in_mask x n_comp
-#'     print(dim(l_matrix))
-#'   }, error = function(e) {
-#'     message("loadings example for LatentNeuroVec failed: ", e$message)
-#'   })
-#' } else {
-#'   message("Skipping loadings example for LatentNeuroVec: helper not available.")
-#' }
-#' }
-#'
-#' @export
-#' @rdname loadings-methods
-setGeneric("loadings", function(x, ...) standardGeneric("loadings"))
-
-#' Get the offset vector
-#' @param x An object, likely a LatentNeuroVec or similar
-#' @param ... Additional arguments
-#' @return The offset vector
-#'
-#' @examples
-#' \dontrun{
-#' # For LatentNeuroVec:
-#' if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'   lnv <- NULL
-#'   tryCatch({
-#'     lnv <- fmristore:::create_minimal_LatentNeuroVec(
-#'       space_dims = c(3L, 3L, 2L),
-#'       n_mask_voxels = 4L # Specify a small number of voxels in mask
-#'     )
-#'     off_vector <- offset(lnv)
-#'     print(head(off_vector))
-#'     # The LatentNeuroVec constructor (used by helper) defaults to zero offset.
-#'     # Length should be n_voxels_in_mask.
-#'     if (inherits(lnv, "LatentNeuroVec")) {
-#'        # Assuming lnv@mask is a LogicalNeuroVol created by the helper
-#'        # The offset vector length should match the number of TRUE voxels in the mask.
-#'        # print(length(off_vector) == sum(lnv@mask@.Data))
-#'     }
-#'   }, error = function(e) {
-#'     message("offset example for LatentNeuroVec failed: ", e$message)
-#'   })
-#' } else {
-#'   message("Skipping offset example for LatentNeuroVec: helper not available.")
-#' }
-#' }
-#'
-#' @name offset
-#' @importFrom fmrilatent offset
-#' @export
-offset
-
 #' Get the mask volume
-#' @param x An object with a mask, like LatentNeuroVec or H5ParcellatedMultiScan
+#' @param x An object with a mask, like H5ParcellatedMultiScan
 #' @param ... Additional arguments
 #' @return The mask object (e.g., a LogicalNeuroVol)
 #'
 #' @examples
 #' \dontrun{
-#' # For LatentNeuroVec:
-#' if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'   lnv <- NULL
-#'   tryCatch({
-#'     lnv <- fmristore:::create_minimal_LatentNeuroVec(space_dims = c(3L,3L,2L))
-#'     mask_vol <- mask(lnv)
-#'     print(mask_vol)
-#'     # if (requireNamespace("neuroim2", quietly=TRUE)) print(is(mask_vol, "LogicalNeuroVol"))
-#'   }, error = function(e) {
-#'     message("mask example for LatentNeuroVec failed: ", e$message)
-#'   })
-#' } else {
-#'   message("Skipping mask example for LatentNeuroVec: helper not available.")
-#' }
-#'
 #' # For H5ParcellatedMultiScan:
 #' if (!is.null(fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan)) {
 #'   temp_exp_file <- NULL
@@ -394,34 +263,6 @@ offset
 #' @importFrom neuroim2 mask
 #' @export
 mask
-
-#' Get the index map volume
-#' @param x An object with an index map, like LatentNeuroVec
-#' @param ... Additional arguments
-#' @return The index map object (e.g., an IndexLookupVol from neuroim2)
-#'
-#' @examples
-#' \dontrun{
-#' # For LatentNeuroVec:
-#' if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-#'   lnv <- NULL
-#'   tryCatch({
-#'     lnv <- fmristore:::create_minimal_LatentNeuroVec(space_dims = c(3L,3L,2L))
-#'     map_vol <- map(lnv)
-#'     print(map_vol)
-#'     # if (requireNamespace("neuroim2", quietly=TRUE)) print(is(map_vol, "IndexLookupVol"))
-#'   }, error = function(e) {
-#'     message("map example for LatentNeuroVec failed: ", e$message)
-#'   })
-#' } else {
-#'   message("Skipping map example for LatentNeuroVec: helper not available.")
-#' }
-#' }
-#'
-#' @rdname map-methods
-#' @importFrom fmrilatent map
-#' @export
-map
 
 #' Get the cluster map object
 #' @param x An object with cluster assignments (e.g., H5ParcellatedMultiScan)
@@ -609,184 +450,6 @@ setGeneric("matrix_concat",
 setGeneric(".dataset_path",
            function(x, cid, ...) standardGeneric(".dataset_path"))
 
-
-#' Generic function to convert R objects to HDF5 format
-#'
-#' @description
-#' A generic function for converting various types of R objects to HDF5 format,
-#' providing a standardized interface for serialization to HDF5.
-#'
-#' @param object The R object to convert to HDF5 (e.g., a \code{NeuroVol} or \code{NeuroVec}).
-#' @param file The path to the HDF5 file to create or modify.
-#' @param ... Additional arguments specific to the particular method (see Details).
-#' @param data_type For NeuroVec/LatentNeuroVec methods: Storage type (e.g., "FLOAT"). 
-#'   Default "FLOAT"
-#' @param chunk_dim For NeuroVec method: Chunk dimensions. Default depends on input dimensions
-#' @param compression For all methods: Integer compression level [0..9]. Default varies by method
-#' @param mask For LabeledVolumeSet method: The mask to use (LogicalNeuroVol)
-#' @param labels For LabeledVolumeSet method: Character vector of labels
-#' @param dtype For LabeledVolumeSet method: HDF5 data type for values. Default H5T_NATIVE_DOUBLE
-#' @param chunk_size For LabeledVolumeSet method: Integer chunk size for HDF5. Default 1024
-#' @param header_values For LabeledVolumeSet method: List of additional header values
-#' @param scan_name For ClusteredNeuroVec method: Character name for this scan (default "scan_001")
-#' @param as_multiscan For ClusteredNeuroVec method: If TRUE, creates multi-scan container
-#'
-#' @section Methods:
-#' \describe{
-#'   \item{\code{signature(object = "NeuroVec")}}{
-#'     Creates an HDF5 file from a 4D NeuroVec object.
-#'     Additional parameters:
-#'     \describe{
-#'       \item{\code{data_type}}{Storage type (e.g., "FLOAT"). Default "FLOAT"}
-#'       \item{\code{chunk_dim}}{Chunk dimensions. Default depends on input dimensions}
-#'       \item{\code{compression}}{Integer [0..9], default 6}
-#'     }
-#'     Returns an H5NeuroVec referencing the new HDF5 file.
-#'   }
-#'   \item{\code{signature(object = "LatentNeuroVec")}}{
-#'     Saves a LatentNeuroVec to an HDF5 file in BasisEmbeddingSpec format.
-#'     Additional parameters:
-#'     \describe{
-#'       \item{\code{data_type}}{Storage type (e.g., "FLOAT"). Default "FLOAT"}
-#'       \item{\code{compression}}{Integer [1..9], default 6}
-#'     }
-#'     Returns an HDF5 file object.
-#'   }
-#'   \item{\code{signature(object = "LabeledVolume")}}{
-#'     Saves a LabeledVolume to an HDF5 file.
-#'     Additional parameters:
-#'     \describe{
-#'       \item{\code{mask}}{The mask to use (LogicalNeuroVol)}
-#'       \item{\code{labels}}{Character vector of labels}
-#'       \item{\code{compression}}{Integer [0..9], default 4}
-#'       \item{\code{dtype}}{HDF5 data type for values. Default H5T_NATIVE_DOUBLE}
-#'       \item{\code{chunk_size}}{Integer chunk size for HDF5, default 1024}
-#'       \item{\code{header_values}}{List of additional header values}
-#'     }
-#'     Returns an HDF5 file object.
-#'   }
-#'   \item{\code{signature(object = "NeuroVecSeq")}}{
-#'     Writes a sequence of NeuroVec objects (multiple 4D scans) to a single HDF5 file.
-#'     All NeuroVec objects must have the same spatial dimensions.
-#'     Additional parameters:
-#'     \describe{
-#'       \item{\code{scan_names}}{Optional character vector of scan names. 
-#'         If NULL, uses "scan_1", "scan_2", etc.}
-#'       \item{\code{data_type}}{Character string: "FLOAT" (default), "DOUBLE", or "INT"}
-#'       \item{\code{chunk_dim}}{Numeric vector specifying chunk sizes. 
-#'         If NULL, uses time-optimized chunking}
-#'       \item{\code{compression}}{Integer [0..9], default 6}
-#'       \item{\code{scan_metadata}}{Optional named list of metadata lists, one per scan}
-#'     }
-#'     Returns the file path of the created HDF5 file.
-#'   }
-#' }
-#'
-#' @return An object representing the HDF5 storage, typically of a class
-#'   corresponding to the input type (e.g., \code{H5NeuroVol} for \code{NeuroVol} input,
-#'   \code{H5NeuroVec} for \code{NeuroVec} input).
-#'
-#' @examples
-#' \dontrun{
-#' # Example 1: NeuroVec (DenseNeuroVec) to HDF5
-#' # Ensure helper function is available and as_h5 exists
-#' # if (!is.null(fmristore:::create_minimal_DenseNeuroVec) &&
-#' #     exists("as_h5", where = "package:fmristore")) {
-#'
-#' dvec <- fmristore:::create_minimal_DenseNeuroVec(dims = c(3L,3L,2L,4L))
-#' temp_h5_file <- tempfile(fileext = ".h5")
-#' h5_obj <- NULL
-#'
-#' tryCatch({
-#'     # Convert DenseNeuroVec to an HDF5 file and get an H5NeuroVec object back
-#'     h5_obj <- as_h5(dvec, file = temp_h5_file,
-#'                     data_type = "FLOAT",
-#'                     chunk_dim = c(2, 2, 2, 4),
-#'                     compression = 4)
-#'
-#'     print(h5_obj) # Should be an H5NeuroVec
-#'
-#' }, error = function(e) {
-#'     message("as_h5 NeuroVec example failed: ", e$message)
-#' }, finally = {
-#'     if (!is.null(h5_obj)) try(close(h5_obj), silent = TRUE)
-#'     if (file.exists(temp_h5_file)) {
-#'       unlink(temp_h5_file)
-#'     }
-#' })
-#' # }
-#'
-#' # Example 2: LatentNeuroVec to HDF5
-#' # if (!is.null(fmristore:::create_minimal_LatentNeuroVec) &&
-#' #     exists("as_h5", where = "package:fmristore")) {
-#'
-#' lnv <- fmristore:::create_minimal_LatentNeuroVec(
-#'     space_dims = c(4L, 4L, 2L),
-#'     n_time = 6L,
-#'     n_comp = 2L
-#' )
-#' temp_h5_file_lnv <- tempfile(fileext = ".h5") # Use a different temp file name
-#' h5_obj_lnv <- NULL # Use a different object name
-#'
-#' tryCatch({
-#'     # Convert LatentNeuroVec to HDF5
-#'     h5_obj_lnv <- as_h5(lnv, file = temp_h5_file_lnv, compression = 4)
-#'
-#'     # File should exist and h5_obj_lnv should be a valid H5File object
-#'     if (file.exists(temp_h5_file_lnv)) {
-#'       print("LatentNeuroVec HDF5 file created successfully: ", temp_h5_file_lnv)
-#'     }
-#'
-#' }, error = function(e) {
-#'     message("as_h5 LatentNeuroVec example failed: ", e$message)
-#' }, finally = {
-#'     if (!is.null(h5_obj_lnv) && inherits(h5_obj_lnv, "H5File") && h5_obj_lnv$is_valid) {
-#'       try(h5_obj_lnv$close_all(), silent = TRUE)
-#'     }
-#'     if (file.exists(temp_h5_file_lnv)) {
-#'       unlink(temp_h5_file_lnv)
-#'     }
-#' })
-#' # }
-#'
-#' # Example 3: Clustered dataset (list) to HDF5
-#' # (This requires more complex setup, so we use a simplified theoretical example)
-#' \dontrun{
-#'   # Removed: if (requireNamespace("neuroim2", quietly = TRUE) && ...
-#'
-#'   # In practice, you would:
-#'   # 1. Create a list of NeuroVec/DenseNeuroVec objects (scan data)
-#'   # 2. Create a LogicalNeuroVol mask
-#'   # 3. Create a ClusteredNeuroVol defining clusters
-#'   # 4. Define scan names and metadata
-#'   # 5. Call as_h5() with these components
-#'
-#'   # Note: This example is simplified for documentation and won't execute
-#'   # as the actual clustered dataset structure is more complex
-#'
-#'   message("Example usage for clustered dataset (as_h5 for list method):")
-#'   message("  # vecs_list <- ... list of NeuroVec objects ...")
-#'   message("  # mask_obj <- fmristore:::create_minimal_LogicalNeuroVol(...)")
-#'   message("  # clusters_obj <- fmristore:::create_minimal_ClusteredNeuroVol(...)")
-#'   message("  # scan_meta <- list(list(TR=2), list(TR=2))")
-#'   message("  # h5_clust_obj <- as_h5(vecs_list, file = tempfile(fileext=\".h5\"), ")
-#'   message("  #                       scan_names = c('run1', 'run2'), ")
-#'   message("  #                       mask = mask_obj, clusters = clusters_obj, ")
-#'   message("  #                       scan_metadata = scan_meta)")
-#'   message("  # print(h5_clust_obj)")
-#'   message("  # if (!is.null(h5_clust_obj)) try(close(h5_clust_obj), silent=TRUE)")
-#'   message("  # if (file.exists(attr(h5_clust_obj, \"filepath\"))) ")
-#'   message("  #     unlink(attr(h5_clust_obj, \"filepath\"))")
-#'
-#' }
-#' }
-#'
-#' @export
-#' @rdname as_h5-methods
-setGeneric("as_h5", function(object, file, ...) {
-  standardGeneric("as_h5")
-})
-
 #' Extract Time Series Data
 #'
 #' @description
@@ -847,30 +510,6 @@ series <- neuroim2::series
 #' @keywords internal
 linear_access <- neuroim2::linear_access
 
-
-
-#' Get Dimensions of an Object (Methods for base R Generic)
-#'
-#' @description
-#' These methods retrieve the dimensions of `fmristore` specific objects,
-#' implementing the S4 generic function \code{\link[base]{dim}} from the `base` package.
-#'
-#' For objects that represent neuroimaging data, this typically returns a numeric
-#' vector indicating the size of each dimension (e.g., X, Y, Z, Time).
-#'
-#' @param x An object for which a `dim` method is defined.
-#'
-#' @return A numeric vector of dimensions. The length and interpretation of the
-#'   vector depend on the specific class of `x`.
-#'
-#' @seealso \code{base::\link[base]{dim}}, specific methods like
-#'   \code{dim,H5ParcellatedScan-method} (if defined and exported).
-#'
-#' @rdname dim-methods
-#' @name dim
-#' @aliases dim
-#' @keywords internal
-NULL
 
 
 #' Convert to Matrix

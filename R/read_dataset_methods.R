@@ -72,14 +72,12 @@ h5_attr_safe <- function(h5, attr_name) {
 #'
 #' @param h5obj An H5File object or file path to an HDF5 file
 #' @return Character string indicating the type, one of:
-#'   - "H5NeuroVol" - 3D brain volume
-#'   - "H5NeuroVec" - 4D brain time series
-#'   - "H5NeuroVecSeq" - Sequence of 4D scans
 #'   - "H5ParcellatedMultiScan" - Multi-run parcellated experiment
 #'   - "H5ParcellatedScan" - Single parcellated run (full data)
 #'   - "H5ParcellatedScanSummary" - Single parcellated run (summary)
-#'   - "LatentNeuroVec" - Latent representation
 #'   - "LabeledVolumeSet" - Labeled brain regions
+#'   - "H5NeuroVol", "H5NeuroVec", "H5NeuroVecSeq", "LatentNeuroVec" - legacy
+#'     layouts whose readers were removed in fmristore 0.2.0
 #'   - "unknown" - Type could not be determined
 #'
 #' @export
@@ -243,16 +241,14 @@ detect_h5_type <- function(h5obj) {
 #' @return The appropriate fmristore object
 #' @keywords internal
 read_dataset_typed <- function(file, type, ...) {
+  removed <- c("H5NeuroVol", "H5NeuroVec", "H5NeuroVecSeq", "LatentNeuroVec")
+  if (type %in% removed) {
+    stop(sprintf(
+      "Reading %s files was removed in fmristore 0.2.0. Store images as fmri_frame objects with write_frame_h5().",
+      type
+    ), call. = FALSE)
+  }
   switch(type,
-    # H5-backed neuroimaging volumes
-    "H5NeuroVol" = H5NeuroVol(file),
-
-    # H5-backed neuroimaging vectors
-    "H5NeuroVec" = H5NeuroVec(file, ...),
-
-    # H5-backed sequence of vectors
-    "H5NeuroVecSeq" = H5NeuroVecSeq(file),
-
     # Parcellated multi-scan experiments
     "H5ParcellatedMultiScan" = H5ParcellatedMultiScan(file, ...),
 
@@ -264,13 +260,6 @@ read_dataset_typed <- function(file, type, ...) {
     "H5ParcellatedScanSummary" = {
       warning("H5ParcellatedScanSummary is typically accessed through H5ParcellatedMultiScan")
       H5ParcellatedScanSummary(file, ...)
-    },
-
-    # Latent representations
-    "LatentNeuroVec" = {
-      # Latent files are read fully into memory by the spec-compliant reader,
-      # which handles dense and sparse bases, the transform and the offset.
-      load_data(LatentNeuroVecSource(file), ...)
     },
 
     # Labeled volume sets
@@ -294,9 +283,6 @@ read_dataset_typed <- function(file, type, ...) {
 #' @param ... Additional arguments passed to the object constructor
 #'
 #' @return An fmristore object of the appropriate type:
-#'   - \code{H5NeuroVol} for 3D volumes
-#'   - \code{H5NeuroVec} for 4D time series
-#'   - \code{H5NeuroVecSeq} for sequences of 4D data
 #'   - \code{H5ParcellatedMultiScan} for parcellated experiments
 #'   - \code{LatentNeuroVec} for latent representations
 #'   - \code{LabeledVolumeSet} for labeled regions

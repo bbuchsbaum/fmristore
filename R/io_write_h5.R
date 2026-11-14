@@ -570,29 +570,3 @@ write_parcellated_experiment_h5 <- function(filepath,
   invisible(NULL)
 }
 
-#' @rdname write_parcellated_experiment_h5
-#' @export
-write_clustered_experiment_h5 <- function(filepath,
-                                          mask,
-                                          clusters,
-                                          runs_data,
-                                          cluster_metadata = NULL,
-                                          overwrite = FALSE,
-                                          compress = TRUE,
-                                          verbose = TRUE) {
-  .Deprecated("write_parcellated_experiment_h5",
-    package = "fmristore",
-    msg = "write_clustered_experiment_h5 is deprecated. Please use write_parcellated_experiment_h5 instead."
-  )
-
-  write_parcellated_experiment_h5(
-    filepath = filepath,
-    mask = mask,
-    clusters = clusters,
-    runs_data = runs_data,
-    cluster_metadata = cluster_metadata,
-    overwrite = overwrite,
-    compress = compress,
-    verbose = verbose
-  )
-}

@@ -93,25 +93,21 @@ test_that("H5ParcellatedScanSummary constructor works with file path", {
   run_summary@obj$close_all()
 })
 
-test_that("H5ParcellatedScanSummary constructor works with open H5File handle (via make_run_summary)", {
+test_that("H5ParcellatedScanSummary constructor works with an open H5File handle", {
   setup_info <- create_dummy_clustered_summary_h5(tempfile(fileext = ".h5"))
   on.exit(unlink(setup_info$filepath), add = TRUE)
 
   h5f <- H5File$new(setup_info$filepath, mode = "r")
   on.exit(if (h5f$is_valid) h5f$close_all(), add = TRUE)
 
-  # Keep using make_run_summary for this test, expecting a deprecation warning
-  expect_warning(
-    run_summary_open <- make_run_summary(
-      file_source = h5f,
-      scan_name = setup_info$scan_name,
-      mask = setup_info$mask,
-      clusters = setup_info$clusters,
-      cluster_names = setup_info$cluster_names,
-      cluster_ids = setup_info$cluster_ids,
-      summary_dset = setup_info$summary_dset_name
-    ),
-    "deprecated"
+  run_summary_open <- H5ParcellatedScanSummary(
+    file = h5f,
+    scan_name = setup_info$scan_name,
+    mask = setup_info$mask,
+    clusters = setup_info$clusters,
+    cluster_names = setup_info$cluster_names,
+    cluster_ids = setup_info$cluster_ids,
+    summary_dset = setup_info$summary_dset_name
   )
 
   expect_s4_class(run_summary_open, "H5ParcellatedScanSummary")
@@ -236,8 +232,8 @@ test_that("as.matrix method for H5ParcellatedScanSummary works", {
   h5f <- H5File$new(setup_info$filepath, mode = "r")
   on.exit(h5f$close_all(), add = TRUE)
 
-  run_summary <- make_run_summary(
-    file_source = h5f,
+  run_summary <- H5ParcellatedScanSummary(
+    file = h5f,
     scan_name = setup_info$scan_name,
     mask = setup_info$mask,
     clusters = setup_info$clusters,
@@ -259,56 +255,20 @@ test_that("as.matrix method for H5ParcellatedScanSummary works", {
   # Check content
   expect_equal(mat, setup_info$summary_data)
 
-  # Test case where cluster_names don't match columns (should warn)
-  run_summary_badnames <- make_run_summary(
-    file_source = h5f,
-    scan_name = setup_info$scan_name,
-    mask = setup_info$mask,
-    clusters = setup_info$clusters,
-    cluster_names = c("Wrong", "Names"), # Incorrect number
-    cluster_ids = setup_info$cluster_ids
+  # cluster_names of the wrong length are caught at construction and reset
+  expect_warning(
+    run_summary_badnames <- H5ParcellatedScanSummary(
+      file = h5f,
+      scan_name = setup_info$scan_name,
+      mask = setup_info$mask,
+      clusters = setup_info$clusters,
+      cluster_names = c("Wrong", "Names"), # Incorrect number
+      cluster_ids = setup_info$cluster_ids
+    ),
+    "Resetting to default names"
   )
-  expect_warning(mat_badnames <- as.matrix(run_summary_badnames), "Length of cluster_names")
-  expect_null(colnames(mat_badnames)) # Names should not be set
+  mat_badnames <- as.matrix(run_summary_badnames)
+  expect_equal(colnames(mat_badnames), paste0("Col_", seq_len(ncol(mat_badnames))))
   expect_equal(mat_badnames, setup_info$summary_data, check.attributes = FALSE) # Content still matches
 })
 
-test_that("make_run_summary generates default names/ids and as.data.frame works", {
-  setup_info <- create_dummy_clustered_summary_h5(tempfile(fileext = ".h5"))
-  on.exit(unlink(setup_info$filepath), add = TRUE)
-
-  h5f <- H5File$new(setup_info$filepath, mode = "r")
-  on.exit(h5f$close_all(), add = TRUE)
-
-  # Call constructor without names or ids
-  run_summary_defaults <- NULL
-
-  expect_warning(
-    run_summary_defaults <- make_run_summary(
-      file_source = h5f,
-      scan_name = setup_info$scan_name,
-      mask = setup_info$mask,
-      clusters = NULL # Pass NULL to test default generation
-      # Omit cluster_names and cluster_ids
-    ),
-    regexp = "Generated default" # Warning for names
-  )
-  expect_s4_class(run_summary_defaults, "H5ParcellatedScanSummary")
-  n_clusters_expected <- ncol(setup_info$summary_data)
-  expected_names <- paste0("Col_", seq_len(n_clusters_expected))
-  expected_ids <- seq_len(n_clusters_expected)
-
-  # Check if defaults were set in the object
-  expect_equal(run_summary_defaults@cluster_names, expected_names)
-  expect_equal(run_summary_defaults@cluster_ids, expected_ids)
-
-  # Test as.data.frame
-  df <- as.data.frame(run_summary_defaults)
-  expect_s3_class(df, "data.frame")
-  expect_equal(nrow(df), setup_info$n_time)
-  expect_equal(ncol(df), n_clusters_expected)
-  expect_equal(names(df), expected_names) # Column names should be the generated defaults
-
-  # Check content consistency with matrix form
-  expect_equal(as.matrix(df), setup_info$summary_data, check.attributes = FALSE)
-})

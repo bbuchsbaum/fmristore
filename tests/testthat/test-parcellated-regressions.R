@@ -58,50 +58,6 @@ open_parcel_exp <- function(path, ...) {
 
 # --- write_parcellated_scan_h5: full data matched by name --------------------
 
-test_that("write_parcellated_scan_h5 assigns full data to clusters by name", {
-  fx <- make_parcel_fixture()
-  tf <- tempfile(fileext = ".h5")
-  on.exit(unlink(tf), add = TRUE)
-
-  dl <- parcel_cluster_list(fx)[c("cluster_10", "cluster_7", "cluster_3")]
-  run <- write_parcellated_scan_h5(tf, fx$mask, fx$cvol, dl,
-    scan_name = "s", data_type = "full"
-  )
-  on.exit(close(run), add = TRUE, after = FALSE)
-
-  expect_equal(unname(series(run, seq_len(9))), t(fx$full))
-  h <- hdf5r::H5File$new(tf, "r")
-  on.exit(h$close_all(), add = TRUE, after = FALSE)
-  for (id in c(3L, 7L, 10L)) {
-    dset_dims <- h[[sprintf("scans/s/clusters/cluster_%d", id)]]$dims
-    expect_equal(dset_dims, c(sum(fx$cl == id), fx$n_time))
-  }
-})
-
-test_that("write_parcellated_scan_h5 rejects missing or mis-sized clusters", {
-  fx <- make_parcel_fixture()
-  tf <- tempfile(fileext = ".h5")
-  on.exit(unlink(tf), add = TRUE)
-  dl <- parcel_cluster_list(fx)
-  write_full <- function(d) {
-    write_parcellated_scan_h5(tf, fx$mask, fx$cvol, d, data_type = "full")
-  }
-
-  renamed <- dl
-  names(renamed)[3] <- "cluster_11"
-  expect_error(write_full(renamed), "cluster_10")
-
-  short <- dl
-  short$cluster_3 <- short$cluster_3[1:2, , drop = FALSE]
-  expect_error(write_full(short), "cluster_3.*2 rows.*4 voxels")
-
-  wide <- dl
-  wide$cluster_7 <- cbind(wide$cluster_7, 0)
-  expect_error(write_full(wide), "same number of columns")
-
-  expect_error(write_full(unname(dl)), "cluster_<id>")
-})
-
 # --- `[` on H5ParcellatedScan with j missing -------------------------------
 
 test_that("[ on H5ParcellatedScan keeps k and l when j is missing", {
@@ -230,7 +186,7 @@ test_that("full-data writer validates matrices against clusters and metadata", {
 
 # --- Spatial metadata and header round trip ---------------------------------
 
-test_that("parcellated writers preserve origin, spacing and orientation", {
+test_that("the parcellated experiment writer preserves origin, spacing and orientation", {
   ang <- pi / 6
   rot <- matrix(c(cos(ang), sin(ang), 0, -sin(ang), cos(ang), 0, 0, 0, 1), 3)
   oblique <- diag(4)
@@ -244,15 +200,9 @@ test_that("parcellated writers preserve origin, spacing and orientation", {
   for (nm in names(fixtures)) {
     fx <- fixtures[[nm]]
     tf_exp <- tempfile(fileext = ".h5")
-    tf_scan <- tempfile(fileext = ".h5")
     write_parcel_fixture(fx, tf_exp)
-    run <- write_parcellated_scan_h5(tf_scan, fx$mask, fx$cvol,
-      parcel_cluster_list(fx),
-      data_type = "full"
-    )
-    close(run)
 
-    for (tf in c(tf_exp, tf_scan)) {
+    for (tf in tf_exp) {
       exp <- open_parcel_exp(tf)
       sp_read <- space(mask(exp))
       close(exp)
@@ -265,7 +215,7 @@ test_that("parcellated writers preserve origin, spacing and orientation", {
       h$close_all()
       expect_equal(hdr_dim[5], fx$n_time, info = nm)
     }
-    unlink(c(tf_exp, tf_scan))
+    unlink(tf_exp)
   }
 })
 
@@ -376,7 +326,7 @@ test_that("summary scans label columns with the sorted cluster IDs they hold", {
   expect_identical(names_only@cluster_names, c("a", "b", "c"))
   close(names_only)
 
-  legacy <- suppressWarnings(make_run_summary(path, "s", mask, cvol))
+  legacy <- suppressWarnings(H5ParcellatedScanSummary(path, "s", mask, cvol))
   expect_identical(legacy@cluster_ids, ids)
   expect_equal(unname(as.matrix(legacy)[1, ]), ids * 100)
 })

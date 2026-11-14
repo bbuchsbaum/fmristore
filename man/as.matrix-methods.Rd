@@ -24,10 +24,8 @@ Other H5Cluster:
 \code{\link{[,H5ParcellatedScan,ANY,ANY,ANY-method}},
 \code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
-\code{\link{dim}()},
+\code{\link{dim,H5ParcellatedScan-method}},
 \code{\link{linear_access-methods}},
-\code{\link{make_run_full}()},
-\code{\link{make_run_summary}()},
 \code{\link{series}()},
 \code{\link{show,H5ParcellatedScan-method}}
 }

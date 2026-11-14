@@ -92,7 +92,7 @@ read_h5_clusters_to_ClusteredNeuroVol <- function(h5, mask,
 #' deliberately avoids \code{$close_all()}: HDF5 shares one file structure
 #' between every handle opened on the same path, so \code{close_all()} also
 #' closes handles owned by unrelated objects (for example a live
-#' \code{H5NeuroVec} on the same file). Unreferenced child handles leaked by
+#' \code{H5ParcellatedScan} on the same file). Unreferenced child handles leaked by
 #' the caller are finalized by a garbage collection before the file handle is
 #' closed, so they do not keep the file open.
 #'

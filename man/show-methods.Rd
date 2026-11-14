@@ -25,10 +25,8 @@ Other H5Cluster:
 \code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{dim}()},
+\code{\link{dim,H5ParcellatedScan-method}},
 \code{\link{linear_access-methods}},
-\code{\link{make_run_full}()},
-\code{\link{make_run_summary}()},
 \code{\link{series}()}
 
 Other H5Cluster: 
@@ -37,10 +35,8 @@ Other H5Cluster:
 \code{\link{[,H5ParcellatedScan,ANY,missing,ANY-method}},
 \code{\link{as.data.frame}()},
 \code{\link{as.matrix}()},
-\code{\link{dim}()},
+\code{\link{dim,H5ParcellatedScan-method}},
 \code{\link{linear_access-methods}},
-\code{\link{make_run_full}()},
-\code{\link{make_run_summary}()},
 \code{\link{series}()}
 }
 \concept{H5Cluster}

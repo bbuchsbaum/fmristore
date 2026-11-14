@@ -4,7 +4,7 @@
 \alias{mask}
 \title{Get the mask volume}
 \arguments{
-\item{x}{An object with a mask, like LatentNeuroVec or H5ParcellatedMultiScan}
+\item{x}{An object with a mask, like H5ParcellatedMultiScan}
 
 \item{...}{Additional arguments}
 }
@@ -16,21 +16,6 @@ Get the mask volume
 }
 \examples{
 \dontrun{
-# For LatentNeuroVec:
-if (!is.null(fmristore:::create_minimal_LatentNeuroVec)) {
-  lnv <- NULL
-  tryCatch({
-    lnv <- fmristore:::create_minimal_LatentNeuroVec(space_dims = c(3L,3L,2L))
-    mask_vol <- mask(lnv)
-    print(mask_vol)
-    # if (requireNamespace("neuroim2", quietly=TRUE)) print(is(mask_vol, "LogicalNeuroVol"))
-  }, error = function(e) {
-    message("mask example for LatentNeuroVec failed: ", e$message)
-  })
-} else {
-  message("Skipping mask example for LatentNeuroVec: helper not available.")
-}
-
 # For H5ParcellatedMultiScan:
 if (!is.null(fmristore:::create_minimal_h5_for_H5ParcellatedMultiScan)) {
   temp_exp_file <- NULL

@@ -2,8 +2,7 @@
 % Please edit documentation in R/cluster_experiment.R
 \name{$,H5ParcellatedMultiScan-method}
 \alias{$,H5ParcellatedMultiScan-method}
-\title{Accessor Methods for H5ParcellatedMultiScan
-Access Slots/Properties using `$`}
+\title{Access Slots/Properties using `$`}
 \usage{
 \S4method{$}{H5ParcellatedMultiScan}(x, name)
 }
