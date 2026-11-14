@@ -1,7 +1,7 @@
 Package: fmristore
 Type: Package
 Title: Efficient Storage of fMRI Data
-Version: 0.1.0.9000
+Version: 0.2.0
 Authors@R: 
     person(given = "Bradley",
            family = "Buchsbaum",
@@ -11,9 +11,7 @@ Authors@R:
 Description: Stores 'fmridataset' frames in HDF5. Single-file snapshots are
     written atomically and reopened lazily, sharded stores accept appended
     observations without rewriting earlier data, interrupted writes can be
-    recovered, and HDF5 datasets are exposed as lazy array sources. Older
-    parcellated-scan and labeled-volume classes remain, frozen, for packages
-    that have not yet moved to frames.
+    recovered, and HDF5 datasets are exposed as lazy array sources.
 License: GPL (>= 3)
 URL: https://github.com/bbuchsbaum/fmristore, https://bbuchsbaum.github.io/fmristore/
 BugReports: https://github.com/bbuchsbaum/fmristore/issues
@@ -22,44 +20,25 @@ Language: en-US
 LazyData: false
 RoxygenNote: 7.3.3
 Imports:
-    assertthat,
-    cli,
     fmridataset (>= 0.11.0),
-    hdf5r,
-    lifecycle,
-    Matrix,
-    methods,
-    neuroim2,
-    withr
+    hdf5r
 Suggests:
     albersdown,
     knitr,
+    Matrix,
+    neuroim2,
     rmarkdown,
-    testthat (>= 3.0.0)
+    testthat (>= 3.0.0),
+    withr
 VignetteBuilder: knitr
 Config/testthat/edition: 3
 Collate: 
-    'all_class.R'
-    'all_generic.R'
     'array_source.R'
-    'assertions.R'
-    'cluster_array.R'
-    'cluster_experiment.R'
-    'constants.R'
-    'constructors.R'
     'fmristore-package.R'
     'frame_h5.R'
     'frame_recovery.R'
     'frame_shards_h5.R'
-    'globals.R'
-    'h5_utils.R'
-    'io_h5_helpers.R'
-    'io_write_h5.R'
-    'labeled_vec.R'
-    'legacy_migration.R'
-    'memory_utils.R'
-    'read_dataset_methods.R'
-    'zzz_example_helpers.R'
+    'utils.R'
 Remotes:
     bbuchsbaum/fmridataset,
     bbuchsbaum/neuroim2,

@@ -29,11 +29,11 @@ R CMD INSTALL .
 Rscript -e "testthat::test_dir('tests/testthat')"
 
 # Run a specific test file
-Rscript -e "testthat::test_file('tests/testthat/test-cluster_experiment.R')"
+Rscript -e "testthat::test_file('tests/testthat/test-frame-h5.R')"
 
 # Or within R:
 # testthat::test_local()
-# testthat::test_file("tests/testthat/test-cluster_experiment.R")
+# testthat::test_file("tests/testthat/test-frame-h5.R")
 ```
 
 ### Linting
@@ -43,7 +43,7 @@ Rscript -e "testthat::test_file('tests/testthat/test-cluster_experiment.R')"
 Rscript -e "lintr::lint_package()"
 
 # Check specific file
-Rscript -e "lintr::lint('R/h5_utils.R')"
+Rscript -e "lintr::lint('R/frame_h5.R')"
 ```
 
 ### Documentation
@@ -66,25 +66,18 @@ recovery and migration, and lazy HDF5 array sources. `fmridataset` owns frame
 semantics; `fmristore` owns the physical storage. See
 `design/fmristore-1.0-plan.md` and `design/deficiency-remediation-plan.md`.
 
-### Frame store (the supported surface)
+### Frame store
 
 - `R/frame_h5.R` - `write_frame_h5()` / `open_frame_h5()` (atomic write, lazy open)
 - `R/frame_shards_h5.R` - `write_sharded_frame_h5()`, `append_frame_shard_h5()`, `open_sharded_frame_h5()`
 - `R/frame_recovery.R` - `frame_store_info()`, `recover_frame_store()`, `migrate_frame_h5()`
 - `R/array_source.R` - `h5_array_source()`, `h5_read_plan()`, `validate_h5_read_amplification()`
-- Helpers it depends on: `close_h5_safely()` (`R/io_h5_helpers.R`) and `%||%` (`R/assertions.R`)
+- `R/utils.R` - `close_h5_safely()` and `%||%`
 
-### Legacy classes (frozen, slated for removal)
-
-Kept only because neurotabs and fmrigds still call them. Do not add features or
-change their API; fix bugs only if they break CI or block one of those packages.
-
-- `H5ParcellatedMultiScan`, `H5ParcellatedScan`, `H5ParcellatedScanSummary` (`R/cluster_*.R`, `R/constructors.R`), written by `write_parcellated_experiment_h5()` (`R/io_write_h5.R`)
-- `LabeledVolumeSet` with `read_labeled_vec()` / `write_labeled_vec()` (`R/labeled_vec.R`)
-- `read_dataset()` / `detect_h5_type()` (`R/read_dataset_methods.R`)
-
-The `H5NeuroVol`/`H5NeuroVec`/`H5NeuroVecSeq` classes, latent I/O, `as_h5()`
-and `write_dataset()` were removed.
+The only imports are fmridataset and hdf5r. The legacy parcellated, labeled
+and `H5NeuroVec` classes were removed in 0.2.0; consumers such as neurotabs and fmrigds
+store frames instead. Do not reintroduce neuroimaging classes here: frame semantics
+belong to fmridataset.
 
 ### Key Design Patterns
 
@@ -95,15 +88,10 @@ and `write_dataset()` were removed.
    and `_R_CHECK_MATRIX_DATA_=TRUE`, as CI does.
 3. **Docs**: regenerate with roxygen2 at the version in `RoxygenNote`.
 
-### HDF5 Schema Conventions
+### HDF5 layout
 
-The package follows specific HDF5 schemas documented in `raw-data/`:
-- `ClusteredTimeSeriesSpec.yaml` - Clustered voxel data format
-
-Key HDF5 paths:
-- `/header/*` - NIfTI-compatible header information
-- `/mask` - Binary brain mask
-- `/clusters/*` - Cluster definitions and metadata
+The FDS v1 layout (manifests, assay arrays, schema version and migrations) is
+defined in `R/frame_h5.R` and `design/fmristore-1.0-plan.md`.
 
 ## Issue Tracking
 

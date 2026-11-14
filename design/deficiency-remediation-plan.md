@@ -14,8 +14,9 @@ into:
 
 - **Green CI and an honest changelog** (Milestone 0).
 - **Legacy removal, step 1 (done):** delete everything no package calls.
-- **Legacy removal, step 2:** move neurotabs and fmrigds to frames, then
-  delete the remaining parcellated and labeled classes.
+- **Legacy removal, step 2 (done):** delete the remaining parcellated and
+  labeled classes. neurotabs and fmrigds are consumers and move to frames on
+  their own schedule.
 - **1.0 engine requirements:** frame-store durability and integrity findings
   become requirements and storage-law tests of the new engine.
 
@@ -23,7 +24,7 @@ into:
 
 | ID | Decision | Consequence |
 |----|----------|-------------|
-| D1 | Remove legacy code now, in two steps, as long as fmridataset is unaffected (it uses only the frame store). | Step 1 deleted everything no package calls. Step 2 deletes the parcellated and labeled classes once neurotabs and fmrigds move to frames. |
+| D1 | Remove legacy code now, as long as fmridataset is unaffected (it uses only the frame store). fmristore is self-contained; neurotabs and fmrigds are consumers and adapt to it. | Step 1 deleted everything no package calls. Step 2 (0.2.0) deleted the rest with no converters, since no real users hold legacy files. Consumers can pin to `4d7adb7` until they migrate. |
 | D2 | Relax `.lintr`: drop `implicit_integer_linter` and `condition_call_linter`, lint only changed files in CI. | Lint and style gates can pass without a package-wide restyle. |
 | D3 | Writers must not overwrite silently. | Applies to the 1.0 engine's writers (default `overwrite = FALSE`). Not retrofitted to legacy writers. |
 | D4 | Out-of-mask fill stays `0`. | Moot under D1: only legacy readers fill masks. No `fill =` work. |
@@ -49,10 +50,10 @@ Goal: CI tells the truth, and users know what changed.
   - [x] Run local and agent checks with `NOT_CRAN=true` and `_R_CHECK_MATRIX_DATA_=TRUE`, as CI does (recorded in CLAUDE.md).
   - [ ] Confirm on the next hosted run; most Windows failures were in code removed by step 1.
 - [x] **Changelog.** NEWS.md records the merged behaviour changes and the step 1 removals. `fmristore-2v0`
-- [ ] **Pin dependencies and test the installed package in CI.** Pin `Remotes:` to commits or tags. Add a test convention for comparing neuroim2 objects via `@.Data`. `fmristore-5jx` (P2)
+- [ ] **Pin dependencies and test the installed package in CI.** Pin `Remotes:` to commits or tags. `fmristore-5jx` (P2)
 - [ ] **Lint gate.** Add `any::cyclocomp` to `lint.yaml`, drop the two linters per D2, and lint only changed files. Exit: the lint job reports and passes. `fmristore-ky0` (P2)
 - [ ] **Style gate.** Check style on changed files only. Exit: the style job passes. `fmristore-ky0`
-- [ ] **Upstream `concat` bug.** File it on fmrilatent (or neuroim2's `.concat4D`) with the reproduction and a test there. The fmristore test was deleted with latent I/O. `fmristore-qsh` (P3)
+- [x] ~~**Upstream `concat` bug.**~~ Out of scope: fmristore no longer handles latent or neuroim2 vectors. `fmristore-qsh` (closed)
 
 Exit evidence: a green hosted R CMD check matrix on one pinned dependency set.
 
@@ -70,14 +71,24 @@ longer imports fmrilatent. Exports went from 55 to 37.
 - [x] Docs regenerated with roxygen2 7.3.3 (the pinned `RoxygenNote`).
 - [x] One vignette on storing frames replaces the five legacy vignettes.
 
-## Milestone 2: Legacy removal, step 2
+## Milestone 2: Legacy removal, step 2 (done)
 
-Still in use, and frozen until removed:
+- [x] **Deleted** the parcellated and labeled classes, `read_dataset()`,
+  `detect_h5_type()`, the example helpers, constants and memory settings
+  (about 5,000 lines). Imports are now fmridataset and hdf5r. `fmristore-w1f`
+- [x] Converters were written and then dropped: no real users hold legacy
+  files. `fmristore-qv9`
+- [x] Frozen-class bugs closed as moot: `fmristore-o4x`, `fmristore-e2u`,
+  `fmristore-qt9`. The `volume_space` to neuroim2 helper is not fmristore's
+  job (`fmristore-amb`, closed).
 
-- **neurotabs:** `read_dataset()`, `H5ParcellatedMultiScan` and `H5ParcellatedArray` (`@runs`, `@clusters`, `@mask`, `as.matrix()`), and `write_parcellated_experiment_h5()` in tests.
-- **fmrigds:** `detect_h5_type()`, and in tests `write_labeled_vec()` and `create_minimal_h5_for_H5ParcellatedMultiScan()`.
+Consumer work, in those repositories (tracked here for reference):
 
-A prototype confirmed the frame store covers both packages' needs:
+- [ ] **neurotabs:** store parcel data as frames. `fmristore-dtd`
+- [ ] **fmrigds:** regenerate fixtures with `write_frame_h5()`, detect with
+  `frame_store_info()`. `fmristore-au7`
+
+How their needs map to frames:
 
 | Need | Frame store |
 |---|---|
@@ -86,19 +97,6 @@ A prototype confirmed the frame store covers both packages' needs:
 | Parcel IDs, voxel counts, mask | `parcel_space`, `parcel_membership()`, parent `volume_space` |
 | Named maps under a mask | observations = labels, features = mask voxels |
 | File type detection | `frame_store_info()` |
-
-Checklist:
-
-- [x] **Converters** from parcellated and labeled files to frames: `migrate_parcellated_h5()` (one kind per frame; summary scans as parcels, full scans as voxels with `cluster_id`) and `migrate_labeled_h5()`. `fmristore-qv9` (P1, done)
-- [ ] **`volume_space` to `neuroim2`** helper in fmridataset, for masks, centroids and space names. `fmristore-amb` (P2)
-- [ ] **neurotabs:** `fmristore-parcel` backend and parcel ingest read frames. `fmristore-dtd` (P2)
-- [ ] **fmrigds:** adapter and fixtures use frames; regenerate `labeled_volume_small.h5`. `fmristore-au7` (P2)
-- [ ] **Delete** the remaining classes, readers and writers, and the `neuroim2`, `Matrix` and `assertthat` imports. `fmristore-w1f` (P2)
-- [ ] Until then, fix a frozen-class bug only if it breaks CI or blocks neurotabs or fmrigds: `fmristore-o4x` (label 0), `fmristore-e2u` (`LabeledVolumeSet` space), `fmristore-qt9` (`write_labeled_vec()` overwrite).
-
-Caveat: reading the voxels of one cluster from a voxel-level frame selects
-scattered columns. If neurotabs or fmrigds need that path, order features by
-cluster or choose a matching chunk layout.
 
 ## Milestone 3: 1.0 engine requirements (fold into 1.0 Phases 1-5)
 
@@ -133,9 +131,7 @@ legacy files.
 |-------|------|------|
 | 0 | Confirm green `main` after step 1 (`fmristore-bfi`) | S |
 | 1 | Rest of M0: CI pinning, lint and style gates, upstream `concat` report | S-M |
-| 2 | M2 converters and the `volume_space` helper | M |
-| 3 | M2 neurotabs and fmrigds migrations (in those repos) | M |
-| 4 | M2 deletion | S |
-| 5 | M3 inside the 1.0 phases | (1.0 schedule) |
+| 2 | M2 (done); neurotabs and fmrigds migrate in their repos | - |
+| 3 | M3 inside the 1.0 phases | (1.0 schedule) |
 
 M4 runs alongside.

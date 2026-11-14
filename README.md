@@ -25,10 +25,6 @@ datasets as lazy `fmridataset` array sources.
 - **Recovery and migration**: `recover_frame_store()` and `migrate_frame_h5()`.
 - **Read planning**: `h5_read_plan()` estimates how much a selection reads before reading it.
 
-The older classes (`H5ParcellatedMultiScan`, `H5ParcellatedScan`,
-`H5ParcellatedScanSummary`, `LabeledVolumeSet`) are frozen and will be removed
-once the packages that still use them move to frames.
-
 ## Installation
 
 ### From GitHub

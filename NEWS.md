@@ -1,52 +1,32 @@
-# fmristore 0.1.0.9000 (Development)
+# fmristore 0.2.0
+
+fmristore now does one thing: store `fmridataset::fmri_frame` objects in
+HDF5. Its only imports are fmridataset and hdf5r.
 
 ## Breaking changes
 
-* Removed the legacy surface that no package uses any more:
-  `H5NeuroVol`, `H5NeuroVec`, `H5NeuroVecSeq`, `to_nih5_vec()`,
-  `neurovecseq_to_h5()`, `LatentNeuroVec` I/O (`write_vec()`, `load_data()`
-  for latent files, `validate_latent_file()`) and the `LatentNeuroVec`,
-  `basis()`, `loadings()`, `offset()` and `map()` re-exports, `as_h5()`,
-  `write_dataset()`, `write_cluster_result()`, `write_parcellated_scan_h5()`,
-  the deprecated `write_clustered_experiment_h5()` and the deprecated
-  `make_run_full()` and `make_run_summary()`. `read_dataset()` on those file
-  types now fails with a message pointing to `write_frame_h5()`. fmristore no
-  longer depends on fmrilatent.
-* `H5ParcellatedMultiScan`, `H5ParcellatedScan`, `H5ParcellatedScanSummary`,
+* Removed every pre-frame class and reader: `H5ParcellatedMultiScan`,
+  `H5ParcellatedScan`, `H5ParcellatedScanSummary`,
   `write_parcellated_experiment_h5()`, `LabeledVolumeSet` with
-  `read_labeled_vec()` and `write_labeled_vec()`, `read_dataset()` and
-  `detect_h5_type()` remain for neurotabs and fmrigds. They are frozen and
-  will be removed once those packages store frames.
+  `read_labeled_vec()` and `write_labeled_vec()`, `read_dataset()`,
+  `detect_h5_type()`, `H5NeuroVol`, `H5NeuroVec`, `H5NeuroVecSeq`,
+  `to_nih5_vec()`, `neurovecseq_to_h5()`, `LatentNeuroVec` I/O, `as_h5()`,
+  `write_dataset()`, `write_cluster_result()`, `write_parcellated_scan_h5()`,
+  `make_run_full()`, `make_run_summary()`, the `H5_PATHS`, `H5_ATTRS` and
+  `H5_DSETS` constants, and the memory-warning settings. Store data as frames
+  with `write_frame_h5()`; parcellations are a `fmridataset::parcel_space()`
+  and labeled volumes an observation x voxel frame. Packages that still need
+  the old classes can pin fmristore to commit `4d7adb7`.
+* No longer imports neuroim2, fmrilatent, Matrix, assertthat, cli, lifecycle
+  or withr.
 * Requires fmridataset >= 0.11.0.
-* `h5vol[i]` on an `H5NeuroVol` became linear indexing before the class was
-  removed; `write_parcellated_experiment_h5()` and the parcellated writers
-  match full data to clusters by `cluster_<id>` name and validate coverage,
-  row counts, column counts and `n_time`; `H5ParcellatedMultiScan(keep_handle_open = FALSE)`
-  closes its handle when the constructor returns.
 * The frame codec rejects integer values a declared dtype cannot store
   (out of range, fractional, or `NA` where the dtype has none) instead of
   silently converting them, and stores logicals with `NA` preserved.
 
 ## Fixes and improvements
 
-* New `migrate_parcellated_h5()` and `migrate_labeled_h5()` convert files
-  written by `write_parcellated_experiment_h5()` and `write_labeled_vec()`
-  into FDS v1 frames, so their data stay readable after the legacy classes
-  are removed. Summary scans become a parcel assay over a `parcel_space()`;
-  full scans a voxel assay with a `cluster_id` feature column.
-* The internal example parcellated file now stores full-scan cluster data
-  voxel x time, as the writer and reader do; the reader previously rejected it.
-
 * Closing a handle no longer closes every other handle open on the same file.
-* Parcellated experiments return scans in the order they were written
-  (`/scans@scan_order`).
-* `H5ParcellatedMultiScan` gains `[[` (by scan name or position) and
-  `names()`; `series_concat()` and `matrix_concat()` accept scan names.
-* Summary scans label columns with the cluster IDs they hold.
-* Parcellated headers store the real quaternion, offsets and `n_time`, so
-  origin and orientation survive a round trip.
-* `overwrite = TRUE` no longer deletes the existing file before validating
-  the new input.
 * Frame recovery works on healthy stores, only cleans directories with a
   valid root manifest, and finds the partials of interrupted shard appends.
   Zero-row and zero-feature frames can be written; read plans no longer
