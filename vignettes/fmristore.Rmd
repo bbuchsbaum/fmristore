@@ -1,0 +1,156 @@
+---
+title: Storing fMRI Frames in HDF5
+author: fmristore Package
+date: '`r Sys.Date()`'
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Storing fMRI Frames in HDF5}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+params:
+  family: red
+css: albers.css
+resource_files:
+- albers.css
+- albers.js
+includes:
+  in_header: |-
+    <script src="albers.js"></script>
+    <script>document.addEventListener('DOMContentLoaded',()=>document.body.classList.add('palette-red'));</script>
+
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(collapse = TRUE, comment = "#>")
+library(fmristore)
+library(fmridataset)
+set.seed(1)
+```
+
+`fmristore` writes `fmridataset::fmri_frame` objects to HDF5 and opens them
+again without reading the arrays. A frame is a set of observation x feature
+matrices (assays) with typed observations, features, entities and tables;
+`fmridataset` defines it, `fmristore` stores it.
+
+## A frame to store
+
+Here the observations are 8 time points from two runs, and the features are
+three parcels of a small masked volume. `parcel_space()` records which voxels
+belong to each parcel, so the parcellation travels with the data.
+
+```{r frame}
+dims <- c(4L, 4L, 2L)
+voxels <- volume_space(dims, support = 6:27, template = "toy")
+cluster <- rep(c(3L, 7L, 10L), length.out = 22)
+parcels <- parcel_space(
+  voxels,
+  parcel_ids = c(3L, 7L, 10L),
+  membership = Matrix::sparseMatrix(
+    i = seq_along(cluster), j = match(cluster, c(3L, 7L, 10L)), x = 1, dims = c(22L, 3L)
+  ),
+  atlas = "toy-atlas"
+)
+
+n_time <- c(run1 = 5L, run2 = 3L)
+observations <- axis_frame(data.frame(
+  .obs_id = paste0("t", 1:8),
+  run_id = rep(names(n_time), n_time)
+))
+signal <- matrix(rnorm(8 * 3), nrow = 8, ncol = 3)
+
+frame <- fmri_frame(
+  assays = list(signal = signal),
+  observations = observations,
+  features = feature_axis(data.frame(.feature_id = feature_ids(parcels)), space = parcels),
+  active_assay = "signal"
+)
+```
+
+## Write and reopen
+
+`write_frame_h5()` streams each assay into a temporary file beside the
+destination and renames it into place only after everything is written, so a
+crash never leaves a half-written file under the final name.
+`open_frame_h5()` reads the manifests; the arrays stay on disk.
+
+```{r write-open}
+path <- tempfile(fileext = ".h5")
+write_frame_h5(frame, path)
+frame_store_info(path)$status
+
+reopened <- open_frame_h5(path)
+class(assay(reopened, "signal")$source)
+```
+
+Selections read only what they need:
+
+```{r read}
+run2 <- filter_observations(reopened, run_id == "run2")
+collect_assay(run2, "signal")
+
+# Parcel structure survives the round trip
+Matrix::colSums(parcel_membership(space(reopened)))
+```
+
+Writing to an existing path requires `overwrite = TRUE`, and a failed
+overwrite leaves the previous file untouched.
+
+```{r overwrite}
+tryCatch(write_frame_h5(frame, path), error = function(e) conditionMessage(e))
+```
+
+## Appending runs: sharded stores
+
+A sharded store is a directory of immutable frame files plus a manifest.
+Each append writes a new shard, so earlier data is never rewritten.
+
+```{r shards}
+store <- tempfile("store")
+run1 <- filter_observations(frame, run_id == "run1")
+run2 <- filter_observations(frame, run_id == "run2")
+
+write_sharded_frame_h5(run1, store, shard_id = "run1")
+append_frame_shard_h5(run2, store, shard_id = "run2")
+frame_shard_manifest(store)[, c(".shard_id", ".n_observation")]
+
+combined <- open_sharded_frame_h5(store)
+nrow(collect_assay(combined, "signal"))
+```
+
+If a writer is interrupted, `recover_frame_store()` reports, and with
+`action = "rollback"` removes, the temporary files it left behind:
+
+```{r recovery}
+recover_frame_store(store)
+```
+
+## Reading HDF5 arrays directly
+
+`h5_array_source()` describes one two-dimensional HDF5 dataset as a lazy
+`fmridataset` source. It holds no open file handle, so it can be serialized
+and reopened elsewhere. `h5_read_plan()` estimates how many stored values a
+selection touches before reading anything.
+
+```{r array-source}
+array_file <- tempfile(fileext = ".h5")
+h5 <- hdf5r::H5File$new(array_file, mode = "w")
+h5$create_dataset("values", robj = matrix(as.double(1:600), 20, 30), chunk_dims = c(10L, 10L))
+h5$close_all()
+
+src <- h5_array_source(array_file, "/values")
+source_shape(src)
+source_read(src, observations = c(2L, 1L), features = 1:3)
+
+plan <- h5_read_plan(src, observations = 1:5, features = 1:5)
+plan$amplification # stored values touched per value requested
+```
+
+The 5 x 5 corner lies in one 10 x 10 chunk, so reading it touches 100 stored
+values for 25 requested: an amplification of 4. `validate_h5_read_amplification()`
+turns such an estimate into a check that fails above a chosen limit.
+
+```{r cleanup, include = FALSE}
+unlink(c(path, array_file))
+unlink(store, recursive = TRUE)
+```
+

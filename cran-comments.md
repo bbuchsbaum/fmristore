@@ -14,9 +14,7 @@ This is a new package with no reverse dependencies.
 
 ## Notes
 
-This package provides HDF5-backed storage for fMRI neuroimaging data,
-integrating with the `neuroim2` package for standard data structures
-and `fmrilatent` for latent space representations.
+This package stores `fmridataset` frames in HDF5.
 
 The package requires the HDF5 library, which is available on all major
 platforms and is handled by the `hdf5r` package dependency.

@@ -21,10 +21,9 @@ template:
   package: albersdown
 home:
   title: 'fmristore: Efficient Storage of fMRI Data'
-  description: "A powerful R package for efficient storage and retrieval of functional
-    magnetic \nresonance imaging (fMRI) data using HDF5 format. Features S4 classes
-    for dense \nand sparse 4D neuroimaging data representations, latent space decompositions,
-    \nand memory-efficient access patterns for large datasets.\n"
+  description: >
+    Stores fmridataset frames in HDF5 with atomic writes, lazy reads,
+    append-only sharded stores, recovery, and HDF5 array sources.
   sidebar:
     structure:
     - links
@@ -44,8 +43,6 @@ navbar:
     left:
     - intro
     - reference
-    - articles
-    - tutorials
     - news
     right:
     - search
@@ -53,50 +50,15 @@ navbar:
   components:
     intro:
       text: Get Started
-      href: articles/index.html
-    tutorials:
-      text: Tutorials
-      menu:
-      - text: H5 Neuroimaging Data
-        href: articles/H5Neuro.html
-      - text: Labeled Volume Sets
-        href: articles/LabeledVolumeSet.html
-      - text: Parcellated Multi-Scan Data
-        href: articles/H5ParcellatedMultiScan.html
-      - text: Parcellated Scan Data
-        href: articles/H5ParcellatedScan.html
+      href: articles/fmristore.html
     reference:
       text: Reference
       href: reference/index.html
-    articles:
-      text: Articles
-      menu:
-      - text: All Articles
-        href: articles/index.html
-      - text: '---'
-      - text: Core Concepts
-      - text: H5 Neuroimaging Data
-        href: articles/H5Neuro.html
-      - text: Labeled Volume Sets
-        href: articles/LabeledVolumeSet.html
-      - text: '---'
-      - text: Advanced Usage
-      - text: Parcellated Multi-Scan Data
-        href: articles/H5ParcellatedMultiScan.html
-      - text: Parcellated Scan Data
-        href: articles/H5ParcellatedScan.html
 articles:
 - title: Getting Started
   navbar: ~
   contents:
-  - fmristore-overview
-  - H5Neuro
-  - LabeledVolumeSet
-- title: Advanced Topics
-  navbar: ~
-  contents:
-  - H5ParcellatedMultiScan
-  - H5ParcellatedScan
+  - fmristore
 news:
   releases:
   - text: Version 0.1.0

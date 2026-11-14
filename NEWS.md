@@ -1,4 +1,43 @@
-# fmristore 0.1.0.9000 (Development)
+# fmristore 0.2.0
+
+fmristore now does one thing: store `fmridataset::fmri_frame` objects in
+HDF5. Its only imports are fmridataset and hdf5r.
+
+## Breaking changes
+
+* Removed every pre-frame class and reader: `H5ParcellatedMultiScan`,
+  `H5ParcellatedScan`, `H5ParcellatedScanSummary`,
+  `write_parcellated_experiment_h5()`, `LabeledVolumeSet` with
+  `read_labeled_vec()` and `write_labeled_vec()`, `read_dataset()`,
+  `detect_h5_type()`, `H5NeuroVol`, `H5NeuroVec`, `H5NeuroVecSeq`,
+  `to_nih5_vec()`, `neurovecseq_to_h5()`, `LatentNeuroVec` I/O, `as_h5()`,
+  `write_dataset()`, `write_cluster_result()`, `write_parcellated_scan_h5()`,
+  `make_run_full()`, `make_run_summary()`, the `H5_PATHS`, `H5_ATTRS` and
+  `H5_DSETS` constants, and the memory-warning settings. Store data as frames
+  with `write_frame_h5()`; parcellations are a `fmridataset::parcel_space()`
+  and labeled volumes an observation x voxel frame. Packages that still need
+  the old classes can pin fmristore to commit `4d7adb7`.
+* No longer imports neuroim2, fmrilatent, Matrix, assertthat, cli, lifecycle
+  or withr.
+* Requires fmridataset >= 0.11.0.
+* The frame codec rejects integer values a declared dtype cannot store
+  (out of range, fractional, or `NA` where the dtype has none) instead of
+  silently converting them, and stores logicals with `NA` preserved.
+
+## Fixes and improvements
+
+* Closing a handle no longer closes every other handle open on the same file.
+* Frame recovery works on healthy stores, only cleans directories with a
+  valid root manifest, and finds the partials of interrupted shard appends.
+  Zero-row and zero-feature frames can be written; read plans no longer
+  overflow on large sources.
+* Legacy `0.1-provisional` frames with free-form provenance migrate instead of
+  failing.
+* The test suite now runs under `R CMD check` (`tests/testthat.R` was
+  missing), against current fmridataset.
+* Replaced the vignettes with one on storing frames, `vignette("fmristore")`.
+
+## Earlier development changes
 
 * Added metadata-only frame-store inspection, conservative rollback of proven
   uncommitted write artifacts, and an atomic streaming migration from the real
