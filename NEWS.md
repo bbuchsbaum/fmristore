@@ -29,6 +29,14 @@
 
 ## Fixes and improvements
 
+* New `migrate_parcellated_h5()` and `migrate_labeled_h5()` convert files
+  written by `write_parcellated_experiment_h5()` and `write_labeled_vec()`
+  into FDS v1 frames, so their data stay readable after the legacy classes
+  are removed. Summary scans become a parcel assay over a `parcel_space()`;
+  full scans a voxel assay with a `cluster_id` feature column.
+* The internal example parcellated file now stores full-scan cluster data
+  voxel x time, as the writer and reader do; the reader previously rejected it.
+
 * Closing a handle no longer closes every other handle open on the same file.
 * Parcellated experiments return scans in the order they were written
   (`/scans@scan_order`).

@@ -342,17 +342,10 @@ populate_H5ParcellatedScan_in_h5file <- function(h5obj,
           # Number of voxels in this specific cluster for this run
           n_vox_in_this_cluster <- sum(cluster_assignments_in_mask == id)
           if (n_vox_in_this_cluster > 0) {
-            # Data: n_time x n_vox_in_this_cluster
-            # The H5ParcellatedScan constructor expects data loaded to be n_vox x n_time (from summary)
-            # or reads n_time x n_vox from disk if that's how write_clustered_run_h5 does it.
-            # write_clustered_run_h5 writes dataset as h5_write(..., robj = data_for_cluster) # data_for_cluster is n_vox x n_time from input
-            # So, the dataset on disk should be n_vox x n_time. But cluster_ts() returns n_time x n_vox.
-            # Let's assume disk storage is n_time x n_vox_in_cluster for now, common for time series.
-            # If constructor expects n_vox x n_time, then this needs to be transposed before constructor is called, or disk format adjusted.
-            # The H5ParcellatedScan constructor: data for each cluster is loaded as: dset[,]
-            # Let's use n_time x n_vox_in_cluster on disk.
-            cluster_ts_data <- matrix(stats::rnorm(n_time * n_vox_in_this_cluster),
-              nrow = n_time, ncol = n_vox_in_this_cluster
+            # Stored voxel x time, as write_parcellated_experiment_h5() and the
+            # H5ParcellatedScan reader expect.
+            cluster_ts_data <- matrix(stats::rnorm(n_vox_in_this_cluster * n_time),
+              nrow = n_vox_in_this_cluster, ncol = n_time
             )
             clusters_data_grp$create_dataset(paste("cluster_", id, sep = ""),
               robj = cluster_ts_data,

@@ -159,3 +159,5 @@ unlink(store, recursive = TRUE)
 `H5ParcellatedMultiScan`, `H5ParcellatedScan`, `H5ParcellatedScanSummary` and
 `LabeledVolumeSet` remain for packages that have not yet moved to frames.
 They are frozen and will be removed; new code should store frames.
+`migrate_parcellated_h5()` and `migrate_labeled_h5()` convert existing files
+to frames.

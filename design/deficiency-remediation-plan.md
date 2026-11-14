@@ -89,7 +89,7 @@ A prototype confirmed the frame store covers both packages' needs:
 
 Checklist:
 
-- [ ] **Converters** from parcellated and labeled files to frames, written while the legacy readers still exist. `fmristore-qv9` (P1)
+- [x] **Converters** from parcellated and labeled files to frames: `migrate_parcellated_h5()` (one kind per frame; summary scans as parcels, full scans as voxels with `cluster_id`) and `migrate_labeled_h5()`. `fmristore-qv9` (P1, done)
 - [ ] **`volume_space` to `neuroim2`** helper in fmridataset, for masks, centroids and space names. `fmristore-amb` (P2)
 - [ ] **neurotabs:** `fmristore-parcel` backend and parcel ingest read frames. `fmristore-dtd` (P2)
 - [ ] **fmrigds:** adapter and fixtures use frames; regenerate `labeled_volume_small.h5`. `fmristore-au7` (P2)
